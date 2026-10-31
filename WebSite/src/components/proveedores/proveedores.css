@@ -1,0 +1,783 @@
+
+/* ------------------------------------------------------------
+   FONDO Y VENTANA (compacta, para no tener que bajar)
+   ------------------------------------------------------------ */
+
+.prov-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    overflow-y: auto;
+    background: rgba(15, 30, 60, 0.48);
+}
+
+.prov-modal {
+    position: relative;
+    width: min(900px, 94vw);
+    max-height: 90vh;
+    padding: 1.25rem;
+    overflow-y: auto;
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    box-shadow: var(--shadow-lg);
+    color: var(--text-dark);
+    box-sizing: border-box;
+    animation: modalEntrada 0.25s ease-out;
+    scrollbar-width: thin;
+    scrollbar-color: #b9c4d1 transparent;
+}
+
+.prov-modal::-webkit-scrollbar {
+    width: 7px;
+}
+
+.prov-modal::-webkit-scrollbar-thumb {
+    background: #b9c4d1;
+    border-radius: 10px;
+}
+
+
+/* ------------------------------------------------------------
+   BOTÓN CERRAR
+   ------------------------------------------------------------ */
+
+.prov-cerrar {
+    position: absolute;
+    top: 1rem;
+    right: 1.2rem;
+    z-index: 5;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #ffffff;
+    color: var(--text-muted);
+    font-size: 1rem;
+    line-height: 1;
+    cursor: pointer;
+    transition:
+        background-color var(--transition-fast),
+        color var(--transition-fast),
+        border-color var(--transition-fast),
+        transform var(--transition-fast);
+}
+
+.prov-cerrar:hover {
+    background: var(--danger-light);
+    border-color: #e7bfc1;
+    color: var(--danger);
+    transform: scale(1.04);
+}
+
+.prov-cerrar:focus-visible,
+.prov-btn:focus-visible,
+.prov-control:focus-visible {
+    outline: 3px solid var(--primary-light);
+    outline-offset: 2px;
+}
+
+
+/* ------------------------------------------------------------
+   TARJETA / CARRUSEL
+   ------------------------------------------------------------ */
+
+.prov-carrusel {
+    display: block;
+}
+
+.prov-tarjeta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    min-width: 0;
+}
+
+
+/* ------------------------------------------------------------
+   ENCABEZADO: avatar, nombre y subtítulo alineados a la izquierda
+   ------------------------------------------------------------ */
+
+.prov-encabezado {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 0 2.6rem 1rem 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.prov-avatar {
+    flex: 0 0 auto;
+    width: 62px;
+    height: 62px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-light), var(--purple-light));
+    color: var(--primary);
+    font-size: 1.65rem;
+}
+
+.prov-titulo {
+    flex: 1 1 auto;
+    min-width: 0;
+    text-align: left;
+}
+
+.prov-titulo h2 {
+    margin: 0 0 0.35rem;
+    color: var(--primary-dark);
+    font-size: 1.45rem;
+    font-weight: 700;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+
+.prov-titulo p {
+    display: inline-block;
+    margin: 0;
+    padding: 0.15rem 0.9rem;
+    border-radius: 8px;
+    background: var(--primary-light);
+    color: var(--primary-dark);
+    font-size: 0.88rem;
+    font-weight: 600;
+}
+
+
+/* ------------------------------------------------------------
+   BOTONES OPCIONALES
+   ------------------------------------------------------------ */
+
+.prov-acciones {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.prov-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 0.55rem 1rem;
+    border: 1px solid #cbdcf5;
+    border-radius: 10px;
+    background: var(--primary-light);
+    color: var(--primary);
+    font-family: inherit;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+        transform var(--transition-fast),
+        box-shadow var(--transition-fast),
+        background-color var(--transition-fast);
+}
+
+.prov-btn:hover {
+    transform: translateY(-1px);
+}
+
+.prov-btn:active {
+    transform: translateY(0);
+}
+
+.prov-btn-azul {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.prov-btn-azul:hover {
+    background: var(--primary-dark);
+    box-shadow: 0 4px 12px rgba(59, 111, 196, 0.20);
+}
+
+
+.prov-cajas {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    align-items: stretch;
+}
+
+.prov-caja {
+    position: relative;
+    overflow: hidden;
+    min-width: 0;
+    padding: 1rem 1.1rem 0.85rem;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: var(--shadow-sm);
+    box-sizing: border-box;
+}
+
+.prov-caja::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: var(--primary);
+    opacity: 0.85;
+}
+
+.prov-caja:nth-child(2)::before {
+    background: var(--green);
+}
+
+.prov-caja-ambar {
+    background: #fcf8ef;
+    border-color: #eadfc9;
+}
+
+.prov-caja-ambar::before {
+    background: var(--yellow);
+}
+
+.prov-caja-titulo {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.6rem;
+    color: var(--text-muted);
+    font-size: 0.88rem;
+}
+
+.prov-caja-titulo.ambar {
+    color: var(--yellow-dark);
+}
+
+.prov-caja-nombre {
+    margin: 0;
+    color: var(--text-dark);
+    font-size: 1.15rem;
+    font-weight: 700;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+
+/* ------------------------------------------------------------
+   PARES "ETIQUETA / VALOR"
+   ------------------------------------------------------------ */
+
+.prov-pares {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.prov-par {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.prov-par span {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+
+.prov-par strong {
+    color: var(--text-dark);
+    font-size: 0.9rem;
+    font-weight: 600;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+
+/* ------------------------------------------------------------
+   ICONOS
+   ------------------------------------------------------------ */
+
+.prov-ico {
+    flex: 0 0 auto;
+    width: 30px;
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9px;
+    background: var(--primary-light);
+    font-size: 0.9rem;
+}
+
+.prov-ico.verde {
+    background: var(--green-light);
+}
+
+.prov-ico.ambar {
+    background: var(--yellow-light);
+}
+
+
+/* ------------------------------------------------------------
+   COLUMNAS Y PANELES
+   ------------------------------------------------------------ */
+
+.prov-columnas {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    align-items: start;
+}
+
+.prov-derecha {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    min-width: 0;
+}
+
+.prov-panel {
+    padding: 0.9rem 1rem 0.6rem;
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--shadow-sm);
+    box-sizing: border-box;
+    transition: box-shadow var(--transition-fast), border-color var(--transition-fast);
+}
+
+.prov-panel:hover {
+    border-color: #c7d5e5;
+    box-shadow: var(--shadow-md);
+}
+
+.prov-panel-titulo {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    margin: 0 0 0.5rem;
+    padding-bottom: 0.7rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--primary-dark);
+    font-size: 0.95rem;
+    font-weight: 700;
+}
+
+
+/* ------------------------------------------------------------
+   FILAS "ETIQUETA / VALOR"
+   ------------------------------------------------------------ */
+
+.prov-fila {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.65rem 0;
+    border-bottom: 1px solid #eaeff5;
+}
+
+.prov-fila:last-child {
+    border-bottom: none;
+}
+
+.prov-etiqueta {
+    color: var(--text-muted);
+    font-size: 0.84rem;
+    line-height: 1.4;
+}
+
+.prov-valor {
+    color: var(--text-dark);
+    font-size: 0.92rem;
+    font-weight: 600;
+    text-align: right;
+    overflow-wrap: anywhere;
+}
+
+.prov-valor a {
+    color: var(--primary);
+    text-decoration: none;
+    transition: color var(--transition-fast);
+}
+
+.prov-valor a:hover {
+    color: var(--primary-dark);
+    text-decoration: underline;
+}
+
+
+/* ------------------------------------------------------------
+   CHIPS / MÉTODOS DE ENTREGA
+   ------------------------------------------------------------ */
+
+.prov-metodos {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.4rem;
+}
+
+.prov-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.prov-chip-verde {
+    background: var(--green-light);
+    color: var(--green-dark);
+}
+
+.prov-chip-azul {
+    background: var(--primary-light);
+    color: var(--primary-dark);
+}
+
+
+/* ------------------------------------------------------------
+   DIRECCIONES
+   ------------------------------------------------------------ */
+
+.prov-direccion {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.7rem;
+    padding: 0.6rem 0;
+}
+
+.prov-direccion + .prov-direccion {
+    border-top: 1px solid #eaeff5;
+}
+
+.prov-direccion strong {
+    display: block;
+    margin-bottom: 2px;
+    color: var(--text-dark);
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.prov-direccion p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+
+/* ------------------------------------------------------------
+   MAPA
+   ------------------------------------------------------------ */
+
+.prov-mapa {
+    display: block;
+    width: 100%;
+    height: 180px;
+    border: 0;
+    border-radius: 10px;
+}
+
+
+/* ------------------------------------------------------------
+   CONTROLES DEL CARRUSEL
+   ------------------------------------------------------------ */
+
+.prov-controles {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 22px;
+    padding: 14px 0 4px;
+}
+
+.prov-contador {
+    min-width: 75px;
+    padding: 6px 12px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--primary-dark);
+    background: var(--primary-light);
+    border: 1px solid #d2dfef;
+    border-radius: 20px;
+}
+
+.prov-control {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--primary);
+    border-radius: 50%;
+    background: var(--primary);
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(42, 69, 144, 0.15);
+    transition:
+        transform var(--transition-normal),
+        background-color var(--transition-normal),
+        color var(--transition-normal),
+        box-shadow var(--transition-normal);
+}
+
+.prov-control:hover {
+    background: #ffffff;
+    color: var(--primary);
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 7px 16px rgba(42, 69, 144, 0.20);
+}
+
+.prov-control:active {
+    transform: scale(0.92);
+}
+
+
+/* ============================================================
+   PANTALLAS MEDIANAS
+   ============================================================ */
+
+@media (max-width: 860px) {
+
+    .prov-cajas,
+    .prov-columnas {
+        grid-template-columns: 1fr;
+    }
+
+    .prov-overlay {
+        padding: 0.75rem;
+    }
+
+    .prov-modal {
+        width: 96vw;
+        padding: 1rem;
+        border-radius: 15px;
+    }
+}
+
+
+/* ============================================================
+   PANTALLAS PEQUEÑAS
+   ============================================================ */
+
+@media (max-width: 600px) {
+
+    .prov-overlay {
+        padding: 0.5rem;
+    }
+
+    .prov-modal {
+        width: 98vw;
+        max-height: 94vh;
+        padding: 0.85rem;
+        border-radius: 12px;
+    }
+
+    .prov-encabezado {
+        gap: 0.7rem;
+        padding-right: 2.6rem;
+    }
+
+    .prov-avatar {
+        width: 48px;
+        height: 48px;
+        font-size: 1.35rem;
+    }
+
+    .prov-titulo h2 {
+        font-size: 1.2rem;
+    }
+
+    .prov-pares {
+        grid-template-columns: 1fr;
+    }
+
+    .prov-caja {
+        padding: 0.9rem 1rem 0.75rem;
+    }
+
+    .prov-fila {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
+    }
+
+    .prov-valor {
+        text-align: left;
+    }
+
+    .prov-metodos {
+        justify-content: flex-start;
+    }
+
+    .prov-mapa {
+        height: 160px;
+    }
+
+    .prov-acciones .prov-btn {
+        flex: 1;
+    }
+}
+
+
+/* ============================================================
+   MODO OSCURO SUAVE
+   ============================================================ */
+
+.modo-oscuro .prov-overlay {
+    background: rgba(8, 11, 15, 0.74);
+}
+
+.modo-oscuro .prov-modal {
+    background: #292f36;
+    border-color: #414b56;
+    color: #e2e6eb;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.34);
+}
+
+.modo-oscuro .prov-encabezado {
+    border-bottom-color: #414b56;
+}
+
+.modo-oscuro .prov-avatar {
+    background: #343c45;
+    color: #9bbce9;
+}
+
+.modo-oscuro .prov-titulo h2,
+.modo-oscuro .prov-panel-titulo {
+    color: #e2e6eb;
+}
+
+.modo-oscuro .prov-titulo p {
+    background: #303b49;
+    color: #a9c4e8;
+}
+
+.modo-oscuro .prov-cerrar {
+    background: #303842;
+    border-color: #414b56;
+    color: #c2cad3;
+}
+
+.modo-oscuro .prov-cerrar:hover {
+    background: #3a4149;
+    border-color: #5b4044;
+    color: #e78a8a;
+}
+
+.modo-oscuro .prov-btn {
+    background: #303842;
+    border-color: #414b56;
+    color: #a9c4e8;
+}
+
+.modo-oscuro .prov-btn-azul {
+    background: #456da5;
+    border-color: #456da5;
+    color: #ffffff;
+}
+
+.modo-oscuro .prov-caja,
+.modo-oscuro .prov-panel {
+    background: #252b32;
+    border-color: #3b444e;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.10);
+}
+
+.modo-oscuro .prov-caja-ambar {
+    background: #35332d;
+    border-color: #4a4538;
+}
+
+.modo-oscuro .prov-panel:hover {
+    border-color: #4a5560;
+    box-shadow: 0 5px 14px rgba(0, 0, 0, 0.16);
+}
+
+.modo-oscuro .prov-caja-titulo,
+.modo-oscuro .prov-par span,
+.modo-oscuro .prov-etiqueta,
+.modo-oscuro .prov-direccion p {
+    color: #aeb6c0;
+}
+
+.modo-oscuro .prov-caja-titulo.ambar {
+    color: #e0b45b;
+}
+
+.modo-oscuro .prov-caja-nombre,
+.modo-oscuro .prov-par strong,
+.modo-oscuro .prov-valor,
+.modo-oscuro .prov-direccion strong {
+    color: #e2e6eb;
+}
+
+.modo-oscuro .prov-valor a {
+    color: #a9c4e8;
+}
+
+.modo-oscuro .prov-panel-titulo {
+    border-bottom-color: #3b444e;
+}
+
+.modo-oscuro .prov-fila,
+.modo-oscuro .prov-direccion + .prov-direccion {
+    border-color: #3b444e;
+}
+
+.modo-oscuro .prov-ico {
+    background: #303b49;
+}
+
+.modo-oscuro .prov-ico.verde {
+    background: #2b3d34;
+}
+
+.modo-oscuro .prov-ico.ambar {
+    background: #3d382b;
+}
+
+.modo-oscuro .prov-chip-verde {
+    background: #2b3d34;
+    color: #7fd3a3;
+}
+
+.modo-oscuro .prov-chip-azul {
+    background: #303b49;
+    color: #a9c4e8;
+}
+
+.modo-oscuro .prov-contador {
+    background: #303842;
+    border-color: #414b56;
+    color: #a9c4e8;
+}
+
+.modo-oscuro .prov-control {
+    background: #456da5;
+    border-color: #456da5;
+}
+
+.modo-oscuro .prov-control:hover {
+    background: #e0e5eb;
+    color: #456da5;
+}
