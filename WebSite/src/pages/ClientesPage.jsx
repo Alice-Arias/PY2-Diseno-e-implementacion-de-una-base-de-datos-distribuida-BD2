@@ -34,9 +34,13 @@ const POR_PAGINA = 10;
 const FILTROS_VACIOS = { nombre: '', categoria: '', metodoEntrega: '' };
 
 function ClientesPage() {
+    const [mensaje, setMensaje] = useState(null);
+
     const listado = useListadoServidor(listarClientes, {
         porPagina: POR_PAGINA,
-        filtrosIniciales: FILTROS_VACIOS
+        filtrosIniciales: FILTROS_VACIOS,
+        alFallar: () =>
+            setMensaje({ tipo: 'error', titulo: 'Error', mensaje: 'Ocurrió un error al buscar los clientes.' })
     });
 
     const [nombreEscrito, setNombreEscrito] = useState('');
@@ -47,7 +51,6 @@ function ClientesPage() {
     const [mostrarNuevo, setMostrarNuevo] = useState(false);
     const [clienteEditar, setClienteEditar] = useState(null);
     const [clienteEliminar, setClienteEliminar] = useState(null);
-    const [mensaje, setMensaje] = useState(null);
     const [recargaResumen, setRecargaResumen] = useState(0);
 
     // PY2: al abrir la página se cargan (una sola vez) las listas del formulario,
@@ -63,11 +66,6 @@ function ClientesPage() {
             .catch((err) => console.error(err));
     }, [recargaResumen]);
 
-    useEffect(() => {
-        if (listado.error) {
-            setMensaje({ tipo: 'error', titulo: 'Error', mensaje: 'Ocurrió un error al buscar los clientes.' });
-        }
-    }, [listado.error]);
 
     const filtrar = (cambios) => {
         setSeleccionados([]);

@@ -17,6 +17,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { buscarCiudades, obtenerCiudad } from '../services/api';
 
+const SIN_SELECCION = { id: '', nombre: '' };
+
 function BuscadorCiudad({
     name,
     value,
@@ -26,51 +28,58 @@ function BuscadorCiudad({
     className = 'campo',
     onFocus
 }) {
+    const id = value ? String(value) : '';
+
     const [texto, setTexto] = useState('');
+    const [seleccion, setSeleccion] = useState(SIN_SELECCION);
     const [resultados, setResultados] = useState([]);
     const [abierto, setAbierto] = useState(false);
     const [buscando, setBuscando] = useState(false);
-    const elegida = useRef({ id: '', nombre: '' });
     const temporizador = useRef(null);
-    // true cuando el cambio de value lo provocó este mismo campo (no hay que redibujar).
-    const cambioInterno = useRef(false);
 
-    /* Muestra el nombre de la ciudad que ya tiene el registro (Modificar). */
-    useEffect(() => {
-        if (cambioInterno.current) {
-            cambioInterno.current = false;
-            return;
-        }
-        const id = value ? String(value) : '';
-        if (!id) {
-            elegida.current = { id: '', nombre: '' };
+    /*
+     * Si el formulario borra la ciudad desde afuera (por ejemplo al limpiar el
+     * formulario), se limpia el campo. Se ajusta durante el render, como recomienda
+     * React, en vez de usar un useEffect.
+     */
+    const [idPrevio, setIdPrevio] = useState(id);
+    if (id !== idPrevio) {
+        setIdPrevio(id);
+        if (!id && seleccion.id) {
+            setSeleccion(SIN_SELECCION);
             setTexto('');
-            return;
         }
-        if (elegida.current.id === id) return;
+    }
+
+    /* Modificar: busca el nombre de la ciudad que ya tiene el registro. */
+    useEffect(() => {
+        if (!id || id === seleccion.id) return;
 
         let cancelado = false;
         obtenerCiudad(id)
             .then((ciudad) => {
                 if (cancelado || !ciudad) return;
-                elegida.current = { id, nombre: ciudad.Nombre };
+                setSeleccion({ id, nombre: ciudad.Nombre });
                 setTexto(ciudad.Nombre);
             })
             .catch((err) => console.error(err));
+
         return () => {
             cancelado = true;
         };
-    }, [value]);
+    }, [id, seleccion.id]);
+
+    /* Limpia el temporizador si el formulario se cierra mientras se escribe. */
+    useEffect(() => () => clearTimeout(temporizador.current), []);
 
     const escribir = (e) => {
         const nuevo = e.target.value;
         setTexto(nuevo);
         setAbierto(true);
 
-        // Si borra o cambia el texto, la ciudad deja de estar elegida.
-        if (elegida.current.id) {
-            elegida.current = { id: '', nombre: '' };
-            cambioInterno.current = true;
+        // Si cambia el texto, la ciudad que estaba elegida deja de valer.
+        if (seleccion.id) {
+            setSeleccion(SIN_SELECCION);
             onCambiar({ target: { name, value: '' } });
         }
 
@@ -91,21 +100,21 @@ function BuscadorCiudad({
     };
 
     const elegir = (ciudad) => {
-        elegida.current = { id: String(ciudad.ID), nombre: ciudad.Nombre };
-        setTexto(ciudad.Nombre);
+        const nueva = { id: String(ciudad.ID), nombre: ciudad.Nombre };
+        setSeleccion(nueva);
+        setTexto(nueva.nombre);
         setAbierto(false);
         setResultados([]);
-        cambioInterno.current = String(ciudad.ID) !== String(value ?? '');
-        onCambiar({ target: { name, value: String(ciudad.ID) } });
+        onCambiar({ target: { name, value: nueva.id } });
     };
 
     // Al salir del campo sin elegir, se vuelve a mostrar la ciudad elegida (si hay).
     const salir = () => {
-        setTimeout(() => {
-            setAbierto(false);
-            if (elegida.current.id) setTexto(elegida.current.nombre);
-        }, 150);
+        setAbierto(false);
+        if (seleccion.id) setTexto(seleccion.nombre);
     };
+
+    const mostrarLista = abierto && texto.trim().length >= 2 && !seleccion.id;
 
     return (
         <div className={className} style={{ position: 'relative' }}>
@@ -121,10 +130,10 @@ function BuscadorCiudad({
                 onBlur={salir}
                 placeholder="Escriba al menos 2 letras..."
                 autoComplete="off"
-                required={requerido && !value}
+                required={requerido && !id}
             />
 
-            {abierto && texto.trim().length >= 2 && !elegida.current.id && (
+            {mostrarLista && (
                 <ul
                     role="listbox"
                     style={{
@@ -154,8 +163,9 @@ function BuscadorCiudad({
                         <li
                             key={ciudad.ID}
                             role="option"
+                            aria-selected={false}
                             onMouseDown={(e) => {
-                                e.preventDefault(); // evita que el blur cierre antes del clic
+                                e.preventDefault(); // evita que el blur cierre la lista antes del clic
                                 elegir(ciudad);
                             }}
                             style={{ padding: '8px 10px', borderRadius: 6, cursor: 'pointer' }}

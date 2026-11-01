@@ -35,9 +35,13 @@ const POR_PAGINA = 10;
 const FILTROS_VACIOS = { nombre: '', grupo: '' };
 
 function InventariosPage() {
+    const [mensaje, setMensaje] = useState(null);
+
     const listado = useListadoServidor(listarInventarios, {
         porPagina: POR_PAGINA,
-        filtrosIniciales: FILTROS_VACIOS
+        filtrosIniciales: FILTROS_VACIOS,
+        alFallar: () =>
+            setMensaje({ tipo: 'error', titulo: 'Error', mensaje: 'Ocurrió un error al buscar los productos.' })
     });
 
     const [nombreEscrito, setNombreEscrito] = useState('');
@@ -48,7 +52,6 @@ function InventariosPage() {
     const [mostrarNuevo, setMostrarNuevo] = useState(false);
     const [inventarioEditar, setInventarioEditar] = useState(null);
     const [inventarioEliminar, setInventarioEliminar] = useState(null);
-    const [mensaje, setMensaje] = useState(null);
     const [recargaResumen, setRecargaResumen] = useState(0);
 
     // PY2: al abrir la página se cargan (una sola vez) las listas del formulario,
@@ -64,11 +67,6 @@ function InventariosPage() {
             .catch((err) => console.error(err));
     }, [recargaResumen]);
 
-    useEffect(() => {
-        if (listado.error) {
-            setMensaje({ tipo: 'error', titulo: 'Error', mensaje: 'Ocurrió un error al buscar los productos.' });
-        }
-    }, [listado.error]);
 
     const filtrar = (cambios) => {
         setSeleccionados([]);

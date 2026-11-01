@@ -13,6 +13,7 @@ import {
 
 // Hooks de React.
 import { useEffect, useState } from 'react';
+import useUltimo from '../hooks/useUltimo';
 
 // Funciones de la API.
 import {
@@ -22,12 +23,147 @@ import {
 } from '../services/api';
 import BuscadorCiudad from './BuscadorCiudad';
 
+/*---------------------------------------------------------------------------------------*
+* NOMBRE: formularioDesdeCliente (PY2 - limpieza)
+* DESCRIPCION: Convierte el resultado de SP_Clientes_Detalle en los valores del
+* formulario. Antes esto se hacía en un useEffect que se volvía a ejecutar cuando
+* llegaban las listas y borraba lo que el usuario ya había cambiado. Ahora se llama
+* una sola vez, justo cuando llegan los datos del cliente.
+*-----------------------------------------------------------------------------------------*/
+function formularioDesdeCliente(clienteCompleto) {
+
+    // ----------------------------------------------------
+    // OBTENER LOS IDS
+    // ----------------------------------------------------
+
+    const categoriaID =
+        clienteCompleto.Categoria_ID != null
+            ? String(clienteCompleto.Categoria_ID)
+            : '';
+
+    const grupoCompraID =
+        clienteCompleto.Grupo_Compra_ID != null
+            ? String(clienteCompleto.Grupo_Compra_ID)
+            : '';
+
+    const contactoPrimarioID =
+        clienteCompleto.Contacto_Primario_ID != null
+            ? String(clienteCompleto.Contacto_Primario_ID)
+            : '';
+
+    const contactoAlternativoID =
+        clienteCompleto.Contacto_Alternativo_ID != null
+            ? String(clienteCompleto.Contacto_Alternativo_ID)
+            : '';
+
+    const clienteFacturarID =
+        clienteCompleto.Cliente_Por_Facturar_ID != null
+            ? String(clienteCompleto.Cliente_Por_Facturar_ID)
+            : '';
+
+    const metodoEntregaID =
+        clienteCompleto.Metodo_Entrega_ID != null
+            ? String(clienteCompleto.Metodo_Entrega_ID)
+            : '';
+
+    const ciudadEntregaID =
+        clienteCompleto.Ciudad_Entrega_ID != null
+            ? String(clienteCompleto.Ciudad_Entrega_ID)
+            : '';
+
+    // ----------------------------------------------------
+    // CARGAR TODO EL FORMULARIO
+    // ----------------------------------------------------
+
+    return {
+
+        Nombre:
+            clienteCompleto.Nombre_Cliente ??
+            clienteCompleto.Nombre ??
+            '',
+
+        CategoriaID:
+            categoriaID,
+
+        GrupoCompraID:
+            grupoCompraID,
+
+        ContactoPrimarioID:
+            contactoPrimarioID,
+
+        ContactoAlternativoID:
+            contactoAlternativoID,
+
+        ClienteFacturarID:
+            clienteFacturarID,
+
+        MetodoEntregaID:
+            metodoEntregaID,
+
+        CiudadEntregaID:
+            ciudadEntregaID,
+
+        LimiteCredito:
+            clienteCompleto.Limite_Credito ??
+            clienteCompleto.LimiteCredito ??
+            '',
+
+        Descuento:
+            clienteCompleto.Descuento ??
+            '0',
+
+        DiasGracia:
+            clienteCompleto.Dias_De_Gracia ??
+            clienteCompleto.DiasGracia ??
+            '7',
+
+        Telefono:
+            clienteCompleto.Telefono ??
+            '',
+
+        Fax:
+            clienteCompleto.Fax ??
+            '',
+
+        SitioWeb:
+            clienteCompleto.Sitio_Web ??
+            clienteCompleto.SitioWeb ??
+            '',
+
+        DireccionEntrega1:
+            clienteCompleto.Direccion_Entrega1 ??
+            '',
+
+        DireccionEntrega2:
+            clienteCompleto.Direccion_Entrega2 ??
+            '',
+
+        CodigoPostal:
+            clienteCompleto.Codigo_Postal ??
+            '',
+
+        DireccionPostal1:
+            clienteCompleto.Direccion_Postal1 ??
+            '',
+
+        DireccionPostal2:
+            clienteCompleto.Direccion_Postal2 ??
+            '',
+
+        UsuarioID: 1
+
+    };
+}
+
 function ClienteEditarModal({
     cliente,
     onCerrar,
     onClienteActualizado,
     onMostrarMensaje
 }) {
+
+    // Versión actual de onMostrarMensaje (ver hooks/useUltimo.js).
+    const avisarRef = useUltimo(onMostrarMensaje);
 
     // ========================================================
     // DATOS DEL FORMULARIO
@@ -80,7 +216,9 @@ function ClienteEditarModal({
 
     // Indica si se está cargando la información completa
     // del cliente seleccionado.
-    const [cargandoCliente, setCargandoCliente] = useState(true);
+    const [cargandoCliente, setCargandoCliente] = useState(() => Boolean(cliente?.CustomerID));
+    // true cuando el formulario ya tiene los datos originales del cliente.
+    const [datosListos, setDatosListos] = useState(false);
 
     // Indica si se están guardando los cambios.
     const [guardando, setGuardando] = useState(false);
@@ -89,7 +227,6 @@ function ClienteEditarModal({
     // CLIENTE COMPLETO
     // ========================================================
 
-    const [clienteCompleto, setClienteCompleto] = useState(null);
 
     // ========================================================
     // CARGAR OPCIONES
@@ -105,10 +242,6 @@ function ClienteEditarModal({
 
                 const data = await obtenerOpcionesClientes();
 
-                console.log(
-                    'Opciones cargadas:',
-                    data
-                );
 
                 setOpciones({
                     categorias: data.categorias || [],
@@ -126,9 +259,9 @@ function ClienteEditarModal({
                     error
                 );
 
-                if (onMostrarMensaje) {
+                if (avisarRef.current) {
 
-                    onMostrarMensaje({
+                    avisarRef.current({
                         tipo: 'error',
                         titulo: 'No se pudieron cargar las opciones',
                         mensaje:
@@ -147,7 +280,7 @@ function ClienteEditarModal({
 
         cargarOpciones();
 
-    }, [onMostrarMensaje]);
+    }, [avisarRef]);
 
     // ========================================================
     // CARGAR INFORMACIÓN COMPLETA DEL CLIENTE
@@ -158,10 +291,6 @@ function ClienteEditarModal({
         const cargarClienteCompleto = async () => {
 
             if (!cliente?.CustomerID) {
-
-                setClienteCompleto(null);
-                setCargandoCliente(false);
-
                 return;
             }
 
@@ -171,15 +300,7 @@ function ClienteEditarModal({
 
                 setCampoActivo(null);
 
-                console.log(
-                    'Cliente recibido para editar:',
-                    cliente
-                );
 
-                console.log(
-                    'Obteniendo información completa del cliente:',
-                    cliente.CustomerID
-                );
 
                 // Obtenemos todos los datos del cliente
                 // utilizando su CustomerID.
@@ -187,10 +308,6 @@ function ClienteEditarModal({
                     cliente.CustomerID
                 );
 
-                console.log(
-                    'Cliente completo recibido:',
-                    data
-                );
 
                 // Dependiendo de cómo responda el backend,
                 // puede venir como objeto o como arreglo.
@@ -206,7 +323,9 @@ function ClienteEditarModal({
 
                 }
 
-                setClienteCompleto(datosCliente);
+                setCampoActivo(null);
+                setFormulario(formularioDesdeCliente(datosCliente));
+                setDatosListos(true);
 
             } catch (error) {
 
@@ -215,11 +334,10 @@ function ClienteEditarModal({
                     error
                 );
 
-                setClienteCompleto(null);
 
-                if (onMostrarMensaje) {
+                if (avisarRef.current) {
 
-                    onMostrarMensaje({
+                    avisarRef.current({
                         tipo: 'error',
                         titulo: 'No se pudo cargar el cliente',
                         mensaje:
@@ -238,215 +356,7 @@ function ClienteEditarModal({
 
         cargarClienteCompleto();
 
-    }, [cliente, onMostrarMensaje]);
-
-    // ========================================================
-    // BUSCAR ID DE UNA OPCIÓN POR SU NOMBRE
-    // ========================================================
-
-    const buscarID = (lista, nombre) => {
-
-        if (!nombre || !Array.isArray(lista)) {
-
-            return '';
-
-        }
-
-        const nombreBuscado = String(nombre)
-            .trim()
-            .toLowerCase();
-
-        const encontrado = lista.find((item) => {
-
-            const nombreItem = String(
-                item.Nombre ??
-                item.Nombre_Categoria ??
-                item.Nombre_Grupo ??
-                item.Nombre_Contacto ??
-                item.Nombre_Cliente ??
-                item.Nombre_Metodo ??
-                item.Nombre_Ciudad ??
-                ''
-            )
-                .trim()
-                .toLowerCase();
-
-            return nombreItem === nombreBuscado;
-
-        });
-
-        return encontrado?.ID != null
-            ? String(encontrado.ID)
-            : '';
-    };
-
-    // ========================================================
-    // CARGAR LOS DATOS DEL CLIENTE EN EL FORMULARIO
-    // ========================================================
-
-    useEffect(() => {
-
-        if (!clienteCompleto) {
-
-            return;
-
-        }
-
-        console.log(
-            'Cargando datos del cliente en el formulario:',
-            clienteCompleto
-        );
-
-        setCampoActivo(null);
-
-        // ----------------------------------------------------
-        // OBTENER LOS IDS
-        // ----------------------------------------------------
-
-        const categoriaID =
-            clienteCompleto.Categoria_ID != null
-                ? String(clienteCompleto.Categoria_ID)
-                : buscarID(
-                    opciones.categorias,
-                    clienteCompleto.Categoria
-                );
-
-        const grupoCompraID =
-            clienteCompleto.Grupo_Compra_ID != null
-                ? String(clienteCompleto.Grupo_Compra_ID)
-                : buscarID(
-                    opciones.gruposCompra,
-                    clienteCompleto.Grupo_Compra
-                );
-
-        const contactoPrimarioID =
-            clienteCompleto.Contacto_Primario_ID != null
-                ? String(clienteCompleto.Contacto_Primario_ID)
-                : buscarID(
-                    opciones.contactos,
-                    clienteCompleto.Contacto_Primario
-                );
-
-        const contactoAlternativoID =
-            clienteCompleto.Contacto_Alternativo_ID != null
-                ? String(clienteCompleto.Contacto_Alternativo_ID)
-                : buscarID(
-                    opciones.contactos,
-                    clienteCompleto.Contacto_Alternativo
-                );
-
-        const clienteFacturarID =
-            clienteCompleto.Cliente_Por_Facturar_ID != null
-                ? String(clienteCompleto.Cliente_Por_Facturar_ID)
-                : buscarID(
-                    opciones.clientes,
-                    clienteCompleto.Cliente_Por_Facturar
-                );
-
-        const metodoEntregaID =
-            clienteCompleto.Metodo_Entrega_ID != null
-                ? String(clienteCompleto.Metodo_Entrega_ID)
-                : buscarID(
-                    opciones.metodosEntrega,
-                    clienteCompleto.Metodo_Entrega
-                );
-
-        const ciudadEntregaID =
-            clienteCompleto.Ciudad_Entrega_ID != null
-                ? String(clienteCompleto.Ciudad_Entrega_ID)
-                : buscarID(
-                    opciones.ciudades,
-                    clienteCompleto.Ciudad_Entrega
-                );
-
-        // ----------------------------------------------------
-        // CARGAR TODO EL FORMULARIO
-        // ----------------------------------------------------
-
-        setFormulario({
-
-            Nombre:
-                clienteCompleto.Nombre_Cliente ??
-                clienteCompleto.Nombre ??
-                '',
-
-            CategoriaID:
-                categoriaID,
-
-            GrupoCompraID:
-                grupoCompraID,
-
-            ContactoPrimarioID:
-                contactoPrimarioID,
-
-            ContactoAlternativoID:
-                contactoAlternativoID,
-
-            ClienteFacturarID:
-                clienteFacturarID,
-
-            MetodoEntregaID:
-                metodoEntregaID,
-
-            CiudadEntregaID:
-                ciudadEntregaID,
-
-            LimiteCredito:
-                clienteCompleto.Limite_Credito ??
-                clienteCompleto.LimiteCredito ??
-                '',
-
-            Descuento:
-                clienteCompleto.Descuento ??
-                '0',
-
-            DiasGracia:
-                clienteCompleto.Dias_De_Gracia ??
-                clienteCompleto.DiasGracia ??
-                '7',
-
-            Telefono:
-                clienteCompleto.Telefono ??
-                '',
-
-            Fax:
-                clienteCompleto.Fax ??
-                '',
-
-            SitioWeb:
-                clienteCompleto.Sitio_Web ??
-                clienteCompleto.SitioWeb ??
-                '',
-
-            DireccionEntrega1:
-                clienteCompleto.Direccion_Entrega1 ??
-                '',
-
-            DireccionEntrega2:
-                clienteCompleto.Direccion_Entrega2 ??
-                '',
-
-            CodigoPostal:
-                clienteCompleto.Codigo_Postal ??
-                '',
-
-            DireccionPostal1:
-                clienteCompleto.Direccion_Postal1 ??
-                '',
-
-            DireccionPostal2:
-                clienteCompleto.Direccion_Postal2 ??
-                '',
-
-            UsuarioID: 1
-
-        });
-
-    // PY2: solo depende de los datos del cliente. Antes también dependía de las
-        // listas: cuando llegaban, el formulario se volvía a llenar y se perdía lo que
-        // el usuario ya había cambiado. SP_Clientes_Detalle ya trae todos los IDs.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [clienteCompleto]);
+    }, [cliente, avisarRef]);
 
     // ========================================================
     // CAMBIAR CAMPO
@@ -910,10 +820,6 @@ function ClienteEditarModal({
 
             };
 
-            console.log(
-                'Datos enviados para actualizar:',
-                datos
-            );
 
             const data =
                 await actualizarCliente(
@@ -1002,7 +908,7 @@ function ClienteEditarModal({
     // SI NO SE PUDO CARGAR EL CLIENTE
     // ========================================================
 
-    if (!clienteCompleto) {
+    if (!datosListos) {
 
         return null;
 

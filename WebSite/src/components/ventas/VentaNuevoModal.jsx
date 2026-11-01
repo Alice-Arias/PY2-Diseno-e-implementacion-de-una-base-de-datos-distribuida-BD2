@@ -5,6 +5,7 @@
 import { X, ShoppingCart, Save, Loader2 } from 'lucide-react';
 
 import { useEffect, useState } from 'react';
+import useUltimo from '../../hooks/useUltimo';
 
 import {
     insertarVenta,
@@ -25,6 +26,9 @@ function VentaNuevoModal({
     onVentaCreada,
     onMostrarMensaje
 }) {
+
+    // Versiones actuales de las funciones del padre (ver hooks/useUltimo.js).
+    const avisarRef = useUltimo(onMostrarMensaje);
 
     const [formulario, setFormulario] = useState(FORMULARIO_VACIO);
 
@@ -55,8 +59,8 @@ function VentaNuevoModal({
 
                 console.error(error);
 
-                if (onMostrarMensaje) {
-                    onMostrarMensaje({
+                if (avisarRef.current) {
+                    avisarRef.current({
                         tipo: 'error',
                         titulo: 'No se pudieron cargar las opciones',
                         mensaje: error.message
@@ -73,7 +77,7 @@ function VentaNuevoModal({
         cargarOpciones();
 
 
-    }, []);
+    }, [avisarRef]);
 
 
     const cambiarCampo = (e) => {

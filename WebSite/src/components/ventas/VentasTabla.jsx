@@ -1,10 +1,11 @@
 
-import { Eye, Pencil, Trash2 } from 'lucide-react';
+import { Eye, Pencil } from 'lucide-react';
 
 import './ventas.css';
 
 
-function VentasTabla({ ventas, onVerUna, onEditar, onEliminar }) {
+// PY2: sin botón Eliminar; las facturas no se eliminan (ver README, objetivos no alcanzados).
+function VentasTabla({ ventas, onVerUna, onEditar }) {
 
     const formatearFecha = (fecha) => {
 

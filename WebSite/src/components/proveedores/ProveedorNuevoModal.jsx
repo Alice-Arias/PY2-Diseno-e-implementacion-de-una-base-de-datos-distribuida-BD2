@@ -5,6 +5,7 @@
 import { X, Truck, Save, Loader2 } from 'lucide-react';
 
 import { useEffect, useState } from 'react';
+import useUltimo from '../../hooks/useUltimo';
 
 
 import {
@@ -27,6 +28,9 @@ function ProveedorNuevoModal({
     onProveedorCreado,
     onMostrarMensaje
 }) {
+
+    // Versiones actuales de las funciones del padre (ver hooks/useUltimo.js).
+    const avisarRef = useUltimo(onMostrarMensaje);
 
     // ========================================================
     // ESTADO
@@ -66,8 +70,8 @@ function ProveedorNuevoModal({
 
                 console.error(error);
 
-                if (onMostrarMensaje) {
-                    onMostrarMensaje({
+                if (avisarRef.current) {
+                    avisarRef.current({
                         tipo: 'error',
                         titulo: 'No se pudieron cargar las opciones',
                         mensaje: error.message
@@ -84,7 +88,7 @@ function ProveedorNuevoModal({
         cargarOpciones();
 
      
-    }, []);
+    }, [avisarRef]);
 
 
     const cambiarCampo = (e) => {

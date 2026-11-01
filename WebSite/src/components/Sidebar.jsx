@@ -17,15 +17,14 @@
 *
 * RESTRICCIONES: Requiere que existan los estilos de las clases sidebar, logo, nav-item
 * y active. Los ids de las opciones deben coincidir con los que reconoce App.jsx para
-* navegar. La opcion Inicio esta comentada y no se muestra. El icono Home se importa
-* pero no se usa mientras esa opcion siga comentada, por lo que se podria eliminar.
+* navegar. La opcion Inicio esta comentada y no se muestra. (PY2: se quitó el import
+* de Home, que no se usaba; si se activa Inicio hay que volver a importarlo.)
 *
 * OBJETIVO: Permitir al usuario navegar entre los modulos de la aplicacion.
 *
 *---------------------------------------------------------------------------------------*/
 
 import {
-  Home,
   Users,
   Truck,
   Package,

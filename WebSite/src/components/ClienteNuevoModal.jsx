@@ -52,6 +52,7 @@ import {
 
 
 import { useEffect, useState } from 'react';
+import useUltimo from '../hooks/useUltimo';
 
 
 import {
@@ -65,6 +66,9 @@ function ClienteNuevoModal({
     onClienteCreado,
     onMostrarMensaje
 }) {
+
+    // Versión actual de onMostrarMensaje (ver hooks/useUltimo.js).
+    const avisarRef = useUltimo(onMostrarMensaje);
 
     // ========================================================
     // DATOS DEL FORMULARIO
@@ -156,9 +160,9 @@ function ClienteNuevoModal({
 
                 console.error(error);
 
-                if (onMostrarMensaje) {
+                if (avisarRef.current) {
 
-                    onMostrarMensaje({
+                    avisarRef.current({
                         tipo: 'error',
                         titulo: 'No se pudieron cargar las opciones',
                         mensaje: error.message
@@ -175,7 +179,7 @@ function ClienteNuevoModal({
 
         cargarOpciones();
 
-    }, [onMostrarMensaje]);
+    }, [avisarRef]);
 
     /*-----------------------------------------------------------------------------------*
     *

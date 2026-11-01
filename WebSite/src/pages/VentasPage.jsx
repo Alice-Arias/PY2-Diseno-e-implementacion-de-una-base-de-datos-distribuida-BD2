@@ -21,7 +21,6 @@ import VentasTabla from '../components/ventas/VentasTabla';
 import VentaDetalleModal from '../components/ventas/VentaDetalleModal';
 import VentaNuevoModal from '../components/ventas/VentaNuevoModal';
 import VentaEditarModal from '../components/ventas/VentaEditarModal';
-import VentaEliminarModal from '../components/ventas/VentaEliminarModal';
 import StatCard from '../components/StatCard';
 import Paginacion from '../components/Paginacion';
 import useListadoServidor from '../hooks/useListadoServidor';
@@ -31,14 +30,18 @@ import { listarVentas, obtenerDetalleVenta, obtenerOpcionesVentas } from '../ser
 const POR_PAGINA = 10;
 
 function VentasPage() {
-    const listado = useListadoServidor(listarVentas, { porPagina: POR_PAGINA });
+    const [mensaje, setMensaje] = useState(null);
+
+    const listado = useListadoServidor(listarVentas, {
+        porPagina: POR_PAGINA,
+        alFallar: () =>
+            setMensaje({ tipo: 'error', titulo: 'Error', mensaje: 'Ocurrió un error al buscar las ventas.' })
+    });
 
     const [metodosEntrega, setMetodosEntrega] = useState([]);
     const [ventaDetalle, setVentaDetalle] = useState(null);
     const [mostrarNuevo, setMostrarNuevo] = useState(false);
     const [ventaEditar, setVentaEditar] = useState(null);
-    const [ventaEliminar, setVentaEliminar] = useState(null);
-    const [mensaje, setMensaje] = useState(null);
 
     useEffect(() => {
         obtenerOpcionesVentas()
@@ -46,11 +49,6 @@ function VentasPage() {
             .catch((err) => console.error(err));
     }, []);
 
-    useEffect(() => {
-        if (listado.error) {
-            setMensaje({ tipo: 'error', titulo: 'Error', mensaje: 'Ocurrió un error al buscar las ventas.' });
-        }
-    }, [listado.error]);
 
     const verDetalle = async (invoiceId) => {
         try {
@@ -86,11 +84,6 @@ function VentasPage() {
         setMensaje({ tipo: 'exito', titulo: 'Venta actualizada', mensaje: 'La venta se actualizó correctamente.' });
     };
 
-    const ventaEliminada = async () => {
-        setVentaEliminar(null);
-        listado.recargar();
-        setMensaje({ tipo: 'exito', titulo: 'Venta eliminada', mensaje: 'La venta se eliminó correctamente.' });
-    };
 
     const info = listado.paginacion;
     const montoTotal = Number(info.Monto_Total || 0).toLocaleString('es-CR', {
@@ -137,7 +130,6 @@ function VentasPage() {
                         ventas={listado.filas}
                         onVerUna={verDetalle}
                         onEditar={setVentaEditar}
-                        onEliminar={setVentaEliminar}
                     />
                 </div>
 
@@ -167,14 +159,6 @@ function VentasPage() {
                     onCerrar={() => setVentaEditar(null)}
                     onVentaActualizada={ventaActualizada}
                     onMostrarMensaje={setMensaje}
-                />
-            )}
-
-            {ventaEliminar && (
-                <VentaEliminarModal
-                    venta={ventaEliminar}
-                    onCerrar={() => setVentaEliminar(null)}
-                    onEliminado={ventaEliminada}
                 />
             )}
 

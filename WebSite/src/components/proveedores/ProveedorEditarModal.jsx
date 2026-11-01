@@ -5,6 +5,7 @@
 import { X, Pencil, Save, Loader2 } from 'lucide-react';
 
 import { useEffect, useState } from 'react';
+import useUltimo from '../../hooks/useUltimo';
 
 import {
     actualizarProveedor,
@@ -29,6 +30,10 @@ function ProveedorEditarModal({
     onMostrarMensaje
 }) {
 
+    // Versiones actuales de las funciones del padre (ver hooks/useUltimo.js).
+    const avisarRef = useUltimo(onMostrarMensaje);
+    const cerrarRef = useUltimo(onCerrar);
+
     // ========================================================
     // ESTADO
     // ========================================================
@@ -46,7 +51,7 @@ function ProveedorEditarModal({
     const [cargandoOpciones, setCargandoOpciones] = useState(true);
 
     // true mientras llegan los datos completos del proveedor.
-    const [cargandoProveedor, setCargandoProveedor] = useState(true);
+    const [cargandoProveedor, setCargandoProveedor] = useState(() => Boolean(proveedor?.SupplierID));
 
     const [guardando, setGuardando] = useState(false);
 
@@ -74,8 +79,8 @@ function ProveedorEditarModal({
 
                 console.error(error);
 
-                if (onMostrarMensaje) {
-                    onMostrarMensaje({
+                if (avisarRef.current) {
+                    avisarRef.current({
                         tipo: 'error',
                         titulo: 'No se pudieron cargar las opciones',
                         mensaje: error.message
@@ -92,7 +97,7 @@ function ProveedorEditarModal({
         cargarOpciones();
 
 
-    }, []);
+    }, [avisarRef]);
 
 
 
@@ -101,7 +106,6 @@ function ProveedorEditarModal({
     useEffect(() => {
 
         if (!supplierID) {
-            setCargandoProveedor(false);
             return;
         }
 
@@ -136,8 +140,8 @@ function ProveedorEditarModal({
 
                 if (!cancelado) {
 
-                    if (onMostrarMensaje) {
-                        onMostrarMensaje({
+                    if (avisarRef.current) {
+                        avisarRef.current({
                             tipo: 'error',
                             titulo: 'No se pudo cargar el proveedor',
                             mensaje:
@@ -147,7 +151,7 @@ function ProveedorEditarModal({
                     }
 
                     // Sin datos no se puede editar: cerramos el modal.
-                    onCerrar();
+                    cerrarRef.current?.();
                 }
 
             } finally {
@@ -166,7 +170,7 @@ function ProveedorEditarModal({
         };
 
 
-    }, [supplierID]);
+    }, [supplierID, avisarRef, cerrarRef]);
 
 
     // ========================================================

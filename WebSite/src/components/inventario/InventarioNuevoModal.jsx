@@ -13,12 +13,15 @@
 
 import { X, PackagePlus, Save, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import useUltimo from '../../hooks/useUltimo';
 
 import { insertarInventario, obtenerOpcionesInventario } from '../../services/api';
 import InventarioFormulario from './InventarioFormulario';
 import { FORMULARIO_VACIO, validarInventario, armarDatos } from './utilsInventario';
 
 function InventarioNuevoModal({ onCerrar, onInventarioCreado, onMostrarMensaje }) {
+    // Versión actual de onMostrarMensaje (ver hooks/useUltimo.js).
+    const avisarRef = useUltimo(onMostrarMensaje);
     const [formulario, setFormulario] = useState(FORMULARIO_VACIO);
     const [opciones, setOpciones] = useState({ proveedores: [], colores: [], tiposPaquete: [], grupos: [] });
     const [cargandoOpciones, setCargandoOpciones] = useState(true);
@@ -36,15 +39,14 @@ function InventarioNuevoModal({ onCerrar, onInventarioCreado, onMostrarMensaje }
             )
             .catch((error) => {
                 console.error(error);
-                onMostrarMensaje?.({
+                avisarRef.current?.({
                     tipo: 'error',
                     titulo: 'No se pudieron cargar las opciones',
                     mensaje: error.message
                 });
             })
             .finally(() => setCargandoOpciones(false));
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [avisarRef]);
 
     const cambiarCampo = (e) => {
         const { name, value, type, checked } = e.target;
