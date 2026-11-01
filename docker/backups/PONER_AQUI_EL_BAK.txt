@@ -1,0 +1,5 @@
+Copie aquí el archivo WideWorldImporters-Full.bak
+(el mismo que usaron en el Proyecto 1, o descárguelo de los "releases" del repositorio
+microsoft/sql-server-samples en GitHub, sección wide-world-importers-v1.0).
+
+No lo suba a GitHub: pesa ~120 MB y ya está excluido en el .gitignore.
