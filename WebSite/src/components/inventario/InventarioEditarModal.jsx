@@ -41,7 +41,8 @@ function InventarioEditarModal({
     const [opciones, setOpciones] = useState({
         proveedores: [],
         colores: [],
-        tiposPaquete: []
+        tiposPaquete: [],
+        grupos: []
     });
 
 
@@ -74,7 +75,9 @@ function InventarioEditarModal({
                         data.colores || [],
 
                     tiposPaquete:
-                        data.tiposPaquete || []
+                        data.tiposPaquete || [],
+                    grupos:
+                        data.grupos || []
 
                 });
 

@@ -70,9 +70,8 @@ router.get('/opciones', async (req, res) => {
             metodosEntrega: result.recordsets[1],
             contactos: result.recordsets[2],
             vendedores: result.recordsets[3],
-            pedidos: result.recordsets[4],
-            productos: result.recordsets[5],
-            tiposPaquete: result.recordsets[6]
+            productos: result.recordsets[4],
+            tiposPaquete: result.recordsets[5]
         });
 
     } catch (err) {
@@ -109,89 +108,36 @@ router.get('/opciones', async (req, res) => {
 *
 *-----------------------------------------------------------------------------------------*/
 
+const num = (v) => (v === undefined || v === null || v === '' ? null : Number(v));
+const txt = (v) => (v === undefined || v === null || String(v).trim() === '' ? null : String(v).trim());
+
+/*---------------------------------------------------------------------------------------*
+* CORREGIDO PY2: GET / -> recibe pagina y tamano; SQL devuelve solo esa página.
+* Respuesta: { datos: [...], paginacion: { Total_Registros, Pagina, Total_Paginas, ... } }
+*-----------------------------------------------------------------------------------------*/
 router.get('/', async (req, res) => {
-
     try {
-
-        /* Obtiene los filtros enviados desde el frontend. */
-        const {
-            numeroFactura,
-            fechaInicio,
-            fechaFin,
-            cliente,
-            metodoEntrega,
-            montoInicio,
-            montoFin
-        } = req.query;
-
-        /* Obtiene la conexión con SQL Server. */
+        const q = req.query;
         const pool = await poolPromise;
+        const result = await pool.request()
+            .input('NumeroFactura', sql.Int, num(q.numeroFactura))
+            .input('FechaInicio', sql.Date, txt(q.fechaInicio))
+            .input('FechaFin', sql.Date, txt(q.fechaFin))
+            .input('Cliente', sql.NVarChar(100), txt(q.cliente))
+            .input('DeliveryMethod', sql.NVarChar(50), txt(q.metodoEntrega))
+            .input('MontoInicio', sql.Decimal(18, 2), num(q.montoInicio))
+            .input('MontoFin', sql.Decimal(18, 2), num(q.montoFin))
+            .input('Pagina', sql.Int, num(q.pagina) ?? 1)
+            .input('TamanoPagina', sql.Int, num(q.tamano) ?? 10)
+            .execute('SP_Ventas_Listar');
 
-        /* Crea la solicitud para ejecutar el procedimiento almacenado. */
-        const request = pool.request();
-
-        request.input(
-            'NumeroFactura',
-            sql.Int,
-            numeroFactura !== undefined && numeroFactura !== ''
-                ? Number(numeroFactura)
-                : null
-        );
-
-        request.input(
-            'FechaInicio',
-            sql.Date,
-            fechaInicio || null
-        );
-
-        request.input(
-            'FechaFin',
-            sql.Date,
-            fechaFin || null
-        );
-
-        request.input(
-            'Cliente',
-            sql.NVarChar(100),
-            cliente || null
-        );
-
-        request.input(
-            'DeliveryMethod',
-            sql.NVarChar(50),
-            metodoEntrega || null
-        );
-
-        request.input(
-            'MontoInicio',
-            sql.Decimal(18, 2),
-            montoInicio !== undefined && montoInicio !== ''
-                ? Number(montoInicio)
-                : null
-        );
-
-        request.input(
-            'MontoFin',
-            sql.Decimal(18, 2),
-            montoFin !== undefined && montoFin !== ''
-                ? Number(montoFin)
-                : null
-        );
-
-        /* Ejecuta el procedimiento almacenado para listar las ventas. */
-        const result = await request.execute(
-            'SP_Ventas_Listar'
-        );
-
-        res.json(result.recordset);
-
-    } catch (err) {
-
-        console.error(err);
-
-        res.status(500).json({
-            error: 'Error al listar las ventas'
+        res.json({
+            datos: result.recordsets[0],
+            paginacion: result.recordsets[1][0]
         });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Error al listar las ventas' });
     }
 });
 

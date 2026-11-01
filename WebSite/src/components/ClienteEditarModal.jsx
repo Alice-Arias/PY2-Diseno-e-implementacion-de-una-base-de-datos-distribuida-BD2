@@ -20,6 +20,7 @@ import {
     obtenerOpcionesClientes,
     obtenerDetalleClientes
 } from '../services/api';
+import BuscadorCiudad from './BuscadorCiudad';
 
 function ClienteEditarModal({
     cliente,
@@ -441,15 +442,11 @@ function ClienteEditarModal({
 
         });
 
-    }, [
-        clienteCompleto,
-        opciones.categorias,
-        opciones.gruposCompra,
-        opciones.contactos,
-        opciones.clientes,
-        opciones.metodosEntrega,
-        opciones.ciudades
-    ]);
+    // PY2: solo depende de los datos del cliente. Antes también dependía de las
+        // listas: cuando llegaban, el formulario se volvía a llenar y se perdía lo que
+        // el usuario ya había cambiado. SP_Clientes_Detalle ya trae todos los IDs.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [clienteCompleto]);
 
     // ========================================================
     // CAMBIAR CAMPO
@@ -1424,49 +1421,16 @@ function ClienteEditarModal({
 
                             {/* CIUDAD */}
 
-                            <div
+                            {/* PY2: buscador; muestra la ciudad ORIGINAL y se puede cambiar */}
+                            <BuscadorCiudad
+                                name="CiudadEntregaID"
+                                etiqueta="Ciudad de entrega"
+                                value={formulario.CiudadEntregaID}
+                                onCambiar={cambiarCampo}
+                                onFocus={() => seleccionarCampo('CiudadEntregaID')}
                                 className={`campo ${claseCampo('CiudadEntregaID')}`}
-                            >
-
-                                <label>
-                                    Ciudad de entrega
-                                </label>
-
-                                <select
-                                    name="CiudadEntregaID"
-                                    value={formulario.CiudadEntregaID}
-                                    onChange={cambiarCampo}
-                                    onFocus={() =>
-                                        seleccionarCampo('CiudadEntregaID')
-                                    }
-                                    required
-                                    disabled={cargandoOpciones}
-                                >
-
-                                    <option value="">
-
-                                        {cargandoOpciones
-                                            ? 'Cargando ciudades...'
-                                            : 'Seleccione una ciudad'}
-
-                                    </option>
-
-                                    {opciones.ciudades.map(
-                                        (ciudad) => (
-
-                                            <option
-                                                key={ciudad.ID}
-                                                value={String(ciudad.ID)}
-                                            >
-                                                {ciudad.Nombre}
-                                            </option>
-
-                                        )
-                                    )}
-
-                                </select>
-
-                            </div>
+                                requerido
+                            />
 
                             {/* TELÉFONO */}
 

@@ -84,6 +84,7 @@ const proveedoresRoutes = require('./routes/proveedores.routes');
 const inventarioRoutes = require('./routes/inventario.routes');
 const ventasRoutes = require('./routes/ventas.routes');
 const reportesRoutes = require('./routes/reportes.routes');
+const ciudadesRoutes = require('./routes/ciudades.routes'); // PY2: buscador de ciudades
 
 
 /*---------------------------------------------------------------------------------------*
@@ -226,6 +227,9 @@ app.use('/api/inventarios', inventarioRoutes);
 app.use('/api/ventas', ventasRoutes);
 
 app.use('/api/reportes', reportesRoutes);
+
+// PY2: búsqueda de ciudades para los formularios (SP_Ciudades_Buscar)
+app.use('/api/ciudades', ciudadesRoutes);
 
 
 /*---------------------------------------------------------------------------------------*

@@ -15,7 +15,8 @@ import {
     formularioDesdeDetalle,
     formulariosDesdeDetalle,
     validarVenta,
-    armarDatos
+    armarDatos,
+    encabezadoDesde
 } from './utilsVentas';
 
 
@@ -327,7 +328,8 @@ function VentaEditarModal({
 
         for (let i = 0; i < lineas.length; i++) {
 
-            const errorLinea = validarVenta(lineas[i]);
+            // PY2: se valida la línea con el encabezado ACTUAL del formulario.
+            const errorLinea = validarVenta({ ...lineas[i], ...encabezadoDesde(formulario) });
 
 
             if (errorLinea) {
@@ -379,7 +381,9 @@ function VentaEditarModal({
 
             for (const linea of lineas) {
 
-                const datos = armarDatos(linea);
+                // PY2 (corrección método de entrega): cada línea se envía con el
+                // encabezado actual del formulario, no con la copia vieja.
+                const datos = armarDatos({ ...linea, ...encabezadoDesde(formulario) });
 
 
                 ultimaRespuesta = await actualizarVenta(

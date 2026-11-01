@@ -58,6 +58,7 @@ import {
     insertarCliente,
     obtenerOpcionesClientes
 } from '../services/api';
+import BuscadorCiudad from './BuscadorCiudad';
 
 function ClienteNuevoModal({
     onCerrar,
@@ -672,44 +673,14 @@ function ClienteNuevoModal({
 
                             {/* Ciudad */}
 
-                            <div className="campo">
-
-                                <label>
-                                    Ciudad de entrega
-                                </label>
-
-                                <select
-                                    name="CiudadEntregaID"
-                                    value={formulario.CiudadEntregaID}
-                                    onChange={cambiarCampo}
-                                    required
-                                    disabled={cargandoOpciones}
-                                >
-
-                                    <option value="">
-
-                                        {cargandoOpciones
-                                            ? 'Cargando ciudades...'
-                                            : 'Seleccione una ciudad'}
-
-                                    </option>
-
-                                    {opciones.ciudades.map(
-                                        (ciudad) => (
-
-                                            <option
-                                                key={ciudad.ID}
-                                                value={ciudad.ID}
-                                            >
-                                                {ciudad.Nombre}
-                                            </option>
-
-                                        )
-                                    )}
-
-                                </select>
-
-                            </div>
+                            {/* PY2: buscador en lugar de un select con ~38 000 ciudades */}
+                            <BuscadorCiudad
+                                name="CiudadEntregaID"
+                                etiqueta="Ciudad de entrega"
+                                value={formulario.CiudadEntregaID}
+                                onCambiar={cambiarCampo}
+                                requerido
+                            />
 
                             {/* Telefono */}
 

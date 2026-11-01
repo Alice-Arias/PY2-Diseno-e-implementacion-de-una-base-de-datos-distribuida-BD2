@@ -36,6 +36,10 @@ export async function listarClientes(filtros = {}) {
     params.append('metodoEntrega', filtros.metodoEntrega);
   }
 
+  // PY2: la paginación la hace SQL Server; se pide solo la página actual.
+  params.append('pagina', filtros.pagina ?? 1);
+  params.append('tamano', filtros.tamano ?? 10);
+
   const res = await fetch(
     `${API_URL}/clientes?${params.toString()}`
   );
@@ -175,7 +179,7 @@ RESTRICCIONES: Requiere conexión con la API y la base de datos.
 OBJETIVO: Llenar los campos de selección al agregar o modificar.
 -------------------------------------------------------------------------------------------------------------------*/
 
-export async function obtenerOpcionesClientes() {
+async function cargar_obtenerOpcionesClientes() {
 
   const res = await fetch(`${API_URL}/clientes/opciones`);
 
@@ -220,6 +224,10 @@ export async function listarProveedores(filtros = {}) {
   if (filtros.metodoEntrega) {
     params.append('metodoEntrega', filtros.metodoEntrega);
   }
+
+  // PY2: la paginación la hace SQL Server; se pide solo la página actual.
+  params.append('pagina', filtros.pagina ?? 1);
+  params.append('tamano', filtros.tamano ?? 10);
 
   const res = await fetch(
     `${API_URL}/proveedores?${params.toString()}`
@@ -360,7 +368,7 @@ RESTRICCIONES: Requiere conexión con la API y la base de datos.
 OBJETIVO: Llenar los campos de selección al agregar o modificar.
 ---------------------------------------------------------------------------------------*/
 
-export async function obtenerOpcionesProveedores() {
+async function cargar_obtenerOpcionesProveedores() {
 
   const res = await fetch(`${API_URL}/proveedores/opciones`);
 
@@ -392,33 +400,23 @@ OBJETIVO: Llenar la tabla general del módulo de Inventario.
 ---------------------------------------------------------------------------------------------------------------------------------*/
 
 export async function listarInventarios(filtros = {}) {
-
   const params = new URLSearchParams();
 
-  if (filtros.nombre) {
-    params.append('nombre', filtros.nombre);
-  }
-
-  if (filtros.grupo) {
-    params.append('grupo', filtros.grupo);
-  }
-
+  if (filtros.nombre) params.append('nombre', filtros.nombre);
+  if (filtros.grupo) params.append('grupo', filtros.grupo);
   if (filtros.cantidad !== undefined && filtros.cantidad !== '') {
     params.append('cantidad', filtros.cantidad);
   }
+  params.append('pagina', filtros.pagina ?? 1);
+  params.append('tamano', filtros.tamano ?? 10);
 
-  const query = params.toString();
-
-  const res = await fetch(
-    `${API_URL}/inventarios${query ? `?${query}` : ''}`
-  );
+  const res = await fetch(`${API_URL}/inventarios?${params.toString()}`);
 
   if (!res.ok) {
     throw new Error('Error al obtener inventarios');
   }
 
   return res.json();
-
 }
 
 
@@ -548,7 +546,7 @@ RESTRICCIONES: Requiere conexión con la API y la base de datos.
 OBJETIVO: Llenar los campos de selección al agregar o modificar.
 ---------------------------------------------------------------------------*/
 
-export async function obtenerOpcionesInventario() {
+async function cargar_obtenerOpcionesInventario() {
 
   const res = await fetch(`${API_URL}/inventarios/opciones`);
 
@@ -610,6 +608,10 @@ export async function listarVentas(filtros = {}) {
   if (filtros.montoFin !== undefined && filtros.montoFin !== '') {
     params.append('montoFin', filtros.montoFin);
   }
+
+  // PY2: la paginación la hace SQL Server; se pide solo la página actual.
+  params.append('pagina', filtros.pagina ?? 1);
+  params.append('tamano', filtros.tamano ?? 10);
 
   const query = params.toString();
 
@@ -748,7 +750,7 @@ RESTRICCIONES: Requiere conexión con la API y la base de datos.
 OBJETIVO: Llenar los campos de selección al agregar o modificar.
 ---------------------------------------------------------------------------------------------------------*/
 
-export async function obtenerOpcionesVentas() {
+async function cargar_obtenerOpcionesVentas() {
 
   const res = await fetch(`${API_URL}/ventas/opciones`);
 
@@ -846,4 +848,86 @@ export async function ejecutarReporte(reporte, filtros = {}) {
   }
 
   return data;
+}
+
+
+/*---------------------------------------------------------------------------------------*
+* NUEVO PY2: funciones de resumen. Las estadísticas de las tarjetas y las listas de
+* los filtros se calculan en SQL Server (SP_*_Resumen), no en React.
+*-----------------------------------------------------------------------------------------*/
+async function obtenerResumen(modulo) {
+  const res = await fetch(`${API_URL}/${modulo}/resumen`);
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data.error || 'No se pudo obtener el resumen');
+  }
+  return data;
+}
+
+export const obtenerResumenClientes = () => obtenerResumen('clientes');
+export const obtenerResumenProveedores = () => obtenerResumen('proveedores');
+export const obtenerResumenInventario = () => obtenerResumen('inventarios');
+
+
+/*---------------------------------------------------------------------------------------*
+* NUEVO PY2: CACHÉ DE LAS LISTAS DE LOS FORMULARIOS
+*
+* Antes cada vez que se abría Agregar o Modificar se volvían a pedir al servidor
+* todas las listas (categorías, proveedores, contactos...). Ahora se piden UNA vez,
+* se guardan en memoria y los formularios abren al instante.
+*
+* La página precarga las listas al abrirse (precargarOpciones) y las limpia después
+* de crear / modificar / eliminar (limpiarCacheOpciones) para que no queden viejas.
+*-----------------------------------------------------------------------------------------*/
+const cacheOpciones = {};
+
+function conCache(clave, cargar) {
+  if (!cacheOpciones[clave]) {
+    cacheOpciones[clave] = cargar().catch((error) => {
+      delete cacheOpciones[clave]; // si falla, se reintenta la próxima vez
+      throw error;
+    });
+  }
+  return cacheOpciones[clave];
+}
+
+export function limpiarCacheOpciones() {
+  Object.keys(cacheOpciones).forEach((clave) => delete cacheOpciones[clave]);
+}
+
+export const obtenerOpcionesClientes = () => conCache('clientes', cargar_obtenerOpcionesClientes);
+export const obtenerOpcionesProveedores = () => conCache('proveedores', cargar_obtenerOpcionesProveedores);
+export const obtenerOpcionesInventario = () => conCache('inventario', cargar_obtenerOpcionesInventario);
+export const obtenerOpcionesVentas = () => conCache('ventas', cargar_obtenerOpcionesVentas);
+
+/* Se llama al abrir cada página: cuando el usuario presiona Agregar ya está cargado. */
+export function precargarOpciones(modulo) {
+  const cargadores = {
+    clientes: obtenerOpcionesClientes,
+    proveedores: obtenerOpcionesProveedores,
+    inventario: obtenerOpcionesInventario,
+    ventas: obtenerOpcionesVentas
+  };
+  cargadores[modulo]?.().catch(() => {});
+}
+
+/*---------------------------------------------------------------------------------------*
+* NUEVO PY2: CIUDADES (SP_Ciudades_Buscar)
+*-----------------------------------------------------------------------------------------*/
+export async function buscarCiudades(texto) {
+  const res = await fetch(`${API_URL}/ciudades?buscar=${encodeURIComponent(texto)}`);
+  if (!res.ok) throw new Error('No se pudieron buscar las ciudades');
+  return res.json();
+}
+
+const cacheCiudades = {};
+
+export async function obtenerCiudad(id) {
+  if (!id) return null;
+  if (!cacheCiudades[id]) {
+    const res = await fetch(`${API_URL}/ciudades/${id}`);
+    if (!res.ok) throw new Error('No se pudo obtener la ciudad');
+    cacheCiudades[id] = await res.json();
+  }
+  return cacheCiudades[id];
 }

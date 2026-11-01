@@ -268,8 +268,8 @@ router.get('/opciones', async (req, res) => {
         res.json({
             categorias: result.recordsets[0],
             contactos: result.recordsets[1],
-            metodosEntrega: result.recordsets[2],
-            ciudades: result.recordsets[3]
+            metodosEntrega: result.recordsets[2]
+            // PY2: las ciudades ya no se mandan completas; se buscan en /api/ciudades
         });
 
     } catch (err) {
@@ -305,55 +305,51 @@ router.get('/opciones', async (req, res) => {
 *
 *-----------------------------------------------------------------------------------------*/
 
-router.get('/', async (req, res) => {
+const num = (v) => (v === undefined || v === null || v === '' ? null : Number(v));
+const txt = (v) => (v === undefined || v === null || String(v).trim() === '' ? null : String(v).trim());
 
+/*---------------------------------------------------------------------------------------*
+* NUEVO PY2: GET /resumen -> estadísticas y listas de filtros calculadas en SQL (SP_Proveedores_Resumen).
+* Va antes de '/:id' para que Express no lo confunda con un ID.
+*-----------------------------------------------------------------------------------------*/
+router.get('/resumen', async (req, res) => {
     try {
-
-        /* Obtiene los filtros enviados desde el frontend. */
-        const {
-            nombre,
-            categoria,
-            metodoEntrega
-        } = req.query;
-
-        /* Obtiene la conexión con SQL Server. */
         const pool = await poolPromise;
-
-        /* Crea la solicitud para ejecutar el procedimiento almacenado. */
-        const request = pool.request();
-
-        request.input(
-            'Nombre',
-            sql.NVarChar(100),
-            nombre || null
-        );
-
-        request.input(
-            'Categoria',
-            sql.NVarChar(100),
-            categoria || null
-        );
-
-        request.input(
-            'MetodoEntrega',
-            sql.NVarChar(100),
-            metodoEntrega || null
-        );
-
-        /* Ejecuta el procedimiento almacenado para listar proveedores. */
-        const result = await request.execute(
-            'SP_Proveedores_Listar'
-        );
-
-        res.json(result.recordset);
-
-    } catch (err) {
-
-        console.error(err);
-
-        res.status(500).json({
-            error: 'Error al listar proveedores'
+        const result = await pool.request().execute('SP_Proveedores_Resumen');
+        res.json({
+            totales: result.recordsets[0][0],
+            categorias: result.recordsets[1],
+            metodos: result.recordsets[2]
         });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Error al obtener el resumen de proveedores' });
+    }
+});
+
+/*---------------------------------------------------------------------------------------*
+* CORREGIDO PY2: GET / -> recibe pagina y tamano; SQL devuelve solo esa página.
+* Respuesta: { datos: [...], paginacion: { Total_Registros, Pagina, Total_Paginas, ... } }
+*-----------------------------------------------------------------------------------------*/
+router.get('/', async (req, res) => {
+    try {
+        const q = req.query;
+        const pool = await poolPromise;
+        const result = await pool.request()
+            .input('Nombre', sql.NVarChar(100), txt(q.nombre))
+            .input('Categoria', sql.NVarChar(100), txt(q.categoria))
+            .input('MetodoEntrega', sql.NVarChar(100), txt(q.metodoEntrega))
+            .input('Pagina', sql.Int, num(q.pagina) ?? 1)
+            .input('TamanoPagina', sql.Int, num(q.tamano) ?? 10)
+            .execute('SP_Proveedores_Listar');
+
+        res.json({
+            datos: result.recordsets[0],
+            paginacion: result.recordsets[1][0]
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Error al listar proveedores' });
     }
 });
 
