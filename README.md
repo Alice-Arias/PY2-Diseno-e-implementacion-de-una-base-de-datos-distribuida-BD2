@@ -17,8 +17,8 @@
 | Dato | Detalle |
 |:---:|:---:|
 | **Profesor** | Cristian Paz Campos Agüero |
-| **Fecha de entrega** | 4 de octubre de 2026 |
-| **Hora de entrega** | 10:00 p. m. |
+| **Fecha de entrega** | 8 de noviembre de 2026 |
+| **Hora de entrega** | 11:00 p. m. |
 
 ### Integrantes
 
