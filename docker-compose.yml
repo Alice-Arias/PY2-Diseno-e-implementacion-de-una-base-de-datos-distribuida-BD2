@@ -1,0 +1,28 @@
+services:
+  sanjose:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    hostname: sanjose
+    container_name: sanjose
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "SanJose#2026Pass"
+      MSSQL_PID: "Developer"
+      MSSQL_AGENT_ENABLED: "true"
+    ports: ["1434:1433"]
+    extra_hosts: ["corporativo:${WINIP:?Use ./levantar.sh}"]
+    volumes: ["sanjose_data:/var/opt/mssql"]
+  limon:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    hostname: limon
+    container_name: limon
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Limon#2026Pass"
+      MSSQL_PID: "Developer"
+      MSSQL_AGENT_ENABLED: "true"
+    ports: ["1435:1433"]
+    extra_hosts: ["corporativo:${WINIP:?Use ./levantar.sh}"]
+    volumes: ["limon_data:/var/opt/mssql"]
+volumes:
+  sanjose_data:
+  limon_data:
