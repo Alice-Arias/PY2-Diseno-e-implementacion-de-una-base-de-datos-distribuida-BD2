@@ -543,3 +543,24 @@ export function armarDatos(f) {
             Number(f.TaxRate)
     };
 }
+
+
+/*---------------------------------------------------------------------------------------*
+* NOMBRE: encabezadoDesde (NUEVO PY2)
+*
+* DESCRIPCION: Devuelve solo los campos del ENCABEZADO de la factura (cliente,
+* método de entrega, fechas, personas, comentarios...), sin los campos de línea.
+*
+* POR QUÉ: en el modal de edición, los cambios del encabezado se guardan en
+* "formulario", pero al guardar se recorrían las "lineas", que tenían una copia
+* VIEJA del encabezado tomada al abrir el modal. Por eso el cambio de método de
+* entrega se perdía (observación del profesor). Ahora cada línea se envía con el
+* encabezado actual del formulario.
+*-----------------------------------------------------------------------------------------*/
+const CAMPOS_LINEA = ['StockItemID', 'Description', 'PackageTypeID', 'Quantity', 'UnitPrice', 'TaxRate'];
+
+export function encabezadoDesde(formulario) {
+    return Object.fromEntries(
+        Object.entries(formulario || {}).filter(([campo]) => !CAMPOS_LINEA.includes(campo))
+    );
+}

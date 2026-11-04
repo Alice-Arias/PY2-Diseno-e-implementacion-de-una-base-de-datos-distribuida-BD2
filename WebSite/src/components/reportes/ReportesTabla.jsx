@@ -16,6 +16,8 @@
 // Ejemplo: "Cantidad_Ventas" -> "Cantidad Ventas"
 // ============================================================
 
+import Paginacion from '../Paginacion';
+
 function tituloColumna(nombre) {
   return nombre
     .split('_')
@@ -172,16 +174,21 @@ function Celda({ valor, columna, tipo }) {
 // - onCambiarPagina: función para cambiar de página.
 // ============================================================
 
+/*
+ * PY2: "filas" ya es SOLO la página actual (SQL hizo la paginación).
+ * totalRegistros y totalPaginas también vienen de SQL.
+ */
 function ReportesTabla({
   filas,
   cargando,
   error,
   pagina,
   totalPaginas,
-  filasMostradas,
-  numerosPagina,
+  totalRegistros,
   onCambiarPagina
 }) {
+  const filasMostradas = filas;
+
 
   // ----------------------------------------------------------
   // COLUMNAS
@@ -210,7 +217,7 @@ function ReportesTabla({
 
       {/* CARGANDO / TABLA / SIN RESULTADOS */}
 
-      {cargando ? (
+      {cargando && filas.length === 0 ? (
         <p className="reportes-estado">Cargando reporte...</p>
       ) : filas.length ? (
         <div className="reportes-tabla-contenedor">
@@ -251,40 +258,17 @@ function ReportesTabla({
 
       {/* PAGINACIÓN */}
 
-      {!cargando && filas.length > 0 && (
-        <div className="reportes-paginacion">
-          <span>
-            Mostrando {(pagina - 1) * 10 + 1} - {Math.min(pagina * 10, filas.length)} de {filas.length} resultados
-          </span>
-          <div className="reportes-paginas">
-            <button
-              aria-label="Página anterior"
-              disabled={pagina === 1}
-              onClick={() => onCambiarPagina(pagina - 1)}
-              type="button"
-            >
-              ‹
-            </button>
-            {numerosPagina.map((numero) => (
-              <button
-                className={pagina === numero ? 'activo' : ''}
-                key={numero}
-                onClick={() => onCambiarPagina(numero)}
-                type="button"
-              >
-                {numero}
-              </button>
-            ))}
-            <button
-              aria-label="Página siguiente"
-              disabled={pagina === totalPaginas}
-              onClick={() => onCambiarPagina(pagina + 1)}
-              type="button"
-            >
-              ›
-            </button>
-          </div>
-        </div>
+      {filas.length > 0 && (
+        <Paginacion
+          pagina={pagina}
+          totalPaginas={totalPaginas}
+          totalRegistros={totalRegistros}
+          porPagina={10}
+          cargando={cargando}
+          onCambiar={onCambiarPagina}
+          claseContenedor="reportes-paginacion"
+          claseBotones="reportes-paginas"
+        />
       )}
 
     </>

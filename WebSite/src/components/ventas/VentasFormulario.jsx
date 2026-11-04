@@ -361,13 +361,15 @@ function VentasFormulario({
                         }
                     )}
 
-                    {selector(
+                    {/* PY2: antes era un select con ~73 000 pedidos (lento y sin texto).
+                        Ahora se escribe el número; el SP valida que exista. */}
+                    {entrada(
                         'OrderID',
-                        'Pedido relacionado',
-                        opciones.pedidos,
+                        'Pedido relacionado (número, opcional)',
                         {
-                            vacio:
-                                'Sin pedido relacionado'
+                            tipo: 'number',
+                            min: 1,
+                            placeholder: 'Ej: 1520'
                         }
                     )}
 

@@ -1,6 +1,7 @@
 
 import { X, Pencil, Save, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import useUltimo from '../../hooks/useUltimo';
 
 import {
     actualizarVenta,
@@ -15,7 +16,8 @@ import {
     formularioDesdeDetalle,
     formulariosDesdeDetalle,
     validarVenta,
-    armarDatos
+    armarDatos,
+    encabezadoDesde
 } from './utilsVentas';
 
 
@@ -25,6 +27,10 @@ function VentaEditarModal({
     onVentaActualizada,
     onMostrarMensaje
 }) {
+
+    // Versiones actuales de las funciones del padre (ver hooks/useUltimo.js).
+    const avisarRef = useUltimo(onMostrarMensaje);
+    const cerrarRef = useUltimo(onCerrar);
 
     // ========================================================
     // DATOS GENERALES DE LA FACTURA
@@ -50,7 +56,7 @@ function VentaEditarModal({
     });
 
     const [cargandoOpciones, setCargandoOpciones] = useState(true);
-    const [cargandoVenta, setCargandoVenta] = useState(true);
+    const [cargandoVenta, setCargandoVenta] = useState(() => Boolean(venta?.InvoiceID));
     const [guardando, setGuardando] = useState(false);
 
     const invoiceID = venta?.InvoiceID;
@@ -74,9 +80,9 @@ function VentaEditarModal({
 
                 console.error(error);
 
-                if (onMostrarMensaje) {
+                if (avisarRef.current) {
 
-                    onMostrarMensaje({
+                    avisarRef.current({
                         tipo: 'error',
                         titulo: 'No se pudieron cargar las opciones',
                         mensaje: error.message
@@ -94,7 +100,7 @@ function VentaEditarModal({
 
         cargarOpciones();
 
-    }, []);
+    }, [avisarRef]);
 
 
     // ========================================================
@@ -104,11 +110,7 @@ function VentaEditarModal({
     useEffect(() => {
 
         if (!invoiceID) {
-
-            setCargandoVenta(false);
-
             return;
-
         }
 
         let cancelado = false;
@@ -183,9 +185,9 @@ function VentaEditarModal({
 
                 if (!cancelado) {
 
-                    if (onMostrarMensaje) {
+                    if (avisarRef.current) {
 
-                        onMostrarMensaje({
+                        avisarRef.current({
                             tipo: 'error',
                             titulo: 'No se pudo cargar la venta',
                             mensaje:
@@ -195,7 +197,7 @@ function VentaEditarModal({
 
                     }
 
-                    onCerrar();
+                    cerrarRef.current?.();
 
                 }
 
@@ -222,7 +224,7 @@ function VentaEditarModal({
         };
 
        
-    }, [invoiceID]);
+    }, [invoiceID, avisarRef, cerrarRef]);
 
 
     // ========================================================
@@ -327,7 +329,8 @@ function VentaEditarModal({
 
         for (let i = 0; i < lineas.length; i++) {
 
-            const errorLinea = validarVenta(lineas[i]);
+            // PY2: se valida la línea con el encabezado ACTUAL del formulario.
+            const errorLinea = validarVenta({ ...lineas[i], ...encabezadoDesde(formulario) });
 
 
             if (errorLinea) {
@@ -379,7 +382,9 @@ function VentaEditarModal({
 
             for (const linea of lineas) {
 
-                const datos = armarDatos(linea);
+                // PY2 (corrección método de entrega): cada línea se envía con el
+                // encabezado actual del formulario, no con la copia vieja.
+                const datos = armarDatos({ ...linea, ...encabezadoDesde(formulario) });
 
 
                 ultimaRespuesta = await actualizarVenta(

@@ -51,10 +51,14 @@ function InventarioDetalleModal({
 }) {
 
     const [indiceActual, setIndiceActual] = useState(0);
-
-    useEffect(() => {
+    // PY2: cuando llega una lista nueva se vuelve al primero. Se ajusta durante el
+    // render (patrón recomendado por React) en vez de usar un useEffect, que
+    // provocaba un render extra con el índice viejo.
+    const [listaPrevia, setListaPrevia] = useState(inventarios);
+    if (inventarios !== listaPrevia) {
+        setListaPrevia(inventarios);
         setIndiceActual(0);
-    }, [inventarios]);
+    }
 
     useEffect(() => {
         const alPresionar = (e) => {

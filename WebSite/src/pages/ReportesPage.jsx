@@ -31,6 +31,7 @@
 // ============================================================
 
 import { useEffect, useState } from 'react';
+import useListadoServidor from '../hooks/useListadoServidor';
 
 // ============================================================
 // ICONOS
@@ -54,24 +55,8 @@ import '../components/reportes/reportes.css';
 import { ejecutarReporte, obtenerOpcionesReportes } from '../services/api';
 
 
-/*---------------------------------------------------------------------------------------*
-*
-* NOMBRE: POR_PAGINA
-*
-* DESCRIPCION: Constante que define la cantidad maxima de filas que se muestran por
-* pagina en la tabla de resultados.
-*
-* ENTRADA: Ninguna.
-*
-* SALIDA: Valor numerico 10.
-*
-* RESTRICCIONES: Debe ser un numero entero mayor que cero.
-*
-* OBJETIVO: Controlar el tamano de la paginacion de la tabla de reportes.
-*
-*---------------------------------------------------------------------------------------*/
 
-const POR_PAGINA = 10;
+
 
 
 /*---------------------------------------------------------------------------------------*
@@ -169,78 +154,20 @@ const OPCIONES_VACIAS = {
 
 
 /*---------------------------------------------------------------------------------------*
-*
-* NOMBRE: ES_ID
-*
-* DESCRIPCION: Expresion regular que reconoce las llaves de columnas que son
-* identificadores: la llave "id", las que empiezan con "ID_" (ID_Producto, ID_Cliente,
-* ID_Proveedor, ID_Categoria...) y las que terminan en "ID" (CustomerID, SupplierID,
-* StockItemID...).
-*
-* ENTRADA: Ninguna.
-*
-* SALIDA: Expresion regular.
-*
-* RESTRICCIONES: Distingue mayusculas para no ocultar columnas cuyo nombre termine en
-* "id" en minuscula como parte de una palabra normal.
-*
-* OBJETIVO: Identificar las columnas que no deben mostrarse al usuario.
-*
-*---------------------------------------------------------------------------------------*/
+* CORREGIDO PY2:
+*   - La paginación de los reportes la hace SQL Server (@Pagina en cada SP).
+*   - Ya no se filtran columnas ID en React: los SP ya no las devuelven.
+*   - El CSV pide al SP todas las filas (?exportar=1); el navegador solo arma
+*     el archivo con lo que SQL devolvió.
+*-----------------------------------------------------------------------------------------*/
 
-const ES_ID = /^id$|^ID_|ID$/;
+const POR_PAGINA_REPORTES = 10;
 
-
-/*---------------------------------------------------------------------------------------*
-*
-* NOMBRE: quitarIds
-*
-* DESCRIPCION: Elimina de cada fila las columnas que son identificadores segun ES_ID.
-*
-* ENTRADA: filas - arreglo de objetos devuelto por la API.
-*
-* SALIDA: Nuevo arreglo de objetos sin las columnas de identificadores.
-*
-* RESTRICCIONES: Si la API devuelve algo que no es un arreglo, retorna un arreglo vacio.
-*
-* OBJETIVO: Evitar que los identificadores se muestren en la tabla o se exporten al CSV.
-*
-*---------------------------------------------------------------------------------------*/
-
-function quitarIds(filas) {
-  if (!Array.isArray(filas)) return [];
-
-  return filas.map((fila) =>
-    Object.fromEntries(Object.entries(fila).filter(([llave]) => !ES_ID.test(llave)))
-  );
-}
-
-
-/*---------------------------------------------------------------------------------------*
-*
-* NOMBRE: descargarCSV
-*
-* DESCRIPCION: Convierte las filas del reporte en un archivo CSV y lo descarga. Usa como
-* columnas las llaves de la primera fila. La funcion interna escapar encierra cada valor
-* entre comillas y duplica las comillas internas para que el CSV no se rompa. El
-* caracter \uFEFF al inicio (BOM) permite que Excel muestre bien las tildes y la enie.
-* El nombre del archivo sale del titulo del reporte.
-*
-* ENTRADA: filas - arreglo de objetos con los resultados del reporte.
-* titulo - titulo del reporte, usado para el nombre del archivo.
-*
-* SALIDA: Descarga de un archivo .csv en el navegador. No retorna ningun valor.
-*
-* RESTRICCIONES: Si el arreglo de filas esta vacio la funcion no hace nada. Todas las
-* filas deben tener las mismas llaves que la primera.
-*
-* OBJETIVO: Permitir exportar los resultados del reporte a un archivo CSV.
-*
-*---------------------------------------------------------------------------------------*/
+/* Adaptador para el hook: separa el id del reporte de sus filtros. */
+const listarReporte = ({ reporte, ...filtros }) => ejecutarReporte(reporte, filtros);
 
 function descargarCSV(filas, titulo) {
   if (!filas.length) return;
-
   const columnas = Object.keys(filas[0]);
   const escapar = (valor) => `"${String(valor ?? '').replaceAll('"', '""')}"`;
   const contenido = [
@@ -255,241 +182,55 @@ function descargarCSV(filas, titulo) {
   URL.revokeObjectURL(enlace.href);
 }
 
-
-/*---------------------------------------------------------------------------------------*
-*
-* NOMBRE: ReportesPage
-*
-* DESCRIPCION: Componente principal de la pagina de reportes. Controla la seleccion del
-* reporte, los filtros propios de cada reporte, la carga de las opciones de los filtros,
-* la ejecucion del reporte con manejo de errores, la exportacion a CSV, las estadisticas
-* y la paginacion, y retorna la interfaz completa.
-*
-* ENTRADA: Ninguna (no recibe props).
-*
-* SALIDA: Elemento JSX con la pagina de reportes.
-*
-* RESTRICCIONES: Debe renderizarse dentro de la aplicacion con acceso a la API.
-*
-* OBJETIVO: Centralizar la consulta de reportes estadisticos en una sola vista.
-*
-*---------------------------------------------------------------------------------------*/
-
 function ReportesPage() {
-
-  // ----------------------------------------------------------
-  // REPORTE Y FILTROS
-  // ----------------------------------------------------------
-
-  // Id del reporte seleccionado (por defecto, el primero).
   const [reporteId, setReporteId] = useState(REPORTES[0].id);
-
-  // Valores de los filtros del reporte actual.
+  // Filtros que el usuario está escribiendo (todavía no aplicados).
   const [filtros, setFiltros] = useState({});
-
-  // Opciones disponibles para los filtros (anios, meses, categorias...).
   const [opciones, setOpciones] = useState(OPCIONES_VACIAS);
+  const [errorOpciones, setErrorOpciones] = useState('');
+  const [exportando, setExportando] = useState(false);
 
+  const listado = useListadoServidor(listarReporte, {
+    porPagina: POR_PAGINA_REPORTES,
+    filtrosIniciales: { reporte: REPORTES[0].id }
+  });
 
-  // ----------------------------------------------------------
-  // RESULTADOS
-  // ----------------------------------------------------------
-
-  // Filas devueltas por el reporte, ya sin columnas de identificadores.
-  const [filas, setFilas] = useState([]);
-
-
-  // ----------------------------------------------------------
-  // ESTADO DE CARGA, ERROR Y PAGINACION
-  // ----------------------------------------------------------
-
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState('');
-  const [pagina, setPagina] = useState(1);
-
-
-  // ----------------------------------------------------------
-  // DATOS DERIVADOS
-  // ----------------------------------------------------------
-
-  // Reporte completo (con titulo y filtros) segun el id seleccionado.
   const reporte = REPORTES.find((item) => item.id === reporteId);
-
-
-  /*-----------------------------------------------------------------------------------*
-  *
-  * NOMBRE: Calculo de paginacion
-  *
-  * DESCRIPCION: Calcula el total de paginas, obtiene el subconjunto de filas que
-  * corresponde a la pagina actual y genera los numeros de pagina que se muestran como
-  * botones alrededor de la pagina actual.
-  *
-  * ENTRADA: Estados filas y pagina, constante POR_PAGINA.
-  *
-  * SALIDA: Variables totalPaginas, filasMostradas y numerosPagina.
-  *
-  * RESTRICCIONES: El total de paginas es como minimo 1.
-  *
-  * OBJETIVO: Mostrar los resultados del reporte divididos en paginas.
-  *
-  *-----------------------------------------------------------------------------------*/
-
-  const totalPaginas = Math.max(1, Math.ceil(filas.length / POR_PAGINA));
-  const filasMostradas = filas.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA);
-
-  // Botones de pagina que se muestran alrededor de la pagina actual.
-  const numerosPagina = Array.from({ length: totalPaginas }, (_, indice) => indice + 1)
-    .slice(Math.max(0, pagina - 3), Math.min(totalPaginas, pagina + 2));
-
-
-  /*-----------------------------------------------------------------------------------*
-  *
-  * NOMBRE: cargarReporte
-  *
-  * DESCRIPCION: Ejecuta un reporte en la API con los filtros recibidos. Si no se indican
-  * valores, usa el reporte y los filtros actuales. Reinicia la paginacion a la primera
-  * pagina, controla el indicador de carga, quita las columnas de identificadores de los
-  * resultados y, si ocurre un error, vacia los resultados y guarda el mensaje de error.
-  *
-  * ENTRADA: id - identificador del reporte (por defecto reporteId).
-  * valores - objeto con los filtros a aplicar (por defecto filtros).
-  *
-  * SALIDA: Actualiza los estados cargando, error, pagina y filas.
-  *
-  * RESTRICCIONES: Requiere conexion con la API mediante ejecutarReporte.
-  *
-  * OBJETIVO: Obtener y mostrar los resultados del reporte seleccionado.
-  *
-  *-----------------------------------------------------------------------------------*/
-
-  const cargarReporte = async (id = reporteId, valores = filtros) => {
-    setCargando(true);
-    setError('');
-
-    // Cada nueva consulta comienza en la pagina 1.
-    setPagina(1);
-
-    try {
-      setFilas(quitarIds(await ejecutarReporte(id, valores)));
-    } catch (err) {
-      setFilas([]);
-      setError(err.message || 'No se pudo cargar el reporte.');
-    } finally {
-      setCargando(false);
-    }
-  };
-
-
-  /*-----------------------------------------------------------------------------------*
-  *
-  * NOMBRE: useEffect de carga inicial
-  *
-  * DESCRIPCION: Al montar el componente carga las opciones de los filtros y ejecuta el
-  * primer reporte, quitando las columnas de identificadores de sus resultados. La
-  * variable activo evita actualizar el estado si el componente se desmonta antes de que
-  * responda la API.
-  *
-  * ENTRADA: Arreglo de dependencias vacio.
-  *
-  * SALIDA: Actualiza los estados opciones, filas, error y cargando.
-  *
-  * RESTRICCIONES: Se ejecuta unicamente en el montaje del componente. Requiere conexion
-  * con la API mediante obtenerOpcionesReportes y ejecutarReporte.
-  *
-  * OBJETIVO: Inicializar los datos de la pantalla.
-  *
-  *-----------------------------------------------------------------------------------*/
+  const info = listado.paginacion;
 
   useEffect(() => {
-    let activo = true;
-
     obtenerOpcionesReportes()
-      .then((datos) => {
-        if (activo) setOpciones(datos);
-      })
-      .catch((err) => {
-        if (activo) setError(err.message || 'No se pudieron cargar las opciones.');
-      });
-
-    ejecutarReporte(REPORTES[0].id, {})
-      .then((datos) => {
-        if (activo) setFilas(quitarIds(datos));
-      })
-      .catch((err) => {
-        if (activo) setError(err.message || 'No se pudo cargar el reporte.');
-      })
-      .finally(() => {
-        if (activo) setCargando(false);
-      });
-
-    return () => {
-      activo = false;
-    };
+      .then(setOpciones)
+      .catch((err) => setErrorOpciones(err.message || 'No se pudieron cargar las opciones.'));
   }, []);
-
-
-  /*-----------------------------------------------------------------------------------*
-  *
-  * NOMBRE: cambiarReporte
-  *
-  * DESCRIPCION: Cambia el reporte seleccionado, limpia los filtros y ejecuta el nuevo
-  * reporte de inmediato.
-  *
-  * ENTRADA: id - identificador del reporte elegido.
-  *
-  * SALIDA: Actualiza los estados reporteId, filtros y los resultados.
-  *
-  * RESTRICCIONES: El id debe existir en el catalogo REPORTES.
-  *
-  * OBJETIVO: Permitir al usuario cambiar de reporte desde el selector.
-  *
-  *-----------------------------------------------------------------------------------*/
 
   const cambiarReporte = (id) => {
     setReporteId(id);
     setFiltros({});
-    cargarReporte(id, {});
+    listado.reemplazarFiltros({ reporte: id });
   };
 
-
-  /*-----------------------------------------------------------------------------------*
-  *
-  * NOMBRE: restaurarFiltros
-  *
-  * DESCRIPCION: Limpia los filtros del reporte actual y vuelve a ejecutarlo sin ellos.
-  *
-  * ENTRADA: Ninguna.
-  *
-  * SALIDA: Actualiza los estados filtros y los resultados.
-  *
-  * RESTRICCIONES: Requiere conexion con la API mediante ejecutarReporte.
-  *
-  * OBJETIVO: Volver a la consulta sin filtros del reporte seleccionado.
-  *
-  *-----------------------------------------------------------------------------------*/
+  const generarReporte = () => {
+    listado.reemplazarFiltros({ reporte: reporteId, ...filtros });
+  };
 
   const restaurarFiltros = () => {
     setFiltros({});
-    cargarReporte(reporteId, {});
+    listado.reemplazarFiltros({ reporte: reporteId });
   };
 
-
-  /*-----------------------------------------------------------------------------------*
-  *
-  * NOMBRE: Fecha y hora actuales
-  *
-  * DESCRIPCION: Obtiene la fecha y la hora del momento del renderizado y las formatea
-  * con la configuracion regional es-CR (hora en formato de 24 horas).
-  *
-  * ENTRADA: Fecha actual del sistema.
-  *
-  * SALIDA: Variables fechaTexto y horaTexto.
-  *
-  * RESTRICCIONES: Los valores se calculan en cada renderizado y no se actualizan solos.
-  *
-  * OBJETIVO: Mostrar la fecha y la hora en el encabezado de la pagina.
-  *
-  *-----------------------------------------------------------------------------------*/
+  const exportar = async () => {
+    setExportando(true);
+    try {
+      const { reporte: id, ...aplicados } = listado.filtros;
+      const respuesta = await ejecutarReporte(id, { ...aplicados, exportar: 1 });
+      descargarCSV(respuesta.datos || [], reporte.titulo);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setExportando(false);
+    }
+  };
 
   const ahora = new Date();
   const fechaTexto = ahora.toLocaleDateString('es-CR', {
@@ -499,16 +240,8 @@ function ReportesPage() {
     hour: '2-digit', minute: '2-digit', hour12: false
   });
 
-
-  // ============================================================
-  // INTERFAZ
-  // ============================================================
-
   return (
     <div>
-
-      {/* ENCABEZADO */}
-
       <div className="page-header">
         <div className="title-block">
           <div className="icon-box"><BarChart3 size={22} /></div>
@@ -523,9 +256,6 @@ function ReportesPage() {
         </div>
       </div>
 
-
-      {/* ESTADISTICAS */}
-
       <div className="stats-row">
         <StatCard
           icon={BarChart3}
@@ -538,57 +268,45 @@ function ReportesPage() {
           icon={Database}
           color="green"
           label="Resultados"
-          value={filas.length}
+          value={info.Total_Registros ?? 0}
           sub={reporte.titulo}
         />
         <StatCard
           icon={Rows3}
           color="yellow"
           label="Página actual"
-          value={`${pagina} / ${totalPaginas}`}
-          sub="Filas por página: 10"
+          value={`${listado.pagina} / ${info.Total_Paginas ?? 1}`}
+          sub={`Filas por página: ${POR_PAGINA_REPORTES}`}
         />
       </div>
 
-
-      {/* TABLA */}
-
       <div className="table-card">
-
-        {/* BARRA DE HERRAMIENTAS: selector de reporte, filtros, buscar, restaurar y exportar */}
-
         <ReportesFiltro
           reportes={REPORTES}
           reporteId={reporteId}
           filtros={filtros}
           opciones={opciones}
-          cargando={cargando}
-          hayResultados={filas.length > 0}
+          cargando={listado.cargando || exportando}
+          hayResultados={(info.Total_Registros ?? 0) > 0}
           onCambiarReporte={cambiarReporte}
           onCambiarFiltro={(nombre, valor) => setFiltros((actuales) => ({ ...actuales, [nombre]: valor }))}
-          onBuscar={() => cargarReporte()}
+          onBuscar={generarReporte}
           onRestaurar={restaurarFiltros}
-          onExportar={() => descargarCSV(filas, reporte.titulo)}
+          onExportar={exportar}
         />
-
-        {/* CARGANDO / ERROR / TABLA / PAGINACION */}
 
         <ReportesTabla
-          filas={filas}
-          cargando={cargando}
-          error={error}
-          pagina={pagina}
-          totalPaginas={totalPaginas}
-          filasMostradas={filasMostradas}
-          numerosPagina={numerosPagina}
-          onCambiarPagina={setPagina}
+          filas={listado.filas}
+          cargando={listado.cargando}
+          error={listado.error || errorOpciones}
+          pagina={listado.pagina}
+          totalPaginas={info.Total_Paginas ?? 1}
+          totalRegistros={info.Total_Registros ?? 0}
+          onCambiarPagina={listado.cambiarPagina}
         />
-
       </div>
-
     </div>
   );
 }
-
 
 export default ReportesPage;

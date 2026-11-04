@@ -11,20 +11,15 @@
 * SALIDA: Elemento JSX con la barra superior y el bloque de usuario.
 *
 * RESTRICCIONES: Requiere que existan los estilos de las clases topbar, user y avatar.
-* El nombre y las iniciales del usuario estan escritos de forma fija en el codigo. Los
-* iconos Search y Bell se importan pero no se usan en este archivo, por lo que se
-* podrian eliminar.
+* El nombre y las iniciales del usuario estan escritos de forma fija en el codigo.
+* (PY2: se quitaron los imports de Search y Bell, que no se usaban.)
 *
 * OBJETIVO: Mostrar al usuario que tiene la sesion activa en la parte superior de la
 * aplicacion.
 *
 *---------------------------------------------------------------------------------------*/
 
-import {
-  Search,
-  Bell,
-  ChevronDown
-} from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 
 
 function Topbar() {

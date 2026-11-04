@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 
 import { useEffect, useState } from 'react';
+import useUltimo from '../../hooks/useUltimo';
 
 import {
     actualizarInventario,
@@ -33,6 +34,10 @@ function InventarioEditarModal({
 
 }) {
 
+    // Versiones actuales de las funciones del padre (ver hooks/useUltimo.js).
+    const avisarRef = useUltimo(onMostrarMensaje);
+    const cerrarRef = useUltimo(onCerrar);
+
 
     const [formulario, setFormulario] = useState(
         FORMULARIO_VACIO
@@ -41,7 +46,8 @@ function InventarioEditarModal({
     const [opciones, setOpciones] = useState({
         proveedores: [],
         colores: [],
-        tiposPaquete: []
+        tiposPaquete: [],
+        grupos: []
     });
 
 
@@ -50,7 +56,7 @@ function InventarioEditarModal({
 
 
     const [cargandoInventario, setCargandoInventario] =
-        useState(true);
+        useState(() => Boolean(inventario?.StockItemID));
 
     const [guardando, setGuardando] = useState(false);
 
@@ -74,7 +80,9 @@ function InventarioEditarModal({
                         data.colores || [],
 
                     tiposPaquete:
-                        data.tiposPaquete || []
+                        data.tiposPaquete || [],
+                    grupos:
+                        data.grupos || []
 
                 });
 
@@ -82,9 +90,9 @@ function InventarioEditarModal({
 
                 console.error(error);
 
-                if (onMostrarMensaje) {
+                if (avisarRef.current) {
 
-                    onMostrarMensaje({
+                    avisarRef.current({
 
                         tipo: 'error',
 
@@ -107,7 +115,7 @@ function InventarioEditarModal({
 
         cargarOpciones();
 
-    }, []);
+    }, [avisarRef]);
 
 
 
@@ -118,11 +126,7 @@ function InventarioEditarModal({
     useEffect(() => {
 
         if (!stockItemID) {
-
-            setCargandoInventario(false);
-
             return;
-
         }
 
 
@@ -173,9 +177,9 @@ function InventarioEditarModal({
 
                 if (!cancelado) {
 
-                    if (onMostrarMensaje) {
+                    if (avisarRef.current) {
 
-                        onMostrarMensaje({
+                        avisarRef.current({
 
                             tipo: 'error',
 
@@ -192,7 +196,7 @@ function InventarioEditarModal({
 
 
   
-                    onCerrar();
+                    cerrarRef.current?.();
 
                 }
 
@@ -221,7 +225,7 @@ function InventarioEditarModal({
 
   
 
-    }, [stockItemID]);
+    }, [stockItemID, avisarRef, cerrarRef]);
 
     const cambiarCampo = (e) => {
 

@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 
 import './proveedores.css';
@@ -33,9 +33,14 @@ function ProveedorDetalleModal({
     const [indiceActual, setIndiceActual] = useState(0);
 
     // Cuando llega una lista nueva, volvemos al primero.
-    useEffect(() => {
+    // PY2: cuando llega una lista nueva se vuelve al primero. Se ajusta durante el
+    // render (patrón recomendado por React) en vez de usar un useEffect, que
+    // provocaba un render extra con el índice viejo.
+    const [listaPrevia, setListaPrevia] = useState(proveedores);
+    if (proveedores !== listaPrevia) {
+        setListaPrevia(proveedores);
         setIndiceActual(0);
-    }, [proveedores]);
+    }
 
     // Si no hay proveedores, no mostramos el modal.
     if (!proveedores || proveedores.length === 0) {

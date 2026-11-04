@@ -1,0 +1,35 @@
+# ---------------------------------------------------------------------------------------
+# NODO LIMÓN - SQL Server 2022 en Docker (Linux)
+#
+# - hostname "limon": la replicación exige conectarse por el NOMBRE REAL del servidor
+#   (@@SERVERNAME). Con esto @@SERVERNAME = limon.
+# - Puerto 1434 en Windows, porque el 1433 lo usa SQL Server de San José.
+# - MSSQL_AGENT_ENABLED: la replicación funciona con trabajos de SQL Server Agent.
+# - La contraseña se lee del archivo .env (NO se sube a GitHub).
+#
+# Uso:   docker compose up -d        (levantar)
+#        docker compose stop         (apagar sin borrar datos)
+#        docker compose logs -f      (ver el arranque)
+# ---------------------------------------------------------------------------------------
+services:
+  limon:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: limon
+    hostname: limon
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: "Developer"
+      MSSQL_SA_PASSWORD: "${LIMON_SA_PASSWORD}"
+      MSSQL_AGENT_ENABLED: "true"
+      TZ: "America/Costa_Rica"
+    ports:
+      - "1434:1433"
+    volumes:
+      - limon_datos:/var/opt/mssql          # bases de datos (persisten aunque se borre el contenedor)
+      - ./backups:/var/opt/mssql/backup     # aquí se pone WideWorldImporters-Full.bak
+    extra_hosts:
+      - "host.docker.internal:host-gateway" # para que Limón llegue a San José (Windows)
+    restart: unless-stopped
+
+volumes:
+  limon_datos:

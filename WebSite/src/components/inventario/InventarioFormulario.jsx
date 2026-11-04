@@ -6,7 +6,8 @@ import {
     Truck,
     DollarSign,
     Scale,
-    FileText
+    FileText,
+    Layers
 } from 'lucide-react';
 
 
@@ -459,6 +460,68 @@ function InventarioFormulario({
 
             </div>
 
+
+            {/* ==================================================
+                GRUPOS E INVENTARIO (NUEVO PY2)
+                Antes no existía: el producto se creaba sin grupos ni
+                registro de inventario y por eso no aparecía en la tabla.
+            ================================================== */}
+            <div className="cd-panel">
+                <h3 className="cd-panel-titulo">
+                    <span className="cd-ico verde">
+                        <Layers size={18} />
+                    </span>
+                    Grupos e inventario
+                </h3>
+
+                <div className="form-grid">
+                    <div className={clase('StockGroupIDs', 'campo-completo')}>
+                        <label>Grupos (seleccione al menos uno)</label>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem 1.25rem', paddingTop: 4 }}>
+                            {(opciones.grupos || []).length === 0 && (
+                                <span style={{ opacity: 0.6 }}>
+                                    {cargandoOpciones ? 'Cargando...' : 'No hay grupos disponibles'}
+                                </span>
+                            )}
+                            {(opciones.grupos || []).map((g) => {
+                                const id = String(g.ID);
+                                const marcado = (formulario.StockGroupIDs || []).includes(id);
+                                return (
+                                    <label
+                                        key={id}
+                                        style={{ display: 'flex', gap: 6, alignItems: 'center', fontWeight: 400, cursor: 'pointer' }}
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={marcado}
+                                            onChange={() => {
+                                                const actuales = formulario.StockGroupIDs || [];
+                                                const nuevos = marcado
+                                                    ? actuales.filter((x) => x !== id)
+                                                    : [...actuales, id];
+                                                setActivo('StockGroupIDs');
+                                                onCambiar({ target: { name: 'StockGroupIDs', value: nuevos } });
+                                            }}
+                                        />
+                                        {g.Nombre}
+                                    </label>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {entrada('QuantityOnHand', 'Cantidad en inventario', { tipo: 'number', min: 0 })}
+                    {entrada('BinLocation', 'Ubicación en bodega', { max: 20, placeholder: 'Ej: L-1' })}
+                    {entrada('LastCostPrice', 'Último costo', {
+                        tipo: 'number',
+                        min: 0,
+                        step: '0.01',
+                        placeholder: 'Vacío = precio unitario'
+                    })}
+                    {entrada('ReorderLevel', 'Nivel de reorden', { tipo: 'number', min: 0 })}
+                    {entrada('TargetStockLevel', 'Nivel objetivo', { tipo: 'number', min: 0 })}
+                </div>
+            </div>
 
             {/* ==================================================
                 INFORMACIÓN ADICIONAL

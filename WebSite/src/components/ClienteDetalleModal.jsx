@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 // ============================================================
 // MODAL PRINCIPAL
@@ -12,11 +12,6 @@ function ClienteDetalleModal({
     onVolver
 }) {
 
-    // Si no hay clientes, no mostramos el modal.
-    if (!clientes || clientes.length === 0) {
-        return null;
-    }
-
     // ========================================================
     // CLIENTE ACTUAL
     // ========================================================
@@ -26,12 +21,21 @@ function ClienteDetalleModal({
     // ========================================================
     // REINICIAR EL CARRUSEL
     // ========================================================
-
-    useEffect(() => {
-
+    // PY2: cuando llega una lista nueva se vuelve al primero. Se ajusta durante el
+    // render (patrón recomendado por React) en vez de usar un useEffect, que
+    // provocaba un render extra con el índice viejo.
+    const [listaPrevia, setListaPrevia] = useState(clientes);
+    if (clientes !== listaPrevia) {
+        setListaPrevia(clientes);
         setIndiceActual(0);
+    }
 
-    }, [clientes]);
+    // PY2: el "return null" va DESPUÉS de todos los hooks. Antes estaba antes del
+    // useState/useEffect: al pasar de "sin clientes" a "con clientes" React veía una
+    // cantidad distinta de hooks y lanzaba un error al presionar "Ver".
+    if (!clientes || clientes.length === 0) {
+        return null;
+    }
 
     // ========================================================
     // IR AL CLIENTE ANTERIOR

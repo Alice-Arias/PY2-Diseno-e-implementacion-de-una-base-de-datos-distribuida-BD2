@@ -58,51 +58,75 @@ GO
 *
 *-----------------------------------------------------------------------------------------*/
 
+/* CORREGIDO PY2: paginado en SQL; las estadísticas de las tarjetas vienen en el resultado 2. */
 CREATE OR ALTER PROCEDURE dbo.SP_Ventas_Listar
-    @NumeroFactura INT = NULL,
-    @FechaInicio DATE = NULL,
-    @FechaFin DATE = NULL,
-    @Cliente NVARCHAR(100) = NULL,
-    @DeliveryMethod NVARCHAR(50) = NULL,
-    @MontoInicio DECIMAL(18,2) = NULL,
-    @MontoFin DECIMAL(18,2) = NULL
+    @NumeroFactura  INT           = NULL,
+    @FechaInicio    DATE          = NULL,
+    @FechaFin       DATE          = NULL,
+    @Cliente        NVARCHAR(100) = NULL,
+    @DeliveryMethod NVARCHAR(50)  = NULL,
+    @MontoInicio    DECIMAL(18,2) = NULL,
+    @MontoFin       DECIMAL(18,2) = NULL,
+    @Pagina         INT           = 1,
+    @TamanoPagina   INT           = 10
 AS
 BEGIN
-    SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
+    SET NOCOUNT ON;
 
-    SELECT 
-        f.InvoiceID,
-        f.InvoiceDate AS Fecha_Factura,
-        c.CustomerName AS Nombre_Cliente,
-        fe.DeliveryMethodName AS Metodo_Entrega,
-        SUM(df.ExtendedPrice) AS Monto
-    FROM dbo.Facturas f
-    INNER JOIN dbo.ClientesActuales AS c 
-        ON f.CustomerID = c.CustomerID
-    INNER JOIN dbo.FormasEntrega AS fe 
-        ON f.DeliveryMethodID = fe.DeliveryMethodID
-    INNER JOIN dbo.DetalleFacturas AS df 
-        ON f.InvoiceID = df.InvoiceID
-    WHERE
-        (@NumeroFactura IS NULL OR f.InvoiceID = @NumeroFactura)
-        AND
-        (@FechaInicio IS NULL OR f.InvoiceDate >= @FechaInicio)
-        AND
-        (@FechaFin IS NULL OR f.InvoiceDate <= @FechaFin)
-        AND
-        (@Cliente IS NULL OR c.CustomerName LIKE '%' + @Cliente + '%')
-        AND
-        (@DeliveryMethod IS NULL OR fe.DeliveryMethodName LIKE '%' + @DeliveryMethod + '%')
-    GROUP BY 
+    IF @Pagina IS NULL OR @Pagina < 1 SET @Pagina = 1;
+    IF @TamanoPagina IS NULL OR @TamanoPagina NOT BETWEEN 1 AND 100 SET @TamanoPagina = 10;
+
+    /* 1. Facturas que cumplen los filtros, con su monto. */
+    SELECT
         f.InvoiceID,
         f.InvoiceDate,
+        f.CustomerID,
         c.CustomerName,
-        fe.DeliveryMethodName
-    HAVING 
+        fe.DeliveryMethodName,
+        SUM(df.ExtendedPrice) AS Monto
+    INTO #Filtradas
+    FROM dbo.Facturas AS f
+    INNER JOIN dbo.ClientesActuales AS c  ON f.CustomerID = c.CustomerID
+    INNER JOIN dbo.FormasEntrega    AS fe ON f.DeliveryMethodID = fe.DeliveryMethodID
+    INNER JOIN dbo.DetalleFacturas  AS df ON f.InvoiceID = df.InvoiceID
+    WHERE
+        (@NumeroFactura  IS NULL OR f.InvoiceID = @NumeroFactura)
+        AND (@FechaInicio    IS NULL OR f.InvoiceDate >= @FechaInicio)
+        AND (@FechaFin       IS NULL OR f.InvoiceDate <= @FechaFin)
+        AND (@Cliente        IS NULL OR c.CustomerName LIKE '%' + @Cliente + '%')
+        AND (@DeliveryMethod IS NULL OR fe.DeliveryMethodName LIKE '%' + @DeliveryMethod + '%')
+    GROUP BY f.InvoiceID, f.InvoiceDate, f.CustomerID, c.CustomerName, fe.DeliveryMethodName
+    HAVING
         (@MontoInicio IS NULL OR SUM(df.ExtendedPrice) >= @MontoInicio)
-        AND 
-        (@MontoFin IS NULL OR SUM(df.ExtendedPrice) <= @MontoFin)
-    ORDER BY c.CustomerName ASC;
+        AND (@MontoFin IS NULL OR SUM(df.ExtendedPrice) <= @MontoFin)
+    OPTION (RECOMPILE); -- plan adecuado según qué filtros vienen en NULL
+
+    DECLARE @Total INT = @@ROWCOUNT;
+    DECLARE @TotalPaginas INT =
+        CASE WHEN @Total = 0 THEN 1 ELSE CEILING(@Total * 1.0 / @TamanoPagina) END;
+
+    IF @Pagina > @TotalPaginas SET @Pagina = @TotalPaginas;
+
+    /* 2. Solo la página pedida (orden por cliente, desempate por factura). */
+    SELECT
+        InvoiceID,
+        InvoiceDate        AS Fecha_Factura,
+        CustomerName       AS Nombre_Cliente,
+        DeliveryMethodName AS Metodo_Entrega,
+        Monto
+    FROM #Filtradas
+    ORDER BY CustomerName ASC, InvoiceID ASC
+    OFFSET (@Pagina - 1) * @TamanoPagina ROWS
+    FETCH NEXT @TamanoPagina ROWS ONLY;
+
+    /* 3. Paginación y estadísticas (antes se calculaban en React con reduce/Set). */
+    SELECT
+        @Total        AS Total_Registros,
+        @Pagina       AS Pagina,
+        @TamanoPagina AS Tamano_Pagina,
+        @TotalPaginas AS Total_Paginas,
+        ISNULL((SELECT SUM(Monto) FROM #Filtradas), 0)                AS Monto_Total,
+        (SELECT COUNT(DISTINCT CustomerID) FROM #Filtradas)           AS Clientes_Unicos;
 END
 GO
 
@@ -1204,11 +1228,8 @@ BEGIN
     ORDER BY FullName;
 
     /* 5. Pedidos. */
-    SELECT
-        OrderID AS ID,
-        CustomerPurchaseOrderNumber AS Numero_Orden
-    FROM dbo.Pedidos
-    ORDER BY OrderID;
+    /* PY2: se quitó la lista de ~73 000 pedidos (hacía lenta la página de Ventas).
+       El pedido ahora se escribe como número y SP_Ventas_Insertar/Actualizar valida que exista. */
 
     /* 6. Productos. */
     SELECT

@@ -1,5 +1,6 @@
 
 import { useState } from 'react';
+import BuscadorCiudad from '../BuscadorCiudad';
 
 import {
     User,
@@ -221,15 +222,16 @@ function ProveedorFormulario({
                         }
                     )}
 
-                    {selector(
-                        'CiudadEntregaID',
-                        'Ciudad de entrega',
-                        opciones.ciudades,
-                        {
-                            requerido: true,
-                            vacio: 'Seleccione una ciudad'
-                        }
-                    )}
+                    {/* PY2: buscador en lugar de ~38 000 ciudades; en Modificar muestra la original */}
+                    <BuscadorCiudad
+                        name="CiudadEntregaID"
+                        etiqueta="Ciudad de entrega"
+                        value={formulario.CiudadEntregaID}
+                        onCambiar={cambiar}
+                        onFocus={() => setActivo('CiudadEntregaID')}
+                        className={clase('CiudadEntregaID')}
+                        requerido
+                    />
 
                     {entrada('Telefono', 'Teléfono', {
                         max: 20,
@@ -334,15 +336,16 @@ function ProveedorFormulario({
                         requerido: true
                     })}
 
-                    {selector(
-                        'CiudadPostalID',
-                        'Ciudad de la dirección postal',
-                        opciones.ciudades,
-                        {
-                            requerido: true,
-                            vacio: 'Seleccione una ciudad'
-                        }
-                    )}
+                    {/* PY2: buscador en lugar de ~38 000 ciudades; en Modificar muestra la original */}
+                    <BuscadorCiudad
+                        name="CiudadPostalID"
+                        etiqueta="Ciudad de la dirección postal"
+                        value={formulario.CiudadPostalID}
+                        onCambiar={cambiar}
+                        onFocus={() => setActivo('CiudadPostalID')}
+                        className={clase('CiudadPostalID')}
+                        requerido
+                    />
 
                     {entrada('DireccionPostal1', 'Dirección postal', {
                         max: 60,

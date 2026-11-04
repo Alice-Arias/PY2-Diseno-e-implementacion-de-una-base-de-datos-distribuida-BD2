@@ -74,53 +74,77 @@ GO
 *-----------------------------------------------------------------------------------------*/
 
 CREATE OR ALTER PROCEDURE dbo.SP_Clientes_Listar
-
-    @Nombre NVARCHAR(100) = NULL,
-
-    @Categoria NVARCHAR(100) = NULL,
-
-    @MetodoEntrega NVARCHAR(100) = NULL
-
+    /* CORREGIDO PY2: pagina en SQL (OFFSET/FETCH). Resultado 1 = filas de la página,
+       resultado 2 = datos de paginación. */
+    @Nombre        NVARCHAR(100) = NULL,
+    @Categoria     NVARCHAR(100) = NULL,
+    @MetodoEntrega NVARCHAR(100) = NULL,
+    @Pagina        INT           = 1,
+    @TamanoPagina  INT           = 10
 AS
-
 BEGIN
+    SET NOCOUNT ON;
 
-    SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
+    IF @Pagina IS NULL OR @Pagina < 1 SET @Pagina = 1;
+    IF @TamanoPagina IS NULL OR @TamanoPagina NOT BETWEEN 1 AND 100 SET @TamanoPagina = 10;
 
     SELECT
-
         c.CustomerID,
-
-        c.CustomerName AS Nombre_Cliente,
-
+        c.CustomerName           AS Nombre_Cliente,
         cat.CustomerCategoryName AS Categoria_Cliente,
-
-        dm.DeliveryMethodName AS Metodo_Entrega
-
+        dm.DeliveryMethodName    AS Metodo_Entrega
+    INTO #Filtrados
     FROM dbo.ClientesActuales AS c
-
-    INNER JOIN dbo.TiposCliente AS cat
-        ON c.CustomerCategoryID = cat.CustomerCategoryID
-
-    INNER JOIN dbo.FormasEntrega AS dm
-        ON c.DeliveryMethodID = dm.DeliveryMethodID
-
+    INNER JOIN dbo.TiposCliente AS cat ON c.CustomerCategoryID = cat.CustomerCategoryID
+    INNER JOIN dbo.FormasEntrega AS dm ON c.DeliveryMethodID = dm.DeliveryMethodID
     WHERE
-
         (@Nombre IS NULL OR c.CustomerName LIKE '%' + @Nombre + '%')
+        AND (@Categoria IS NULL OR cat.CustomerCategoryName LIKE '%' + @Categoria + '%')
+        AND (@MetodoEntrega IS NULL OR dm.DeliveryMethodName LIKE '%' + @MetodoEntrega + '%');
 
-        AND
+    DECLARE @Total INT = @@ROWCOUNT;
+    DECLARE @TotalPaginas INT =
+        CASE WHEN @Total = 0 THEN 1 ELSE CEILING(@Total * 1.0 / @TamanoPagina) END;
 
-        (@Categoria IS NULL OR cat.CustomerCategoryName LIKE '%' + @Categoria + '%')
+    /* Si la página pedida ya no existe (ej. se borró el último registro), se ajusta. */
+    IF @Pagina > @TotalPaginas SET @Pagina = @TotalPaginas;
 
-        AND
+    SELECT CustomerID, Nombre_Cliente, Categoria_Cliente, Metodo_Entrega
+    FROM #Filtrados
+    ORDER BY Nombre_Cliente ASC, CustomerID ASC
+    OFFSET (@Pagina - 1) * @TamanoPagina ROWS
+    FETCH NEXT @TamanoPagina ROWS ONLY;
 
-        (@MetodoEntrega IS NULL OR dm.DeliveryMethodName LIKE '%' + @MetodoEntrega + '%')
-
-    ORDER BY c.CustomerName ASC;
-
+    SELECT @Total AS Total_Registros, @Pagina AS Pagina,
+           @TamanoPagina AS Tamano_Pagina, @TotalPaginas AS Total_Paginas;
 END
+GO
 
+/*---------------------------------------------------------------------------------------*
+* NOMBRE: SP_Clientes_Resumen  (NUEVO PY2)
+* DESCRIPCION: Estadísticas de las tarjetas y listas de los filtros del módulo.
+*              Antes se calculaban en React con new Set() sobre todos los clientes.
+* SALIDA: 1) totales  2) categorías usadas  3) métodos de entrega usados
+*-----------------------------------------------------------------------------------------*/
+CREATE OR ALTER PROCEDURE dbo.SP_Clientes_Resumen
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        (SELECT COUNT(*) FROM dbo.ClientesActuales) AS Total_Clientes,
+        (SELECT COUNT(DISTINCT CustomerCategoryID) FROM dbo.ClientesActuales) AS Total_Categorias;
+
+    SELECT DISTINCT cat.CustomerCategoryName AS Nombre
+    FROM dbo.ClientesActuales AS c
+    INNER JOIN dbo.TiposCliente AS cat ON c.CustomerCategoryID = cat.CustomerCategoryID
+    ORDER BY Nombre;
+
+    SELECT DISTINCT dm.DeliveryMethodName AS Nombre
+    FROM dbo.ClientesActuales AS c
+    INNER JOIN dbo.FormasEntrega AS dm ON c.DeliveryMethodID = dm.DeliveryMethodID
+    ORDER BY Nombre;
+END
 GO
 
 
@@ -670,7 +694,7 @@ BEGIN
         COMMIT TRANSACTION;
 
 
-        SELECT @NuevoID AS CustomerID;
+        SELECT @NuevoID AS CustomerID, @Nombre AS Nombre;  -- PY2: nombre para mostrarlo en la tabla
 
 
     END TRY

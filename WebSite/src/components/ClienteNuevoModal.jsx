@@ -52,18 +52,23 @@ import {
 
 
 import { useEffect, useState } from 'react';
+import useUltimo from '../hooks/useUltimo';
 
 
 import {
     insertarCliente,
     obtenerOpcionesClientes
 } from '../services/api';
+import BuscadorCiudad from './BuscadorCiudad';
 
 function ClienteNuevoModal({
     onCerrar,
     onClienteCreado,
     onMostrarMensaje
 }) {
+
+    // Versión actual de onMostrarMensaje (ver hooks/useUltimo.js).
+    const avisarRef = useUltimo(onMostrarMensaje);
 
     // ========================================================
     // DATOS DEL FORMULARIO
@@ -155,9 +160,9 @@ function ClienteNuevoModal({
 
                 console.error(error);
 
-                if (onMostrarMensaje) {
+                if (avisarRef.current) {
 
-                    onMostrarMensaje({
+                    avisarRef.current({
                         tipo: 'error',
                         titulo: 'No se pudieron cargar las opciones',
                         mensaje: error.message
@@ -174,7 +179,7 @@ function ClienteNuevoModal({
 
         cargarOpciones();
 
-    }, [onMostrarMensaje]);
+    }, [avisarRef]);
 
     /*-----------------------------------------------------------------------------------*
     *
@@ -672,44 +677,14 @@ function ClienteNuevoModal({
 
                             {/* Ciudad */}
 
-                            <div className="campo">
-
-                                <label>
-                                    Ciudad de entrega
-                                </label>
-
-                                <select
-                                    name="CiudadEntregaID"
-                                    value={formulario.CiudadEntregaID}
-                                    onChange={cambiarCampo}
-                                    required
-                                    disabled={cargandoOpciones}
-                                >
-
-                                    <option value="">
-
-                                        {cargandoOpciones
-                                            ? 'Cargando ciudades...'
-                                            : 'Seleccione una ciudad'}
-
-                                    </option>
-
-                                    {opciones.ciudades.map(
-                                        (ciudad) => (
-
-                                            <option
-                                                key={ciudad.ID}
-                                                value={ciudad.ID}
-                                            >
-                                                {ciudad.Nombre}
-                                            </option>
-
-                                        )
-                                    )}
-
-                                </select>
-
-                            </div>
+                            {/* PY2: buscador en lugar de un select con ~38 000 ciudades */}
+                            <BuscadorCiudad
+                                name="CiudadEntregaID"
+                                etiqueta="Ciudad de entrega"
+                                value={formulario.CiudadEntregaID}
+                                onCambiar={cambiarCampo}
+                                requerido
+                            />
 
                             {/* Telefono */}
 

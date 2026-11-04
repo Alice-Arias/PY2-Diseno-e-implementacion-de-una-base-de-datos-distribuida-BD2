@@ -122,13 +122,26 @@ const entero = (request, query, parameter) => {
 *-----------------------------------------------------------------------------------------*/
 
 const ejecutarReporte = (procedimiento, configurar = () => {}) => async (req, res) => {
+    /* CORREGIDO PY2: la paginación la hace el SP.
+       ?pagina=N&tamano=10 -> solo esa página.  ?exportar=1 -> todas las filas (CSV). */
     try {
         const pool = await poolPromise;
         const request = pool.request();
         configurar(request, req.query);
 
+        const exportar = req.query.exportar === '1';
+        const pagina = Number(req.query.pagina);
+        const tamano = Number(req.query.tamano);
+
+        request.input('Pagina', sql.Int, exportar ? null : (Number.isInteger(pagina) && pagina > 0 ? pagina : 1));
+        request.input('TamanoPagina', sql.Int, Number.isInteger(tamano) && tamano > 0 ? tamano : 10);
+
         const result = await request.execute(procedimiento);
-        res.json(result.recordset || []);
+
+        res.json({
+            datos: result.recordsets[0] || [],
+            paginacion: (result.recordsets[1] || [])[0] || null
+        });
     } catch (err) {
         console.error(err);
         res.status(err.statusCode || 500).json({
@@ -163,13 +176,7 @@ router.get('/opciones', async (req, res) => {
     try {
         const pool = await poolPromise;
         const result = await pool.request().execute('SP_Reportes_Opciones');
-        const categoriasProveedores = await pool.request().query(`
-            SELECT
-                SupplierCategoryID AS ID,
-                SupplierCategoryName AS Nombre
-            FROM dbo.CategoriaProveedores
-            ORDER BY SupplierCategoryName
-        `);
+        /* PY2: las categorías de proveedores ahora vienen del mismo SP (resultado 7). */
 
         res.json({
             aniosVentas: result.recordsets[0],
@@ -178,7 +185,7 @@ router.get('/opciones', async (req, res) => {
             categoriasProductos: result.recordsets[3],
             categoriasClientes: result.recordsets[4],
             proveedores: result.recordsets[5],
-            categoriasProveedores: categoriasProveedores.recordset
+            categoriasProveedores: result.recordsets[6]
         });
     } catch (err) {
         console.error(err);
