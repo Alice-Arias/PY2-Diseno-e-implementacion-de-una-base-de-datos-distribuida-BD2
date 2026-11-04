@@ -8,7 +8,7 @@ services:
       MSSQL_SA_PASSWORD: "SanJose#2026Pass"
       MSSQL_PID: "Developer"
       MSSQL_AGENT_ENABLED: "true"
-    ports: ["1434:1433"]
+    ports: ["1436:1433"]
     extra_hosts: ["corporativo:${WINIP:?Use ./levantar.sh}"]
     volumes: ["sanjose_data:/var/opt/mssql"]
   limon:
@@ -20,7 +20,7 @@ services:
       MSSQL_SA_PASSWORD: "Limon#2026Pass"
       MSSQL_PID: "Developer"
       MSSQL_AGENT_ENABLED: "true"
-    ports: ["1435:1433"]
+    ports: ["1437:1433"]
     extra_hosts: ["corporativo:${WINIP:?Use ./levantar.sh}"]
     volumes: ["limon_data:/var/opt/mssql"]
 volumes:
