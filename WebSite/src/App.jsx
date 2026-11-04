@@ -30,7 +30,7 @@ function App() {
     const [page, setPage] = useState('clientes');
 
     return (
-        <div className="app-shell">
+        <div className="app-shell modo-oscuro">
 
             <Sidebar
                 current={page}

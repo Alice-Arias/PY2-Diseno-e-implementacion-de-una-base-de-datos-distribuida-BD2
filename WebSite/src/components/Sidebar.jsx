@@ -29,9 +29,10 @@ import {
   Truck,
   Package,
   ShoppingCart,
-  BarChart3,
-  Database
+  BarChart3
 } from 'lucide-react';
+
+import WorldWideBanner from "../assets/WorldWidebanner.png"
 
 
 /*---------------------------------------------------------------------------------------*
@@ -92,11 +93,8 @@ function Sidebar({ current, onNavigate }) {
 
       <div className="logo">
 
-        <Database color="#071cff" />
+        <img src={WorldWideBanner} alt="World Wide Importers" />
 
-        <span>
-          Sistema BD2
-        </span>
 
       </div>
 

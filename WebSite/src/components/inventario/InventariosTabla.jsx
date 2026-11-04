@@ -41,7 +41,7 @@ function InventariosTabla({
 
     <div className="inv-tabla-contenedor">
 
-      <table className="inv-tabla">
+      <table className="inv-tabla tabla-coherente">
 
         {/* Anchos fijos: el nombre toma todo el espacio sobrante
             y por eso se ve completo (baja de línea si es largo) */}

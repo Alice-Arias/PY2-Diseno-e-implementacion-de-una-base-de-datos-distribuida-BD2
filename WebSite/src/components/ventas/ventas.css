@@ -958,7 +958,7 @@ a.vta-caja-nombre.vta-link-producto {
    ============================================================ */
 
 .modo-oscuro .vf-fecha-wrap {
-    background: #1f242a;
+    background: #121111;
     border-color: #3b444e;
     color: #e2e6eb;
 }
@@ -1219,7 +1219,7 @@ a.vta-caja-nombre.vta-link-producto {
    ============================================================ */
 
 .modo-oscuro .vf-filtro {
-    background: #252b32;
+    background: #0d0d0d;
     border-bottom-color: #3b444e;
 }
 
@@ -1229,7 +1229,7 @@ a.vta-caja-nombre.vta-link-producto {
 
 .modo-oscuro .vf-campo input,
 .modo-oscuro .vf-campo select {
-    background: #1f242a;
+    background: #121111;
     border-color: #3b444e;
     color: #e2e6eb;
 }
@@ -1240,7 +1240,7 @@ a.vta-caja-nombre.vta-link-producto {
 
 .modo-oscuro .vf-filtro .btn-restaurar,
 .modo-oscuro .vf-filtro .btn-buscar {
-    background: #303842;
+    background: #121111;
     border-color: #414b56;
     color: #c2cad3;
 }

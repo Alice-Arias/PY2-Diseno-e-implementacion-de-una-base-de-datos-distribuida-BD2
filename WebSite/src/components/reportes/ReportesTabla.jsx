@@ -221,7 +221,7 @@ function ReportesTabla({
         <p className="reportes-estado">Cargando reporte...</p>
       ) : filas.length ? (
         <div className="reportes-tabla-contenedor">
-          <table className="reportes-tabla">
+          <table className="reportes-tabla tabla-coherente">
 
             {/* ENCABEZADOS */}
 

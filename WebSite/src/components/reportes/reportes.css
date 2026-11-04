@@ -551,7 +551,7 @@
 
 .modo-oscuro .toolbar.reportes-toolbar select,
 .modo-oscuro .toolbar.reportes-toolbar .reportes-filtro-texto {
-    background-color: #303842;
+    background-color: #121111;
     border-color: #414b56;
     color: #e2e6eb;
 }
@@ -568,7 +568,7 @@
 }
 
 .modo-oscuro .toolbar.reportes-toolbar .btn-restaurar {
-    background: #303842;
+    background: #121111;
     border-color: #46515c;
     color: #c8ced6;
 }
@@ -663,7 +663,7 @@
 }
 
 .modo-oscuro .reportes-paginas button {
-    background: #303842;
+    background: #202020;
     border-color: #414b56;
     color: #e2e6eb;
 }

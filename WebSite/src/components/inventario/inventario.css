@@ -769,7 +769,7 @@
 
 
 .modo-oscuro .filtro select {
-    background: #303842;
+    background: #0d0d0d;
     border-color: #414b56;
     color: #e2e6eb;
 }
@@ -780,7 +780,7 @@
 }
 
 .modo-oscuro .filtro button.btn-restaurar {
-    background: #303842;
+    background: #0d0d0d;
     border-color: #46515c;
     color: #c8ced6;
 }
@@ -796,7 +796,7 @@
 }
 
 .modo-oscuro .inv-tabla th {
-    background: #303842;
+    background: #0d0d0d;
     color: #cbd2da;
     border-bottom-color: #46515c;
 }
@@ -812,7 +812,7 @@
 }
 
 .modo-oscuro .inv-tabla input[type="checkbox"] {
-    background: #303842;
+    background: #0d0d0d;
     border-color: #59636e;
 }
 
@@ -836,7 +836,7 @@
 }
 
 .modo-oscuro .inv-accion {
-    background: #303842;
+    background: #0d0d0d;
     border-color: #414b56;
 }
 
@@ -871,7 +871,7 @@
 }
 
 .modo-oscuro .inv-cerrar {
-    background: #303842;
+    background: #0d0d0d;
     border-color: #414b56;
     color: #c2cad3;
 }
@@ -882,7 +882,7 @@
 }
 
 .modo-oscuro .inv-btn {
-    background: #303842;
+    background: #0d0d0d;
     border-color: #414b56;
     color: #a9c4e8;
 }
@@ -937,7 +937,7 @@
 }
 
 .modo-oscuro .inv-contador {
-    background: #303842;
+    background: #0d0d0d;
     border-color: #414b56;
     color: #a9c4e8;
 }

@@ -39,7 +39,7 @@ function VentasTabla({ ventas, onVerUna, onEditar }) {
 
         <div className="vta-tabla-contenedor">
 
-            <table className="vta-tabla">
+            <table className="vta-tabla tabla-coherente">
 
                 <thead>
                     <tr>
