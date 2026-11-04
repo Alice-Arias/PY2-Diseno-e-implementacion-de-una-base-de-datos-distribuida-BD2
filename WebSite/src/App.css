@@ -144,6 +144,13 @@ input[type="number"]::-webkit-inner-spin-button {
     color: var(--text-dark);
 }
 
+.sidebar .logo img{
+    margin-left: 3.5rem;
+    width: 10rem;
+    height: 7.5rem;
+    object-fit: contain;
+}
+
 .sidebar .logo span {
     color: var(--primary);
 }
@@ -665,7 +672,7 @@ input[type="number"]::-webkit-inner-spin-button {
     align-items: center;
     justify-content: center;
     gap: 0.4rem;
-    height: 38px;
+    height: 42.5px;
     padding: 0 14px;
     border: 1px solid #cbd5e1;
     border-radius: 8px;
@@ -2064,7 +2071,6 @@ input[type="number"]::-webkit-inner-spin-button {
     font-weight: 700;
     font-size: 0.95rem;
     color: var(--primary-dark);
-    text-align: left;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -3475,4 +3481,337 @@ input[type="number"]::-webkit-inner-spin-button {
     .mensaje-modal {
         padding: 1.1rem;
     }
+}
+
+
+
+
+
+/* =========================================================
+   TEMA OSCURO - NEGRO
+   ========================================================= */
+
+.modo-oscuro {
+    background: #000000;
+    color: #f1f1f1;
+    min-height: 100vh;
+}
+
+.modo-oscuro .app-shell,
+.modo-oscuro .content {
+    background: #000000;
+    color: #f1f1f1;
+}
+
+/* SIDEBAR */
+
+.modo-oscuro .sidebar {
+    background: #000000;
+    border-right-color: #252525;
+}
+
+.modo-oscuro .sidebar .logo {
+    color: #ffffff;
+}
+
+.modo-oscuro .sidebar .logo span {
+    color: #4d83d8;
+}
+
+.modo-oscuro .sidebar .nav-item {
+    color: #a0a0a0;
+}
+
+.modo-oscuro .sidebar .nav-item:hover {
+    background: #202020;
+    color: #75a5f0;
+}
+
+.modo-oscuro .sidebar .nav-item.active {
+    background: #1b2638;
+    color: #75a5f0;
+    box-shadow: inset 3px 0 0 #4d83d8;
+}
+
+/* TOPBAR */
+
+.modo-oscuro .topbar {
+    background: #000000;
+    border-bottom-color: #252525;
+}
+
+.modo-oscuro .topbar .search,
+.modo-oscuro .toolbar .search-box,
+.modo-oscuro .toolbar select {
+    background: #121111;
+    border-color: #303030;
+    color: #f1f1f1;
+}
+
+.modo-oscuro .topbar .search input,
+.modo-oscuro .toolbar .search-box input {
+    color: #ffffff;
+}
+
+.modo-oscuro .topbar .user {
+    color: #ffffff;
+}
+
+/* ENCABEZADOS */
+
+.modo-oscuro .page-header h1 {
+    color: #ffffff;
+}
+
+.modo-oscuro .page-header p,
+.modo-oscuro .page-header .date-badge {
+    color: #a0a0a0;
+}
+
+/* TARJETAS */
+
+.modo-oscuro .stat-card,
+.modo-oscuro .table-card {
+    background: #0d0d0d;
+    border-color: #303030;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+
+.modo-oscuro .stat-card .stat-value {
+    color: #ffffff;
+}
+
+.modo-oscuro .stat-card .stat-label,
+.modo-oscuro .stat-card .stat-sub {
+    color: #a0a0a0;
+}
+
+.modo-oscuro .stat-card .stat-progress {
+    background: #303030;
+}
+
+/* TOOLBAR */
+
+.modo-oscuro .toolbar {
+    background: #0d0d0d;
+    border-color: #303030;
+}
+
+.modo-oscuro .toolbar .search-box:focus-within,
+.modo-oscuro .toolbar select:focus {
+    background: #202020;
+}
+
+/* TABLAS */
+
+.modo-oscuro .tabla-clientes {
+    background: #0d0d0d;
+    color: #f1f1f1;
+}
+
+.modo-oscuro .tabla-clientes th {
+    background: #202020;
+    color: #ffffff;
+    border-bottom-color: #383838;
+}
+
+.modo-oscuro .tabla-clientes td {
+    background: #0d0d0d;
+    color: #e5e5e5;
+    border-bottom-color: #303030;
+}
+
+.modo-oscuro .tabla-clientes tbody tr:hover td {
+    background: #222222;
+}
+
+/* PAGINACIÓN */
+
+.modo-oscuro .paginacion {
+    background: #0d0d0d;
+    color: #aaaaaa;
+    border-color: #303030;
+}
+
+.modo-oscuro .paginacion button {
+    background: #202020;
+    border-color: #383838;
+    color: #eeeeee;
+}
+
+/* FILTROS */
+
+.modo-oscuro .filtro input,
+.modo-oscuro .campo input,
+.modo-oscuro .campo select,
+.modo-oscuro .campo textarea {
+    background: #0d0d0d;
+    border-color: #383838;
+    color: #ffffff;
+}
+
+.modo-oscuro .campo label {
+    color: #dddddd;
+}
+
+/* MODALES */
+
+.modo-oscuro .modal-contenido,
+.modo-oscuro .modal-formulario,
+.modo-oscuro .modal-confirmacion,
+.modo-oscuro .mensaje-modal {
+    background: #0d0d0d;
+    border-color: #303030;
+    color: #f1f1f1;
+}
+
+.modo-oscuro .modal-header,
+.modo-oscuro .modal-footer {
+    background: #0d0d0d;
+    border-color: #303030;
+}
+
+.modo-oscuro .modal-header h2,
+.modo-oscuro .modal-confirmacion h2,
+.modo-oscuro .mensaje-modal h2,
+.modo-oscuro .modal-contenido .cd-titulo h2,
+.modo-oscuro .cd-panel-titulo {
+    color: #ffffff;
+}
+
+/* PANELES DE DETALLE */
+
+.modo-oscuro .cd-caja,
+.modo-oscuro .cd-panel {
+    background: #0d0d0d;
+    border-color: #303030;
+}
+
+.modo-oscuro .cd-caja-ambar,
+.modo-oscuro .cd-notas {
+    background: #242018;
+    border-color: #453a25;
+}
+
+.modo-oscuro .cd-subtitulo,
+.modo-oscuro .cd-linea,
+.modo-oscuro .cd-datos {
+    color: #cccccc;
+}
+
+/* BOTONES SECUNDARIOS */
+
+.modo-oscuro .btn-restaurar,
+.modo-oscuro .btn-cancelar,
+.modo-oscuro .modal-cerrar,
+.modo-oscuro .cerrar {
+    background: #121111;
+    border-color: #383838;
+    color: #eeeeee;
+}
+
+.modo-oscuro .btn-restaurar:hover,
+.modo-oscuro .btn-cancelar:hover {
+    background: #303030;
+}
+
+/* TEXTOS GENERALES */
+
+.modo-oscuro .table-card p {
+    color: #dddddd;
+}
+
+/* TRANSICIONES */
+
+.modo-oscuro,
+.modo-oscuro .app-shell,
+.modo-oscuro .content,
+.modo-oscuro .sidebar,
+.modo-oscuro .topbar,
+.modo-oscuro .stat-card,
+.modo-oscuro .table-card {
+    transition: background-color 0.25s ease,
+                color 0.25s ease,
+                border-color 0.25s ease;
+}
+
+/* =========================================================
+   CORRECCIÓN DE COMBOBOX - MÓDULO REPORTES
+   ========================================================= */
+
+/* =========================================================
+   COMBOBOX - MÓDULO REPORTES
+   ========================================================= */
+
+.reportes-toolbar select {
+    appearance: none !important;
+    -webkit-appearance: none !important;
+
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23cbd5e1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+
+    background-repeat: no-repeat !important;
+    background-position: right 12px center !important;
+    background-size: 16px !important;
+
+    padding-right: 2.5rem;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+/* Base compartida para las tablas de inventario, ventas y reportes. */
+.table-card .tabla-coherente {
+    color: var(--text-dark);
+    background: var(--card-bg);
+}
+
+.table-card .tabla-coherente th,
+.table-card .tabla-coherente td {
+    box-sizing: border-box;
+    padding: 0.8rem 1rem;
+    vertical-align: middle;
+}
+
+.table-card .tabla-coherente th {
+    height: 52px;
+    background: linear-gradient(180deg, #edf3f9, #e8eef5);
+    color: #46566b;
+    font-size: 0.84rem;
+    font-weight: 650;
+    white-space: nowrap;
+    border-bottom: 2px solid #d5dfeb;
+}
+
+.table-card .tabla-coherente td {
+    height: 58px;
+    background: #ffffff;
+    color: var(--text-dark);
+    font-size: 0.9rem;
+    line-height: 1.45;
+    border-bottom: 1px solid var(--border);
+    transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.table-card .tabla-coherente tbody tr:hover td {
+    background: #f0f6ff;
+}
+
+.modo-oscuro .table-card .tabla-coherente {
+    background: #0d0d0d;
+    color: #f1f1f1;
+}
+
+.modo-oscuro .table-card .tabla-coherente th {
+    background: #202020;
+    color: #ffffff;
+    border-bottom-color: #383838;
+}
+
+.modo-oscuro .table-card .tabla-coherente td {
+    background: #0d0d0d;
+    color: #e5e5e5;
+    border-bottom-color: #303030;
+}
+
+.modo-oscuro .table-card .tabla-coherente tbody tr:hover td {
+    background: #222222;
 }
