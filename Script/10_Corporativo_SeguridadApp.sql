@@ -91,6 +91,14 @@ ALTER ROLE rol_corporativo    ADD MEMBER app_corporativo;
 ALTER ROLE rol_admin_catalogo ADD MEMBER app_admin;
 GO
 
+/* app_corporativo consulta las sucursales para las estadísticas: necesita su propio
+   mapeo en los linked servers LS_SANJOSE y LS_LIMON. */
+EXEC master.dbo.sp_addlinkedsrvlogin @rmtsrvname = N'LS_SANJOSE', @useself = N'FALSE',
+     @locallogin = N'app_corporativo', @rmtuser = N'enlace_corporativo', @rmtpassword = N'Enlace#2026Pass';
+EXEC master.dbo.sp_addlinkedsrvlogin @rmtsrvname = N'LS_LIMON', @useself = N'FALSE',
+     @locallogin = N'app_corporativo', @rmtuser = N'enlace_corporativo', @rmtpassword = N'Enlace#2026Pass';
+GO
+
 /*---------------------------------------------------------------------------------------*
 * Paso 5: verificación
 *-----------------------------------------------------------------------------------------*/

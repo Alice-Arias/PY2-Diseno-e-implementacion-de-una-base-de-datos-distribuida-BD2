@@ -165,6 +165,9 @@ sj   12_Sucursal_Sinonimos.sql
 lm   12_Sucursal_Sinonimos.sql
 sj   13_Sucursal_Procedimientos.sql
 lm   13_Sucursal_Procedimientos.sql
+corp 14_Corporativo_Catalogo.sql
+sj   15_Sucursal_Productos.sql
+lm   15_Sucursal_Productos.sql
 
 # ---------------------------------------------------------------------------
 paso "6. Verificación final"

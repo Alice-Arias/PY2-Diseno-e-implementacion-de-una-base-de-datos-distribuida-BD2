@@ -6,19 +6,22 @@
 * Instala en la sucursal los procedimientos del Proyecto 1 que usa el rol
 * Administrador, adaptados a la base distribuida.
 *
-*   Clientes      Listar, Detalle (*), Opciones
-*   Proveedores   Listar, Detalle (*), Opciones
-*   Inventario    Listar (*), Detalle (*), Opciones
+*   Clientes      Listar, Resumen, Detalle (*), Opciones
+*   Proveedores   Listar, Resumen, Detalle (*), Opciones
+*   Ciudades      Buscar
+*   Inventario    Listar, Resumen, Detalle (*), Opciones
 *   Ventas        Listar, Detalle, Insertar (*), Actualizar, Opciones
 *
-*   (*) adaptado. Los demás son el código del Proyecto 1 sin cambios: como usan
-*       sinónimos (12_Sucursal_Sinonimos.sql), funcionan igual sobre los fragmentos.
+*   (*) adaptado. Los demás son la versión actual del proyecto (SP_Clientes.sql,
+*       SP_Proveedores.sql, SP_Inventarios.sql, SP_Ventas.sql y
+*       SP_Formularios_Rapidos.sql) sin cambios: como usan sinónimos
+*       (12_Sucursal_Sinonimos.sql), funcionan igual sobre los fragmentos.
 *
 * No se instalan:
 *   - Insertar/Actualizar/Eliminar de clientes y proveedores: según el enunciado,
 *     el Administrador solo CONSULTA clientes y proveedores.
 *   - Insertar/Actualizar/Eliminar de productos: el catálogo se modifica en el
-*     Corporativo y se replica (siguiente script).
+*     Corporativo y se replica (14_Corporativo_Catalogo.sql y 15_Sucursal_Productos.sql).
 *
 * Al final se otorga EXECUTE sobre estos procedimientos al rol rol_admin_sucursal.
 *
@@ -42,194 +45,190 @@ END
 GO
 
 /*---------------------------------------------------------------------------------------*
-* SP_Clientes_Listar  (Proyecto 1, sin cambios: solo usa datos locales)
+* SP_Clientes_Listar  (versión actual del proyecto, sin cambios: datos locales)
 *-----------------------------------------------------------------------------------------*/
 
 CREATE OR ALTER PROCEDURE dbo.SP_Clientes_Listar
-
-    @Nombre NVARCHAR(100) = NULL,
-
-    @Categoria NVARCHAR(100) = NULL,
-
-    @MetodoEntrega NVARCHAR(100) = NULL
-
+    /* CORREGIDO PY2: pagina en SQL (OFFSET/FETCH). Resultado 1 = filas de la página,
+       resultado 2 = datos de paginación. */
+    @Nombre        NVARCHAR(100) = NULL,
+    @Categoria     NVARCHAR(100) = NULL,
+    @MetodoEntrega NVARCHAR(100) = NULL,
+    @Pagina        INT           = 1,
+    @TamanoPagina  INT           = 10
 AS
-
 BEGIN
+    SET NOCOUNT ON;
 
-    SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
+    IF @Pagina IS NULL OR @Pagina < 1 SET @Pagina = 1;
+    IF @TamanoPagina IS NULL OR @TamanoPagina NOT BETWEEN 1 AND 100 SET @TamanoPagina = 10;
 
     SELECT
-
         c.CustomerID,
-
-        c.CustomerName AS Nombre_Cliente,
-
+        c.CustomerName           AS Nombre_Cliente,
         cat.CustomerCategoryName AS Categoria_Cliente,
-
-        dm.DeliveryMethodName AS Metodo_Entrega
-
+        dm.DeliveryMethodName    AS Metodo_Entrega
+    INTO #Filtrados
     FROM dbo.ClientesActuales AS c
-
-    INNER JOIN dbo.TiposCliente AS cat
-        ON c.CustomerCategoryID = cat.CustomerCategoryID
-
-    INNER JOIN dbo.FormasEntrega AS dm
-        ON c.DeliveryMethodID = dm.DeliveryMethodID
-
+    INNER JOIN dbo.TiposCliente AS cat ON c.CustomerCategoryID = cat.CustomerCategoryID
+    INNER JOIN dbo.FormasEntrega AS dm ON c.DeliveryMethodID = dm.DeliveryMethodID
     WHERE
-
         (@Nombre IS NULL OR c.CustomerName LIKE '%' + @Nombre + '%')
+        AND (@Categoria IS NULL OR cat.CustomerCategoryName LIKE '%' + @Categoria + '%')
+        AND (@MetodoEntrega IS NULL OR dm.DeliveryMethodName LIKE '%' + @MetodoEntrega + '%');
 
-        AND
+    DECLARE @Total INT = @@ROWCOUNT;
+    DECLARE @TotalPaginas INT =
+        CASE WHEN @Total = 0 THEN 1 ELSE CEILING(@Total * 1.0 / @TamanoPagina) END;
 
-        (@Categoria IS NULL OR cat.CustomerCategoryName LIKE '%' + @Categoria + '%')
+    /* Si la página pedida ya no existe (ej. se borró el último registro), se ajusta. */
+    IF @Pagina > @TotalPaginas SET @Pagina = @TotalPaginas;
 
-        AND
+    SELECT CustomerID, Nombre_Cliente, Categoria_Cliente, Metodo_Entrega
+    FROM #Filtrados
+    ORDER BY Nombre_Cliente ASC, CustomerID ASC
+    OFFSET (@Pagina - 1) * @TamanoPagina ROWS
+    FETCH NEXT @TamanoPagina ROWS ONLY;
 
-        (@MetodoEntrega IS NULL OR dm.DeliveryMethodName LIKE '%' + @MetodoEntrega + '%')
-
-    ORDER BY c.CustomerName ASC;
-
+    SELECT @Total AS Total_Registros, @Pagina AS Pagina,
+           @TamanoPagina AS Tamano_Pagina, @TotalPaginas AS Total_Paginas;
 END
 GO
 
 
 /*---------------------------------------------------------------------------------------*
-* SP_Clientes_Opciones  (Proyecto 1, sin cambios)
+* SP_Clientes_Resumen  (sin cambios)
+*-----------------------------------------------------------------------------------------*/
+
+CREATE OR ALTER PROCEDURE dbo.SP_Clientes_Resumen
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        (SELECT COUNT(*) FROM dbo.ClientesActuales) AS Total_Clientes,
+        (SELECT COUNT(DISTINCT CustomerCategoryID) FROM dbo.ClientesActuales) AS Total_Categorias;
+
+    SELECT DISTINCT cat.CustomerCategoryName AS Nombre
+    FROM dbo.ClientesActuales AS c
+    INNER JOIN dbo.TiposCliente AS cat ON c.CustomerCategoryID = cat.CustomerCategoryID
+    ORDER BY Nombre;
+
+    SELECT DISTINCT dm.DeliveryMethodName AS Nombre
+    FROM dbo.ClientesActuales AS c
+    INNER JOIN dbo.FormasEntrega AS dm ON c.DeliveryMethodID = dm.DeliveryMethodID
+    ORDER BY Nombre;
+END
+GO
+
+
+/*---------------------------------------------------------------------------------------*
+* SP_Clientes_Opciones  (versión de SP_Formularios_Rapidos.sql, sin cambios)
 *-----------------------------------------------------------------------------------------*/
 
 CREATE OR ALTER PROCEDURE dbo.SP_Clientes_Opciones
-
 AS
-
 BEGIN
-
     SET NOCOUNT ON;
 
+    SELECT CustomerCategoryID AS ID, CustomerCategoryName AS Nombre
+    FROM dbo.TiposCliente ORDER BY CustomerCategoryName;
 
-    /* 1. Categorías de clientes. */
-    SELECT
+    SELECT BuyingGroupID AS ID, BuyingGroupName AS Nombre
+    FROM dbo.GruposCompradores ORDER BY BuyingGroupName;
 
-        CustomerCategoryID AS ID,
+    SELECT PersonID AS ID, FullName AS Nombre
+    FROM dbo.Contactos WHERE IsSalesperson = 0 ORDER BY FullName;
 
-        CustomerCategoryName AS Nombre
+    SELECT CustomerID AS ID, CustomerName AS Nombre
+    FROM dbo.ClientesActuales ORDER BY CustomerName;
 
-    FROM Sales.CustomerCategories
-
-    ORDER BY CustomerCategoryName;
-
-
-    /* 2. Grupos de compra. */
-    SELECT
-
-        BuyingGroupID AS ID,
-
-        BuyingGroupName AS Nombre
-
-    FROM Sales.BuyingGroups
-
-    ORDER BY BuyingGroupName;
-
-
-    /* 3. Personas y contactos disponibles. */
-    SELECT
-
-        PersonID AS ID,
-
-        FullName AS Nombre
-
-    FROM Application.People
-
-    WHERE IsSalesperson = 0
-
-    ORDER BY FullName;
-
-
-    /* 4. Clientes disponibles para facturación. */
-    SELECT
-
-        CustomerID AS ID,
-
-        CustomerName AS Nombre
-
-    FROM Sales.Customers
-
-    ORDER BY CustomerName;
-
-
-    /* 5. Métodos de entrega disponibles. */
-    SELECT
-
-        DeliveryMethodID AS ID,
-
-        DeliveryMethodName AS Nombre
-
-    FROM Application.DeliveryMethods
-
-    ORDER BY DeliveryMethodName;
-
-
-    /* 6. Ciudades disponibles. */
-    SELECT
-
-        CityID AS ID,
-
-        CityName AS Nombre
-
-    FROM Application.Cities
-
-    ORDER BY CityName;
-
-END;
-
-GO
-GO
-
-
-/*---------------------------------------------------------------------------------------*
-* SP_Proveedores_Listar  (Proyecto 1, sin cambios: solo usa datos locales)
-*-----------------------------------------------------------------------------------------*/
-
-CREATE OR ALTER PROCEDURE dbo.SP_Proveedores_Listar
-    @Nombre NVARCHAR(100) = NULL,
-    @Categoria NVARCHAR(100) = NULL,
-    @MetodoEntrega NVARCHAR(100) = NULL
-AS
-BEGIN
-    SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
-
-    SELECT
-        p.SupplierID,
-        p.SupplierName AS Nombre_Proveedor,
-        cat.SupplierCategoryName AS Categoria_Proveedor,
-        dm.DeliveryMethodName AS Metodo_Entrega
-
-    FROM dbo.ProveedoresActuales AS p
-
-    /* Obtiene la categoría correspondiente al proveedor. */
-    INNER JOIN dbo.CategoriaProveedores AS cat
-        ON p.SupplierCategoryID = cat.SupplierCategoryID
-
-    /* Obtiene el método de entrega correspondiente. */
-    INNER JOIN dbo.FormasEntrega AS dm
-        ON p.DeliveryMethodID = dm.DeliveryMethodID
-
-    WHERE
-        (@Nombre IS NULL OR p.SupplierName LIKE '%' + @Nombre + '%')
-        AND
-        (@Categoria IS NULL OR cat.SupplierCategoryName LIKE '%' + @Categoria + '%')
-        AND
-        (@MetodoEntrega IS NULL OR dm.DeliveryMethodName LIKE '%' + @MetodoEntrega + '%')
-
-    /* Ordena los proveedores de la A a la Z. */
-    ORDER BY p.SupplierName ASC;
+    SELECT DeliveryMethodID AS ID, DeliveryMethodName AS Nombre
+    FROM dbo.FormasEntrega ORDER BY DeliveryMethodName;
 END
 GO
 
 
 /*---------------------------------------------------------------------------------------*
-* SP_Proveedores_Opciones  (Proyecto 1, sin cambios)
+* SP_Proveedores_Listar  (sin cambios: datos locales)
+*-----------------------------------------------------------------------------------------*/
+
+CREATE OR ALTER PROCEDURE dbo.SP_Proveedores_Listar
+    /* CORREGIDO PY2: pagina en SQL (OFFSET/FETCH). Resultado 1 = filas de la página,
+       resultado 2 = datos de paginación. */
+    @Nombre        NVARCHAR(100) = NULL,
+    @Categoria     NVARCHAR(100) = NULL,
+    @MetodoEntrega NVARCHAR(100) = NULL,
+    @Pagina        INT           = 1,
+    @TamanoPagina  INT           = 10
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF @Pagina IS NULL OR @Pagina < 1 SET @Pagina = 1;
+    IF @TamanoPagina IS NULL OR @TamanoPagina NOT BETWEEN 1 AND 100 SET @TamanoPagina = 10;
+
+    SELECT
+        p.SupplierID,
+        p.SupplierName           AS Nombre_Proveedor,
+        cat.SupplierCategoryName AS Categoria_Proveedor,
+        dm.DeliveryMethodName    AS Metodo_Entrega
+    INTO #Filtrados
+    FROM dbo.ProveedoresActuales AS p
+    INNER JOIN dbo.CategoriaProveedores AS cat ON p.SupplierCategoryID = cat.SupplierCategoryID
+    INNER JOIN dbo.FormasEntrega AS dm ON p.DeliveryMethodID = dm.DeliveryMethodID
+    WHERE
+        (@Nombre IS NULL OR p.SupplierName LIKE '%' + @Nombre + '%')
+        AND (@Categoria IS NULL OR cat.SupplierCategoryName LIKE '%' + @Categoria + '%')
+        AND (@MetodoEntrega IS NULL OR dm.DeliveryMethodName LIKE '%' + @MetodoEntrega + '%');
+
+    DECLARE @Total INT = @@ROWCOUNT;
+    DECLARE @TotalPaginas INT =
+        CASE WHEN @Total = 0 THEN 1 ELSE CEILING(@Total * 1.0 / @TamanoPagina) END;
+
+    /* Si la página pedida ya no existe (ej. se borró el último registro), se ajusta. */
+    IF @Pagina > @TotalPaginas SET @Pagina = @TotalPaginas;
+
+    SELECT SupplierID, Nombre_Proveedor, Categoria_Proveedor, Metodo_Entrega
+    FROM #Filtrados
+    ORDER BY Nombre_Proveedor ASC, SupplierID ASC
+    OFFSET (@Pagina - 1) * @TamanoPagina ROWS
+    FETCH NEXT @TamanoPagina ROWS ONLY;
+
+    SELECT @Total AS Total_Registros, @Pagina AS Pagina,
+           @TamanoPagina AS Tamano_Pagina, @TotalPaginas AS Total_Paginas;
+END
+GO
+
+
+/*---------------------------------------------------------------------------------------*
+* SP_Proveedores_Resumen  (sin cambios)
+*-----------------------------------------------------------------------------------------*/
+
+CREATE OR ALTER PROCEDURE dbo.SP_Proveedores_Resumen
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        (SELECT COUNT(*) FROM dbo.ProveedoresActuales) AS Total_Proveedores,
+        (SELECT COUNT(DISTINCT SupplierCategoryID) FROM dbo.ProveedoresActuales) AS Total_Categorias;
+
+    SELECT DISTINCT cat.SupplierCategoryName AS Nombre
+    FROM dbo.ProveedoresActuales AS p
+    INNER JOIN dbo.CategoriaProveedores AS cat ON p.SupplierCategoryID = cat.SupplierCategoryID
+    ORDER BY Nombre;
+
+    SELECT DISTINCT dm.DeliveryMethodName AS Nombre
+    FROM dbo.ProveedoresActuales AS p
+    INNER JOIN dbo.FormasEntrega AS dm ON p.DeliveryMethodID = dm.DeliveryMethodID
+    ORDER BY Nombre;
+END
+GO
+
+
+/*---------------------------------------------------------------------------------------*
+* SP_Proveedores_Opciones  (versión de SP_Formularios_Rapidos.sql, sin cambios)
 *-----------------------------------------------------------------------------------------*/
 
 CREATE OR ALTER PROCEDURE dbo.SP_Proveedores_Opciones
@@ -237,97 +236,163 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    /* 1. Categorías de proveedores. */
-    SELECT
-        SupplierCategoryID AS ID,
-        SupplierCategoryName AS Nombre
-    FROM dbo.CategoriaProveedores
-    ORDER BY SupplierCategoryName;
+    SELECT SupplierCategoryID AS ID, SupplierCategoryName AS Nombre
+    FROM dbo.CategoriaProveedores ORDER BY SupplierCategoryName;
 
-    /* 2. Contactos disponibles. */
-    SELECT
-        PersonID AS ID,
-        FullName AS Nombre
-    FROM dbo.Contactos
-    WHERE IsSalesperson = 0
-    ORDER BY FullName;
+    SELECT PersonID AS ID, FullName AS Nombre
+    FROM dbo.Contactos WHERE IsSalesperson = 0 ORDER BY FullName;
 
-    /* 3. Métodos de entrega. */
-    SELECT
-        DeliveryMethodID AS ID,
-        DeliveryMethodName AS Nombre
-    FROM dbo.FormasEntrega
-    ORDER BY DeliveryMethodName;
-
-    /* 4. Ciudades disponibles. */
-    SELECT
-        CityID AS ID,
-        CityName AS Nombre
-    FROM dbo.Ciudades
-    ORDER BY CityName;
-END;
-
-GO
-GO
-
-
-/*---------------------------------------------------------------------------------------*
-* SP_Inventarios_Listar  (adaptado: un producto nuevo del catálogo puede no tener
-* existencias todavía en esta sucursal; se muestra con cantidad 0)
-*-----------------------------------------------------------------------------------------*/
-
-CREATE OR ALTER PROCEDURE dbo.SP_Inventarios_Listar
-    @Nombre NVARCHAR(100) = NULL,
-    @Grupo NVARCHAR(100) = NULL,
-    @Cantidad INT
-AS
-BEGIN
-    SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
-
-    SELECT
-        pto.StockItemID,
-        pto.StockItemName AS Producto,
-
-        /* Agrupa los grupos asociados al mismo producto. */
-        STRING_AGG(g.StockGroupName, ', ')
-            WITHIN GROUP (ORDER BY g.StockGroupName)
-            AS Grupo,
-
-        ISNULL(pi.QuantityOnHand, 0) AS Cantidad_Inventario
-
-    FROM dbo.ProductosActuales AS pto
-
-    /* Relaciona el producto con sus grupos de inventario. */
-    INNER JOIN dbo.ItemGrupos AS ig
-        ON pto.StockItemID = ig.StockItemID
-
-    INNER JOIN dbo.GruposInventario AS g
-        ON ig.StockGroupID = g.StockGroupID
-
-    /* Obtiene la cantidad disponible del producto. */
-    LEFT JOIN dbo.ProductosInventario AS pi
-        ON pto.StockItemID = pi.StockItemID
-
-    WHERE
-        (@Nombre IS NULL OR pto.StockItemName LIKE '%' + @Nombre + '%')
-        AND
-        (@Grupo IS NULL OR g.StockGroupName LIKE '%' + @Grupo + '%')
-        AND
-        (@Cantidad IS NULL OR ISNULL(pi.QuantityOnHand, 0) >= @Cantidad)
-
-    GROUP BY
-        pto.StockItemID,
-        pto.StockItemName,
-        pi.QuantityOnHand
-
-    /* Ordena los productos alfabéticamente. */
-    ORDER BY pto.StockItemName ASC;
+    SELECT DeliveryMethodID AS ID, DeliveryMethodName AS Nombre
+    FROM dbo.FormasEntrega ORDER BY DeliveryMethodName;
 END
 GO
 
 
 /*---------------------------------------------------------------------------------------*
-* SP_Inventarios_Detalle  (adaptado: existencias en 0 si la sucursal aún no tiene el producto)
+* SP_Ciudades_Buscar  (versión de SP_Formularios_Rapidos.sql, sin cambios)
+*-----------------------------------------------------------------------------------------*/
+
+CREATE OR ALTER PROCEDURE dbo.SP_Ciudades_Buscar
+    @Texto  NVARCHAR(50) = NULL,
+    @CityID INT          = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF @CityID IS NOT NULL
+    BEGIN
+        SELECT c.CityID AS ID,
+               c.CityName + N', ' + sp.StateProvinceName AS Nombre
+        FROM dbo.Ciudades AS c
+        INNER JOIN Application.StateProvinces AS sp ON c.StateProvinceID = sp.StateProvinceID
+        WHERE c.CityID = @CityID;
+        RETURN;
+    END
+
+    SET @Texto = LTRIM(RTRIM(ISNULL(@Texto, N'')));
+
+    IF LEN(@Texto) < 2
+    BEGIN
+        SELECT CAST(NULL AS INT) AS ID, CAST(NULL AS NVARCHAR(100)) AS Nombre WHERE 1 = 0;
+        RETURN;
+    END
+
+    /* Primero las que EMPIEZAN con el texto, luego las que lo CONTIENEN. */
+    SELECT TOP (20)
+        c.CityID AS ID,
+        c.CityName + N', ' + sp.StateProvinceName AS Nombre
+    FROM dbo.Ciudades AS c
+    INNER JOIN Application.StateProvinces AS sp ON c.StateProvinceID = sp.StateProvinceID
+    WHERE c.CityName LIKE N'%' + @Texto + N'%'
+    ORDER BY
+        CASE WHEN c.CityName LIKE @Texto + N'%' THEN 0 ELSE 1 END,
+        c.CityName,
+        sp.StateProvinceName;
+END
+GO
+
+
+/*---------------------------------------------------------------------------------------*
+* SP_Inventarios_Listar  (sin cambios)
+*-----------------------------------------------------------------------------------------*/
+
+CREATE OR ALTER PROCEDURE dbo.SP_Inventarios_Listar
+    @Nombre       NVARCHAR(100) = NULL,
+    @Grupo        NVARCHAR(100) = NULL,
+    @Cantidad     INT           = NULL,
+    @Pagina       INT           = 1,
+    @TamanoPagina INT           = 10
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF @Pagina IS NULL OR @Pagina < 1 SET @Pagina = 1;
+    IF @TamanoPagina IS NULL OR @TamanoPagina NOT BETWEEN 1 AND 100 SET @TamanoPagina = 10;
+
+    /* 1. Productos que cumplen los filtros (solo columnas livianas). */
+    SELECT
+        pto.StockItemID,
+        pto.StockItemName,
+        pi.QuantityOnHand
+    INTO #Filtrados
+    FROM dbo.ProductosActuales AS pto
+    LEFT JOIN dbo.ProductosInventario AS pi
+        ON pi.StockItemID = pto.StockItemID
+    WHERE
+        (@Nombre IS NULL OR pto.StockItemName LIKE '%' + @Nombre + '%')
+        AND (@Cantidad IS NULL OR pi.QuantityOnHand >= @Cantidad)
+        AND (@Grupo IS NULL OR EXISTS
+            (
+                SELECT 1
+                FROM dbo.ItemGrupos AS ig
+                INNER JOIN dbo.GruposInventario AS g
+                    ON g.StockGroupID = ig.StockGroupID
+                WHERE ig.StockItemID = pto.StockItemID
+                  AND g.StockGroupName LIKE '%' + @Grupo + '%'
+            ));
+
+    DECLARE @Total INT = @@ROWCOUNT;
+    DECLARE @TotalPaginas INT =
+        CASE WHEN @Total = 0 THEN 1
+             ELSE CEILING(@Total * 1.0 / @TamanoPagina) END;
+
+    /* Si la página pedida ya no existe (ej: se borró el último registro), se ajusta. */
+    IF @Pagina > @TotalPaginas SET @Pagina = @TotalPaginas;
+
+    /* 2. Solo la página solicitada. Los grupos se arman únicamente para estas filas. */
+    SELECT
+        f.StockItemID,
+        f.StockItemName AS Producto,
+        (
+            SELECT STRING_AGG(g.StockGroupName, ', ')
+                   WITHIN GROUP (ORDER BY g.StockGroupName)
+            FROM dbo.ItemGrupos AS ig
+            INNER JOIN dbo.GruposInventario AS g
+                ON g.StockGroupID = ig.StockGroupID
+            WHERE ig.StockItemID = f.StockItemID
+              AND (@Grupo IS NULL OR g.StockGroupName LIKE '%' + @Grupo + '%')
+        ) AS Grupo,
+        f.QuantityOnHand AS Cantidad_Inventario
+    FROM #Filtrados AS f
+    ORDER BY f.StockItemName ASC
+    OFFSET (@Pagina - 1) * @TamanoPagina ROWS
+    FETCH NEXT @TamanoPagina ROWS ONLY;
+
+    /* 3. Información de paginación. */
+    SELECT
+        @Total        AS Total_Registros,
+        @Pagina       AS Pagina,
+        @TamanoPagina AS Tamano_Pagina,
+        @TotalPaginas AS Total_Paginas;
+END
+GO
+
+
+/*---------------------------------------------------------------------------------------*
+* SP_Inventarios_Resumen  (sin cambios)
+*-----------------------------------------------------------------------------------------*/
+
+CREATE OR ALTER PROCEDURE dbo.SP_Inventarios_Resumen
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        (SELECT COUNT(*) FROM dbo.ProductosActuales)            AS Total_Productos,
+        (SELECT COUNT(*) FROM dbo.GruposInventario)             AS Total_Grupos,
+        (SELECT COUNT(*) FROM dbo.ProductosInventario
+          WHERE QuantityOnHand <= 0)                            AS Productos_Sin_Stock;
+
+    SELECT StockGroupID AS ID, StockGroupName AS Nombre
+    FROM dbo.GruposInventario
+    ORDER BY StockGroupName;
+END
+GO
+
+
+/*---------------------------------------------------------------------------------------*
+* SP_Inventarios_Detalle  (adaptado: devuelve "Version", que el formulario de Modificar
+* debe enviar de vuelta al guardar para detectar si otro usuario cambió el producto)
 *-----------------------------------------------------------------------------------------*/
 
 CREATE OR ALTER PROCEDURE dbo.SP_Inventarios_Detalle
@@ -335,59 +400,64 @@ CREATE OR ALTER PROCEDURE dbo.SP_Inventarios_Detalle
 AS
 BEGIN
     SET NOCOUNT ON;
-    SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
 
     SELECT
         pto.StockItemID,
         pto.StockItemName AS Producto,
-        p.SupplierID AS Proveedor_ID,
-        p.SupplierName AS Proveedor,
-
-        /* Si el color está vacío, muestra un texto descriptivo. */
+        CONVERT(NVARCHAR(30), pto.ValidFrom, 126) AS Version,   -- control de concurrencia
+        pto.SupplierID   AS Proveedor_ID,
+        p.SupplierName   AS Proveedor,
+        pto.ColorID      AS Color_ID,
         ISNULL(NULLIF(LTRIM(RTRIM(c.ColorName)), ''), 'Color sin definir') AS Color,
-
-        /* Si la marca está vacía, muestra un texto descriptivo. */
-        ISNULL(NULLIF(LTRIM(RTRIM(pto.Brand)), ''), 'Marca sin definir') AS Marca,
-
-        e.PackageTypeName AS Unidad_Empaquetamiento,
+        ISNULL(NULLIF(LTRIM(RTRIM(pto.Brand)), ''), 'Marca sin definir')   AS Marca,
+        pto.Brand        AS Brand,
+        pto.UnitPackageID,
+        e.PackageTypeName  AS Unidad_Empaquetamiento,
+        pto.OuterPackageID,
         em.PackageTypeName AS Empaquetamiento,
         pto.QuantityPerOuter AS Cantidad_Empaquetamiento,
-        pto.Size AS Talla,
-
-        /* Calcula el impuesto correspondiente al precio unitario. */
+        pto.Size         AS Talla,
+        pto.LeadTimeDays,
+        pto.IsChillerStock,
+        pto.Barcode,
+        pto.TaxRate,
         ROUND(pto.UnitPrice * (pto.TaxRate / 100.0), 2) AS Impuesto,
-
-        pto.UnitPrice AS Precio_Unitario,
+        pto.UnitPrice    AS Precio_Unitario,
         pto.RecommendedRetailPrice AS Precio_Venta,
-        pto.TypicalWeightPerUnit AS Peso,
+        pto.TypicalWeightPerUnit   AS Peso,
+        pto.MarketingComments,
+        pto.InternalComments,
+        pto.CustomFields,
         pto.SearchDetails AS Palabras_Clave,
-        ISNULL(pi.QuantityOnHand, 0) AS Cantidad_Disponible,
-        pi.BinLocation AS Ubicacion
-
+        pi.QuantityOnHand AS Cantidad_Disponible,
+        pi.BinLocation    AS Ubicacion,
+        pi.LastCostPrice,
+        pi.ReorderLevel,
+        pi.TargetStockLevel,
+        (
+            SELECT STRING_AGG(CAST(ig.StockGroupID AS NVARCHAR(10)), ',')
+            FROM dbo.ItemGrupos AS ig
+            WHERE ig.StockItemID = pto.StockItemID
+        ) AS Grupos_IDs,
+        (
+            SELECT STRING_AGG(g.StockGroupName, ', ')
+            FROM dbo.ItemGrupos AS ig
+            INNER JOIN dbo.GruposInventario AS g ON g.StockGroupID = ig.StockGroupID
+            WHERE ig.StockItemID = pto.StockItemID
+        ) AS Grupos
     FROM dbo.ProductosActuales AS pto
-
-    /* Obtiene la información del proveedor. */
-    INNER JOIN dbo.ProveedoresActuales AS p
+    LEFT JOIN dbo.ProveedoresActuales AS p
         ON pto.SupplierID = p.SupplierID
-
-    /* El color es opcional. */
     LEFT JOIN dbo.ColoresProductos AS c
         ON pto.ColorID = c.ColorID
-
-    /* Obtiene los tipos de empaquetamiento. */
-    INNER JOIN dbo.EmpaquetamientoInventario e
+    LEFT JOIN dbo.EmpaquetamientoInventario AS e
         ON pto.UnitPackageID = e.PackageTypeID
-
-    INNER JOIN dbo.EmpaquetamientoInventario AS em
+    LEFT JOIN dbo.EmpaquetamientoInventario AS em
         ON pto.OuterPackageID = em.PackageTypeID
-
-    /* Obtiene la cantidad y ubicación del inventario. */
-    LEFT JOIN dbo.ProductosInventario AS pi
+    LEFT JOIN dbo.ProductosInventario AS pi      -- antes era INNER: el producto nuevo no aparecía
         ON pto.StockItemID = pi.StockItemID
-
     WHERE pto.StockItemID IN
     (
-        /* Permite recibir uno o varios IDs separados por coma. */
         SELECT TRY_CAST(value AS INT)
         FROM STRING_SPLIT(@StockItemID, ',')
         WHERE TRY_CAST(value AS INT) IS NOT NULL
@@ -397,95 +467,99 @@ GO
 
 
 /*---------------------------------------------------------------------------------------*
-* SP_Inventario_Opciones  (Proyecto 1, sin cambios)
+* SP_Inventario_Opciones  (sin cambios)
 *-----------------------------------------------------------------------------------------*/
 
 CREATE OR ALTER PROCEDURE dbo.SP_Inventario_Opciones
 AS
 BEGIN
     SET NOCOUNT ON;
-
-    /* 1. Proveedores disponibles. */
-    SELECT
-        SupplierID AS ID,
-        SupplierName AS Nombre
-    FROM dbo.ProveedoresActuales
-    ORDER BY SupplierName;
-
-    /* 2. Colores disponibles. */
-    SELECT
-        ColorID AS ID,
-        ColorName AS Nombre
-    FROM dbo.ColoresProductos
-    ORDER BY ColorName;
-
-    /* 3. Tipos de paquete disponibles. */
-    SELECT
-        PackageTypeID AS ID,
-        PackageTypeName AS Nombre
-    FROM dbo.EmpaquetamientoInventario
-    ORDER BY PackageTypeName;
-END;
-
-GO
-GO
-
-
-/*---------------------------------------------------------------------------------------*
-* SP_Ventas_Listar  (Proyecto 1, sin cambios: lee solo las facturas de esta sucursal)
-*-----------------------------------------------------------------------------------------*/
-
-CREATE OR ALTER PROCEDURE dbo.SP_Ventas_Listar
-    @NumeroFactura INT = NULL,
-    @FechaInicio DATE = NULL,
-    @FechaFin DATE = NULL,
-    @Cliente NVARCHAR(100) = NULL,
-    @DeliveryMethod NVARCHAR(50) = NULL,
-    @MontoInicio DECIMAL(18,2) = NULL,
-    @MontoFin DECIMAL(18,2) = NULL
-AS
-BEGIN
-    SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
-
-    SELECT 
-        f.InvoiceID,
-        f.InvoiceDate AS Fecha_Factura,
-        c.CustomerName AS Nombre_Cliente,
-        fe.DeliveryMethodName AS Metodo_Entrega,
-        SUM(df.ExtendedPrice) AS Monto
-    FROM dbo.Facturas f
-    INNER JOIN dbo.ClientesActuales AS c 
-        ON f.CustomerID = c.CustomerID
-    INNER JOIN dbo.FormasEntrega AS fe 
-        ON f.DeliveryMethodID = fe.DeliveryMethodID
-    INNER JOIN dbo.DetalleFacturas AS df 
-        ON f.InvoiceID = df.InvoiceID
-    WHERE
-        (@NumeroFactura IS NULL OR f.InvoiceID = @NumeroFactura)
-        AND
-        (@FechaInicio IS NULL OR f.InvoiceDate >= @FechaInicio)
-        AND
-        (@FechaFin IS NULL OR f.InvoiceDate <= @FechaFin)
-        AND
-        (@Cliente IS NULL OR c.CustomerName LIKE '%' + @Cliente + '%')
-        AND
-        (@DeliveryMethod IS NULL OR fe.DeliveryMethodName LIKE '%' + @DeliveryMethod + '%')
-    GROUP BY 
-        f.InvoiceID,
-        f.InvoiceDate,
-        c.CustomerName,
-        fe.DeliveryMethodName
-    HAVING 
-        (@MontoInicio IS NULL OR SUM(df.ExtendedPrice) >= @MontoInicio)
-        AND 
-        (@MontoFin IS NULL OR SUM(df.ExtendedPrice) <= @MontoFin)
-    ORDER BY c.CustomerName ASC;
+    SELECT SupplierID AS ID, SupplierName AS Nombre FROM dbo.ProveedoresActuales ORDER BY SupplierName;
+    SELECT ColorID AS ID, ColorName AS Nombre FROM dbo.ColoresProductos ORDER BY ColorName;
+    SELECT PackageTypeID AS ID, PackageTypeName AS Nombre FROM dbo.EmpaquetamientoInventario ORDER BY PackageTypeName;
+    SELECT StockGroupID AS ID, StockGroupName AS Nombre FROM dbo.GruposInventario ORDER BY StockGroupName;
 END
 GO
 
 
 /*---------------------------------------------------------------------------------------*
-* SP_Ventas_Detalle  (Proyecto 1, sin cambios)
+* SP_Ventas_Listar  (sin cambios: lee solo las facturas de esta sucursal)
+*-----------------------------------------------------------------------------------------*/
+
+CREATE OR ALTER PROCEDURE dbo.SP_Ventas_Listar
+    @NumeroFactura  INT           = NULL,
+    @FechaInicio    DATE          = NULL,
+    @FechaFin       DATE          = NULL,
+    @Cliente        NVARCHAR(100) = NULL,
+    @DeliveryMethod NVARCHAR(50)  = NULL,
+    @MontoInicio    DECIMAL(18,2) = NULL,
+    @MontoFin       DECIMAL(18,2) = NULL,
+    @Pagina         INT           = 1,
+    @TamanoPagina   INT           = 10
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF @Pagina IS NULL OR @Pagina < 1 SET @Pagina = 1;
+    IF @TamanoPagina IS NULL OR @TamanoPagina NOT BETWEEN 1 AND 100 SET @TamanoPagina = 10;
+
+    /* 1. Facturas que cumplen los filtros, con su monto. */
+    SELECT
+        f.InvoiceID,
+        f.InvoiceDate,
+        f.CustomerID,
+        c.CustomerName,
+        fe.DeliveryMethodName,
+        SUM(df.ExtendedPrice) AS Monto
+    INTO #Filtradas
+    FROM dbo.Facturas AS f
+    INNER JOIN dbo.ClientesActuales AS c  ON f.CustomerID = c.CustomerID
+    INNER JOIN dbo.FormasEntrega    AS fe ON f.DeliveryMethodID = fe.DeliveryMethodID
+    INNER JOIN dbo.DetalleFacturas  AS df ON f.InvoiceID = df.InvoiceID
+    WHERE
+        (@NumeroFactura  IS NULL OR f.InvoiceID = @NumeroFactura)
+        AND (@FechaInicio    IS NULL OR f.InvoiceDate >= @FechaInicio)
+        AND (@FechaFin       IS NULL OR f.InvoiceDate <= @FechaFin)
+        AND (@Cliente        IS NULL OR c.CustomerName LIKE '%' + @Cliente + '%')
+        AND (@DeliveryMethod IS NULL OR fe.DeliveryMethodName LIKE '%' + @DeliveryMethod + '%')
+    GROUP BY f.InvoiceID, f.InvoiceDate, f.CustomerID, c.CustomerName, fe.DeliveryMethodName
+    HAVING
+        (@MontoInicio IS NULL OR SUM(df.ExtendedPrice) >= @MontoInicio)
+        AND (@MontoFin IS NULL OR SUM(df.ExtendedPrice) <= @MontoFin)
+    OPTION (RECOMPILE); -- plan adecuado según qué filtros vienen en NULL
+
+    DECLARE @Total INT = @@ROWCOUNT;
+    DECLARE @TotalPaginas INT =
+        CASE WHEN @Total = 0 THEN 1 ELSE CEILING(@Total * 1.0 / @TamanoPagina) END;
+
+    IF @Pagina > @TotalPaginas SET @Pagina = @TotalPaginas;
+
+    /* 2. Solo la página pedida (orden por cliente, desempate por factura). */
+    SELECT
+        InvoiceID,
+        InvoiceDate        AS Fecha_Factura,
+        CustomerName       AS Nombre_Cliente,
+        DeliveryMethodName AS Metodo_Entrega,
+        Monto
+    FROM #Filtradas
+    ORDER BY CustomerName ASC, InvoiceID ASC
+    OFFSET (@Pagina - 1) * @TamanoPagina ROWS
+    FETCH NEXT @TamanoPagina ROWS ONLY;
+
+    /* 3. Paginación y estadísticas (antes se calculaban en React con reduce/Set). */
+    SELECT
+        @Total        AS Total_Registros,
+        @Pagina       AS Pagina,
+        @TamanoPagina AS Tamano_Pagina,
+        @TotalPaginas AS Total_Paginas,
+        ISNULL((SELECT SUM(Monto) FROM #Filtradas), 0)                AS Monto_Total,
+        (SELECT COUNT(DISTINCT CustomerID) FROM #Filtradas)           AS Clientes_Unicos;
+END
+GO
+
+
+/*---------------------------------------------------------------------------------------*
+* SP_Ventas_Detalle  (sin cambios)
 *-----------------------------------------------------------------------------------------*/
 
 CREATE OR ALTER PROCEDURE dbo.SP_Ventas_Detalle
@@ -562,9 +636,9 @@ GO
 
 
 /*---------------------------------------------------------------------------------------*
-* SP_Ventas_Insertar  (adaptado: InvoiceID sale de una secuencia, no de IDENTITY, por lo que
-* se obtiene con OUTPUT. La secuencia de cada sucursal está en su propio rango
-* (San José 10 000 000+, Limón 20 000 000+) y la factura queda con su SucursalID por defecto.)
+* SP_Ventas_Insertar  (corregido: InvoiceID sale de una secuencia, no de IDENTITY, por lo que
+* SCOPE_IDENTITY() devolvía NULL. Ahora se obtiene con OUTPUT. La secuencia de cada sucursal
+* está en su propio rango y la factura queda con su SucursalID por defecto.)
 *-----------------------------------------------------------------------------------------*/
 
 CREATE OR ALTER PROCEDURE dbo.SP_Ventas_Insertar
@@ -1040,7 +1114,7 @@ GO
 
 
 /*---------------------------------------------------------------------------------------*
-* SP_Ventas_Actualizar  (Proyecto 1, sin cambios)
+* SP_Ventas_Actualizar  (sin cambios)
 *-----------------------------------------------------------------------------------------*/
 
 CREATE OR ALTER PROCEDURE dbo.SP_Ventas_Actualizar
@@ -1473,7 +1547,7 @@ GO
 
 
 /*---------------------------------------------------------------------------------------*
-* SP_Ventas_Opciones  (Proyecto 1, sin cambios)
+* SP_Ventas_Opciones  (sin cambios)
 *-----------------------------------------------------------------------------------------*/
 
 CREATE OR ALTER PROCEDURE dbo.SP_Ventas_Opciones
@@ -1512,11 +1586,8 @@ BEGIN
     ORDER BY FullName;
 
     /* 5. Pedidos. */
-    SELECT
-        OrderID AS ID,
-        CustomerPurchaseOrderNumber AS Numero_Orden
-    FROM dbo.Pedidos
-    ORDER BY OrderID;
+    /* PY2: se quitó la lista de ~73 000 pedidos (hacía lenta la página de Ventas).
+       El pedido ahora se escribe como número y SP_Ventas_Insertar/Actualizar valida que exista. */
 
     /* 6. Productos. */
     SELECT
@@ -1653,7 +1724,8 @@ GO
 
 
 /*---------------------------------------------------------------------------------------*
-* SP_Proveedores_Detalle  (adaptado a la fragmentación vertical)
+* SP_Proveedores_Detalle  (adaptado a la fragmentación vertical; incluye los campos
+* agregados en SP_Formularios_Rapidos.sql: código bancario, comentarios y ciudad postal)
 *
 * Igual que SP_Clientes_Detalle: datos generales locales + datos sensibles
 * (contacto, teléfonos, direcciones y datos bancarios) desde el Corporativo, con
@@ -1736,9 +1808,11 @@ BEGIN
         p.SupplierReference            AS Referencia_Proveedor,
         s.BankAccountName              AS Nombre_Cuenta_Bancaria,
         s.BankAccountBranch            AS Sucursal_Cuenta_Bancaria,
+        s.BankAccountCode              AS Codigo_Cuenta_Bancaria,
         s.BankAccountNumber            AS Numero_Cuenta_Bancaria,
         s.BankInternationalCode        AS Codigo_Bancario_Internacional,
         p.PaymentDays                  AS Dias_De_Gracia,
+        p.InternalComments             AS Comentarios_Internos,
         s.PhoneNumber                  AS Telefono,
         s.FaxNumber                    AS Fax,
         s.WebsiteURL                   AS Sitio_Web,
@@ -1750,6 +1824,7 @@ BEGIN
         s.DeliveryLatitude             AS Latitud,
         s.DeliveryLongitude            AS Longitud,
         p.PostalCityID                 AS Ciudad_Postal_ID,
+        pc.CityName                    AS Ciudad_Postal,
         s.PostalPostalCode             AS Codigo_Postal_Postal,
         @CorporativoDisponible         AS Corporativo_Disponible
     FROM dbo.ProveedoresActuales AS p
@@ -1765,6 +1840,8 @@ BEGIN
         ON p.DeliveryMethodID = dm.DeliveryMethodID
     LEFT JOIN dbo.Ciudades AS ciu
         ON p.DeliveryCityID = ciu.CityID
+    LEFT JOIN dbo.Ciudades AS pc
+        ON p.PostalCityID = pc.CityID
     WHERE p.SupplierID IN (SELECT SupplierID FROM @Ids);
 END
 GO
