@@ -32,9 +32,9 @@ paso()  { echo; echo "==========================================================
 falla() { echo; echo "ERROR: $1"; echo "La instalación se detuvo. Revise el mensaje de arriba."; exit 1; }
 
 # sqlcmd dentro de una sucursal (contenedor, password, argumentos...)
-sql_suc()  { local c=$1 p=$2; shift 2; docker exec "$c" $SQLCMD -S localhost -U sa -P "$p" -C -b -f 65001 "$@"; }
+sql_suc()  { local c=$1 p=$2; shift 2; docker exec "$c" $SQLCMD -S localhost -U sa -P "$p" -C -b -I -f 65001 "$@"; }
 # sqlcmd hacia el Corporativo (se ejecuta desde el contenedor sanjose)
-sql_corp() { docker exec sanjose $SQLCMD -S corporativo,1433 -U sa -P "$CORP_PASS" -C -b -f 65001 "$@"; }
+sql_corp() { docker exec sanjose $SQLCMD -S corporativo,1433 -U sa -P "$CORP_PASS" -C -b -I -f 65001 "$@"; }
 
 valor() { tr -d '[:space:]'; }
 
@@ -168,6 +168,7 @@ lm   13_Sucursal_Procedimientos.sql
 corp 14_Corporativo_Catalogo.sql
 sj   15_Sucursal_Productos.sql
 lm   15_Sucursal_Productos.sql
+corp 16_Corporativo_Estadisticas.sql
 
 # ---------------------------------------------------------------------------
 paso "6. Verificación final"

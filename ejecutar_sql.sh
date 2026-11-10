@@ -35,7 +35,7 @@ en_suc() {
     local nodo=$1 pass=$2
     echo "-> $NOMBRE en $nodo"
     docker cp "$ARCHIVO" "$nodo":/tmp/"$NOMBRE" >/dev/null
-    docker exec "$nodo" $SQLCMD -S localhost -U sa -P "$pass" -C -b -f 65001 -i /tmp/"$NOMBRE"
+    docker exec "$nodo" $SQLCMD -S localhost -U sa -P "$pass" -C -b -I -f 65001 -i /tmp/"$NOMBRE"
 }
 
 en_corp() {
@@ -44,7 +44,7 @@ en_corp() {
     fi
     echo "-> $NOMBRE en corporativo"
     docker cp "$ARCHIVO" sanjose:/tmp/"$NOMBRE" >/dev/null
-    docker exec sanjose $SQLCMD -S corporativo,1433 -U sa -P "$CORP_SA_PASS" -C -b -f 65001 -i /tmp/"$NOMBRE"
+    docker exec sanjose $SQLCMD -S corporativo,1433 -U sa -P "$CORP_SA_PASS" -C -b -I -f 65001 -i /tmp/"$NOMBRE"
 }
 
 case "$DESTINO" in
