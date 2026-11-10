@@ -32,9 +32,9 @@ paso()  { echo; echo "==========================================================
 falla() { echo; echo "ERROR: $1"; echo "La instalación se detuvo. Revise el mensaje de arriba."; exit 1; }
 
 # sqlcmd dentro de una sucursal (contenedor, password, argumentos...)
-sql_suc()  { local c=$1 p=$2; shift 2; docker exec "$c" $SQLCMD -S localhost -U sa -P "$p" -C -b -f 65001 "$@"; }
+sql_suc()  { local c=$1 p=$2; shift 2; docker exec "$c" $SQLCMD -S localhost -U sa -P "$p" -C -b -I -f 65001 "$@"; }
 # sqlcmd hacia el Corporativo (se ejecuta desde el contenedor sanjose)
-sql_corp() { docker exec sanjose $SQLCMD -S corporativo,1433 -U sa -P "$CORP_PASS" -C -b -f 65001 "$@"; }
+sql_corp() { docker exec sanjose $SQLCMD -S corporativo,1433 -U sa -P "$CORP_PASS" -C -b -I -f 65001 "$@"; }
 
 valor() { tr -d '[:space:]'; }
 
@@ -79,15 +79,17 @@ sql_corp -h -1 -Q "SET NOCOUNT ON; SELECT @@SERVERNAME" >/dev/null 2>&1 \
     || falla "No se pudo conectar al SQL Server de Windows. Revise los requisitos de INSTALACION.md (TCP/IP 1433, firewall, contraseña de sa)."
 echo "listo."
 
+
 # ---------------------------------------------------------------------------
-paso "2. Verificando que no haya una instalación previa"
+#paso "2. Verificando que no haya una instalación previa"
 # ---------------------------------------------------------------------------
 
-YA=$(sql_corp -h -1 -Q "SET NOCOUNT ON; SELECT CASE WHEN OBJECT_ID('WideWorldImporters.dbo.ConfigNodo') IS NULL THEN 0 ELSE 1 END" | valor)
-if [ "$YA" = "1" ]; then
-    falla "El Corporativo ya tiene el sistema instalado. Este script es solo para computadoras nuevas."
-fi
-echo "No hay instalación previa."
+#YA=$(sql_corp -h -1 -Q "SET NOCOUNT ON; SELECT CASE WHEN OBJECT_ID('WideWorldImporters.dbo.ConfigNodo') IS NULL THEN 0 ELSE 1 END" | valor)
+#if [ "$YA" = "1" ]; then
+#    falla "El Corporativo ya tiene el sistema instalado. Este script es solo para computadoras nuevas."
+#fi
+#echo "No hay instalación previa."
+
 
 # ---------------------------------------------------------------------------
 paso "3. Restaurando WideWorldImporters en las sucursales"
@@ -109,8 +111,15 @@ paso "4. Restaurando WideWorldImporters en el Corporativo"
 
 mkdir -p /mnt/c/SQLBackups
 cp "$BAK" /mnt/c/SQLBackups/WideWorldImporters-Full.bak
-/mnt/c/Windows/System32/icacls.exe 'C:\SQLBackups' /grant 'NT SERVICE\MSSQLSERVER:(OI)(CI)RX' /T >/dev/null \
-    || falla "No se pudo dar permiso de lectura a C:\\SQLBackups."
+INST=$(sql_corp -h -1 -Q "SET NOCOUNT ON; SELECT ISNULL(CAST(SERVERPROPERTY('InstanceName') AS NVARCHAR(128)), '')" | valor)
+if [ -z "$INST" ]; then
+    CUENTA='NT SERVICE\MSSQLSERVER'          # instancia por defecto
+else
+    CUENTA="NT SERVICE\\MSSQL\$$INST"        # instancia con nombre (en tu caso MSSQL$SQLDEV2022)
+fi
+echo "Cuenta del servicio SQL: $CUENTA"
+/mnt/c/Windows/System32/icacls.exe 'C:\SQLBackups' /grant "$CUENTA:(OI)(CI)RX" /T >/dev/null \
+    || falla "No se pudo dar permiso de lectura a C:\\SQLBackups para $CUENTA."
 
 cat > /tmp/restaurar_corporativo.sql <<'EOF'
 USE master;
