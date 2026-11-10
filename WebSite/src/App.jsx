@@ -1,8 +1,12 @@
 import { useState } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
 
 import Sidebar from './components/Sidebar';
 import Topbar from './components/Topbar';
 
+import MainLayout from './components/MainLayout';
+
+import LoginPage from './pages/LoginPage';
 import ClientesPage from './pages/ClientesPage';
 import ProveedoresPage from './pages/ProveedoresPage';
 import InventarioPage from './pages/InventarioPage';
@@ -30,25 +34,23 @@ function App() {
     const [page, setPage] = useState('clientes');
 
     return (
-        <div className="app-shell modo-oscuro">
+        <div className="modo-oscuro">
+            <Routes>
+                {/* Login: siempre es la primera pantalla */}
+                <Route path="/" element={<LoginPage />} />
 
-            <Sidebar
-                current={page}
-                onNavigate={setPage}
-            />
+                {/* Resto de la app, dentro del layout con Sidebar y Topbar */}
+                <Route element={<MainLayout />}>
+                    <Route path="/clientes" element={<ClientesPage />} />
+                    <Route path="/proveedores" element={<ProveedoresPage />} />
+                    <Route path="/inventario" element={<InventarioPage />} />
+                    <Route path="/ventas" element={<VentasPage />} />
+                    <Route path="/reportes" element={<ReportesPage />} />
+                </Route>
 
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                <Topbar />
-
-                <div className="content">
-                    {page === 'clientes' && <ClientesPage />}
-                    {page === 'proveedores' && <ProveedoresPage />}
-                    {page === 'inventario' && <InventarioPage />}
-                    {page === 'ventas' && <VentasPage />}
-                    {page === 'reportes' && <ReportesPage />}
-                </div>
-            </div>
-
+                {/* Cualquier ruta desconocida vuelve al login */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
         </div>
     );
 }
