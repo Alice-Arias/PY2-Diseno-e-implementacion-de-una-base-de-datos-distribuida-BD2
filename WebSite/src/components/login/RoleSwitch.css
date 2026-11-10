@@ -1,0 +1,90 @@
+/* =========================================================
+   ROLE SWITCH - CORPORATIVO / ADMINISTRADOR
+   ========================================================= */
+
+.role-switch {
+    --rs-padding: 4px;
+    --rs-acento: #787879;        /* azul de la app, un poco más profundo para contraste con texto blanco */
+    --rs-acento-claro: #2059b4;
+
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    padding: var(--rs-padding);
+    border-radius: 14px;
+    background: rgba(0, 0, 0, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow:
+        inset 0 2px 6px rgba(0, 0, 0, 0.6),
+        0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* ---------------------------------------------------------
+   Indicador deslizante
+   --------------------------------------------------------- */
+
+.role-switch-indicador {
+    position: absolute;
+    top: var(--rs-padding);
+    bottom: var(--rs-padding);
+    left: var(--rs-padding);
+    width: calc((100% - var(--rs-padding) * 2) / 2);
+    border-radius: 10px;
+    background: linear-gradient(180deg, var(--rs-acento-claro), var(--rs-acento));
+    box-shadow:
+        0 4px 14px rgba(77, 131, 216, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.30);
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+}
+
+/* Al seleccionar "Administrador" se desplaza a la segunda mitad */
+.role-switch[data-activo='administrador'] .role-switch-indicador {
+    transform: translateX(100%);
+}
+
+/* ---------------------------------------------------------
+   Opciones (texto siempre visible por encima del indicador)
+   --------------------------------------------------------- */
+
+.role-switch-opcion {
+    position: relative;
+    z-index: 1;
+    padding: 0.7rem 0.5rem;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: #a0a0a0;
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: color 0.25s ease;
+}
+
+.role-switch-opcion:hover {
+    color: #f1f1f1;
+}
+
+.role-switch-opcion.active,
+.role-switch-opcion.active:hover {
+    color: #ffffff;
+}
+
+.role-switch-opcion:focus-visible {
+    outline: 2px solid #75a5f0;
+    outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------
+   Accesibilidad: sin animación si el usuario lo prefiere
+   --------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+    .role-switch-indicador,
+    .role-switch-opcion {
+        transition: none;
+    }
+}

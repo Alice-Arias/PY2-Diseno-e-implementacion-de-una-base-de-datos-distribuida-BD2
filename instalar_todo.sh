@@ -79,6 +79,7 @@ sql_corp -h -1 -Q "SET NOCOUNT ON; SELECT @@SERVERNAME" >/dev/null 2>&1 \
     || falla "No se pudo conectar al SQL Server de Windows. Revise los requisitos de INSTALACION.md (TCP/IP 1433, firewall, contraseña de sa)."
 echo "listo."
 
+
 # ---------------------------------------------------------------------------
 paso "2. Verificando que no haya una instalación previa"
 # ---------------------------------------------------------------------------
@@ -88,6 +89,7 @@ if [ "$YA" = "1" ]; then
     falla "El Corporativo ya tiene el sistema instalado. Este script es solo para computadoras nuevas."
 fi
 echo "No hay instalación previa."
+
 
 # ---------------------------------------------------------------------------
 paso "3. Restaurando WideWorldImporters en las sucursales"
@@ -109,8 +111,15 @@ paso "4. Restaurando WideWorldImporters en el Corporativo"
 
 mkdir -p /mnt/c/SQLBackups
 cp "$BAK" /mnt/c/SQLBackups/WideWorldImporters-Full.bak
-/mnt/c/Windows/System32/icacls.exe 'C:\SQLBackups' /grant 'NT SERVICE\MSSQLSERVER:(OI)(CI)RX' /T >/dev/null \
-    || falla "No se pudo dar permiso de lectura a C:\\SQLBackups."
+INST=$(sql_corp -h -1 -Q "SET NOCOUNT ON; SELECT ISNULL(CAST(SERVERPROPERTY('InstanceName') AS NVARCHAR(128)), '')" | valor)
+if [ -z "$INST" ]; then
+    CUENTA='NT SERVICE\MSSQLSERVER'          # instancia por defecto
+else
+    CUENTA="NT SERVICE\\MSSQL\$$INST"        # instancia con nombre (en tu caso MSSQL$SQLDEV2022)
+fi
+echo "Cuenta del servicio SQL: $CUENTA"
+/mnt/c/Windows/System32/icacls.exe 'C:\SQLBackups' /grant "$CUENTA:(OI)(CI)RX" /T >/dev/null \
+    || falla "No se pudo dar permiso de lectura a C:\\SQLBackups para $CUENTA."
 
 cat > /tmp/restaurar_corporativo.sql <<'EOF'
 USE master;
