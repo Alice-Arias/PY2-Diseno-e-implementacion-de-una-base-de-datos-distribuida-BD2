@@ -81,14 +81,14 @@ echo "listo."
 
 
 # ---------------------------------------------------------------------------
-#paso "2. Verificando que no haya una instalación previa"
+paso "2. Verificando que no haya una instalación previa"
 # ---------------------------------------------------------------------------
 
-#YA=$(sql_corp -h -1 -Q "SET NOCOUNT ON; SELECT CASE WHEN OBJECT_ID('WideWorldImporters.dbo.ConfigNodo') IS NULL THEN 0 ELSE 1 END" | valor)
-#if [ "$YA" = "1" ]; then
-#    falla "El Corporativo ya tiene el sistema instalado. Este script es solo para computadoras nuevas."
-#fi
-#echo "No hay instalación previa."
+YA=$(sql_corp -h -1 -Q "SET NOCOUNT ON; SELECT CASE WHEN OBJECT_ID('WideWorldImporters.dbo.ConfigNodo') IS NULL THEN 0 ELSE 1 END" | valor)
+if [ "$YA" = "1" ]; then
+    falla "El Corporativo ya tiene el sistema instalado. Este script es solo para computadoras nuevas."
+fi
+echo "No hay instalación previa."
 
 
 # ---------------------------------------------------------------------------
