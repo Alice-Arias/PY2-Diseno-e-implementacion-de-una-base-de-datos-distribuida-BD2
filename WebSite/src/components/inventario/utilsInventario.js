@@ -48,6 +48,7 @@ export function formularioDesdeDetalle(d) {
 
     return {
         StockItemName: texto(d.Producto),
+        Version: d.Version ?? null,          // PY2: control de concurrencia
         SupplierID: str(d.Proveedor_ID),
         ColorID: str(d.Color_ID),
         UnitPackageID: str(d.UnitPackageID),
@@ -140,6 +141,7 @@ export function armarDatos(f) {
         ReorderLevel: numero(f.ReorderLevel),
         TargetStockLevel: numero(f.TargetStockLevel),
 
-        LastEditedBy: f.LastEditedBy ?? 1
+        LastEditedBy: f.LastEditedBy ?? 1,
+        Version: f.Version ?? null           // PY2: el SP rechaza el cambio si otro usuario lo modificó
     };
 }

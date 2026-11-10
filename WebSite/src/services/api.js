@@ -1,3 +1,4 @@
+import { obtenerToken, cerrarSesion } from './sesion';
 /*-----------------------------------------------------------------------
 CONSTANTE: API_URL
 DESCRIPCION: Dirección base del servidor backend (Node + Express).
@@ -5,7 +6,68 @@ RESTRICCIONES: La API debe estar en ejecución en ese puerto.
 OBJETIVO: Centralizar la ruta para no repetirla en cada petición.
 -----------------------------------*-----------------------------------*/
 
-const API_URL = 'http://localhost:4000/api';
+const API_URL = '/api';   // PY2: pasa por el proxy de Vite (vite.config.js)
+
+/*---------------------------------------------------------------------------------------*
+* PY2: todas las peticiones llevan el token de la sesión. Si la API responde 401
+* (sesión vencida), se cierra la sesión y se vuelve al login.
+* Esta función reemplaza a fetch dentro de este archivo, así que las funciones de
+* abajo no cambian.
+*-----------------------------------------------------------------------------------------*/
+const fetchNativo = window.fetch.bind(window);
+
+const fetch = async (url, opciones = {}) => {
+  const token = obtenerToken();
+  const headers = { ...(opciones.headers || {}) };
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const res = await fetchNativo(url, { ...opciones, headers });
+
+  if (res.status === 401 && token) {
+    cerrarSesion();
+    window.location.href = '/';
+  }
+  return res;
+};
+
+/*---------------------------------------------------------------------------------------*
+* PY2: INICIO DE SESIÓN
+*-----------------------------------------------------------------------------------------*/
+export async function iniciarSesion(username, password, rol) {
+  let res;
+  try {
+    res = await fetchNativo(`${API_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password, rol })
+    });
+  } catch {
+    throw new Error('No se pudo conectar con la API. Revise que esté en ejecución.');
+  }
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'No se pudo iniciar sesión');
+  return data;
+}
+
+/*---------------------------------------------------------------------------------------*
+* PY2: ESTADÍSTICAS POR SUCURSAL (vistas materializadas del Corporativo)
+*-----------------------------------------------------------------------------------------*/
+export async function obtenerResumenSucursales(sucursal = '', anio = '') {
+  const params = new URLSearchParams();
+  if (sucursal) params.append('sucursal', sucursal);
+  if (anio) params.append('anio', anio);
+  const res = await fetch(`${API_URL}/reportes/resumen-sucursales?${params.toString()}`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'No se pudo obtener el resumen por sucursal');
+  return data;
+}
+
+export async function sincronizarEstadisticas() {
+  const res = await fetch(`${API_URL}/reportes/sincronizar`, { method: 'POST' });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'No se pudo sincronizar');
+  return data;
+}
 
 /*-------------------------------------
 MODULO: CLIENTES

@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 
 import WorldWideBanner from "../assets/WorldWidebanner.png"
+import { obtenerUsuario } from '../services/sesion';
 
 
 /*---------------------------------------------------------------------------------------*
@@ -55,11 +56,11 @@ import WorldWideBanner from "../assets/WorldWidebanner.png"
 
 const items = [
   //{ id: 'inicio', label: 'Inicio', icon: Home },
-  { id: 'clientes', label: 'Clientes', icon: Users },
-  { id: 'proveedores', label: 'Proveedores', icon: Truck },
-  { id: 'inventario', label: 'Inventario', icon: Package },
-  { id: 'ventas', label: 'Ventas', icon: ShoppingCart },
-  { id: 'reportes', label: 'Reportes', icon: BarChart3 }
+  { id: 'clientes', label: 'Clientes', icon: Users, roles: ['Administrador'] },
+  { id: 'proveedores', label: 'Proveedores', icon: Truck, roles: ['Administrador'] },
+  { id: 'inventario', label: 'Inventario', icon: Package, roles: ['Administrador'] },
+  { id: 'ventas', label: 'Ventas', icon: ShoppingCart, roles: ['Administrador'] },
+  { id: 'reportes', label: 'Reportes', icon: BarChart3, roles: ['Corporativo'] }
 ];
 
 
@@ -103,7 +104,8 @@ function Sidebar({ current, onNavigate }) {
 
       <nav>
 
-        {items.map((item) => (
+        {/* PY2: solo los módulos del rol del usuario */}
+        {items.filter((item) => item.roles.includes(obtenerUsuario()?.rol)).map((item) => (
 
           <div
 

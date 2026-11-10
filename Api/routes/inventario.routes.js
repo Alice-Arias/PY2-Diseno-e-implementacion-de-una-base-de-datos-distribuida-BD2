@@ -15,7 +15,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { sql, poolPromise } = require('../db');
+const { sql } = require('../db');
 
 /* Convierte '' / undefined en null; si trae valor lo convierte a número. */
 const num = (v) => (v === undefined || v === null || v === '' ? null : Number(v));
@@ -26,7 +26,7 @@ const txt = (v) => (v === undefined || v === null || String(v).trim() === '' ? n
 *-----------------------------------------------------------------------------------------*/
 router.get('/opciones', async (req, res) => {
     try {
-        const pool = await poolPromise;
+        const pool = req.pool;   // PY2: pool del nodo del usuario (auth.js)
         const result = await pool.request().execute('SP_Inventario_Opciones');
 
         res.json({
@@ -46,7 +46,7 @@ router.get('/opciones', async (req, res) => {
 *-----------------------------------------------------------------------------------------*/
 router.get('/resumen', async (req, res) => {
     try {
-        const pool = await poolPromise;
+        const pool = req.pool;   // PY2: pool del nodo del usuario (auth.js)
         const result = await pool.request().execute('SP_Inventarios_Resumen');
 
         res.json({
@@ -66,7 +66,7 @@ router.get('/', async (req, res) => {
     try {
         const { nombre, grupo, cantidad, pagina, tamano } = req.query;
 
-        const pool = await poolPromise;
+        const pool = req.pool;   // PY2: pool del nodo del usuario (auth.js)
         const result = await pool.request()
             .input('Nombre', sql.NVarChar(100), txt(nombre))
             .input('Grupo', sql.NVarChar(100), txt(grupo))
@@ -90,7 +90,7 @@ router.get('/', async (req, res) => {
 *-----------------------------------------------------------------------------------------*/
 router.get('/:id', async (req, res) => {
     try {
-        const pool = await poolPromise;
+        const pool = req.pool;   // PY2: pool del nodo del usuario (auth.js)
         const result = await pool.request()
             .input('StockItemID', sql.NVarChar(sql.MAX), req.params.id)
             .execute('SP_Inventarios_Detalle');
@@ -145,9 +145,16 @@ function parametrosProducto(request, b) {
 /*---------------------------------------------------------------------------------------*
 * POST /api/inventarios
 *-----------------------------------------------------------------------------------------*/
+/* PY2: código HTTP según el estado del RAISERROR de los procedimientos.
+   4 = nombre repetido, 5 = no existe, 6 = tiene movimientos, 7 = otro usuario lo
+   modificó (concurrencia), 8 = sucursal no responde, 9 = Corporativo no responde. */
+function codigoHttp(err) {
+    return { 4: 409, 5: 404, 6: 409, 7: 409, 8: 503, 9: 503 }[err.state] ?? 400;
+}
+
 router.post('/', async (req, res) => {
     try {
-        const pool = await poolPromise;
+        const pool = req.pool;   // PY2: pool del nodo del usuario (auth.js)
         const result = await parametrosProducto(pool.request(), req.body)
             .execute('SP_Inventario_Insertar');
 
@@ -157,7 +164,7 @@ router.post('/', async (req, res) => {
         });
     } catch (err) {
         console.error(err);
-        res.status(400).json({ error: err.message });
+        res.status(codigoHttp(err)).json({ error: err.message });
     }
 });
 
@@ -166,8 +173,10 @@ router.post('/', async (req, res) => {
 *-----------------------------------------------------------------------------------------*/
 router.put('/:id', async (req, res) => {
     try {
-        const pool = await poolPromise;
-        const request = pool.request().input('StockItemID', sql.Int, num(req.params.id));
+        const pool = req.pool;   // PY2: pool del nodo del usuario (auth.js)
+        const request = pool.request()
+            .input('StockItemID', sql.Int, num(req.params.id))
+            .input('Version', sql.NVarChar(30), txt(req.body.Version));   // PY2: concurrencia
         const result = await parametrosProducto(request, req.body)
             .execute('SP_Inventario_Actualizar');
 
@@ -177,7 +186,7 @@ router.put('/:id', async (req, res) => {
         });
     } catch (err) {
         console.error(err);
-        res.status(400).json({ error: err.message });
+        res.status(codigoHttp(err)).json({ error: err.message });
     }
 });
 
@@ -186,7 +195,7 @@ router.put('/:id', async (req, res) => {
 *-----------------------------------------------------------------------------------------*/
 router.delete('/:id', async (req, res) => {
     try {
-        const pool = await poolPromise;
+        const pool = req.pool;   // PY2: pool del nodo del usuario (auth.js)
         const result = await pool.request()
             .input('StockItemID', sql.Int, num(req.params.id))
             .execute('SP_Inventario_Eliminar');
@@ -197,7 +206,7 @@ router.delete('/:id', async (req, res) => {
         });
     } catch (err) {
         console.error(err);
-        res.status(400).json({ error: err.message });
+        res.status(codigoHttp(err)).json({ error: err.message });
     }
 });
 

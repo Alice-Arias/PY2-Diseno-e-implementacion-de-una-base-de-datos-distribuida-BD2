@@ -679,3 +679,145 @@
     border-color: #456da5;
     color: #ffffff;
 }
+
+/* ==================================================
+   PY2: RESUMEN POR SUCURSAL (rol Corporativo)
+   ================================================== */
+
+.resumen-sucursales {
+    margin-bottom: 1.5rem;
+    padding: 1rem 1.2rem;
+}
+
+.resumen-encabezado {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.selector-sucursal {
+    display: inline-flex;
+    padding: 4px;
+    gap: 4px;
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    background: var(--surface-soft);
+}
+
+.selector-sucursal button {
+    padding: 0.45rem 1.1rem;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.selector-sucursal button.activo {
+    background: var(--primary);
+    color: #ffffff;
+}
+
+.resumen-error {
+    margin: 0.8rem 0 0;
+    color: var(--danger);
+}
+
+.resumen-cuerpo {
+    display: grid;
+    grid-template-columns: 1fr 1.3fr 1.2fr;
+    gap: 1.2rem;
+    margin-top: 1rem;
+}
+
+.resumen-totales {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+}
+
+.resumen-totales div {
+    display: flex;
+    flex-direction: column;
+}
+
+.resumen-totales span,
+.resumen-sucursales h3 {
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    font-weight: 600;
+}
+
+.resumen-totales strong {
+    font-size: 1.15rem;
+}
+
+.resumen-sucursales h3 {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin: 0 0 0.6rem;
+}
+
+.resumen-barra {
+    display: grid;
+    grid-template-columns: 80px 1fr auto;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.55rem;
+    font-size: 0.86rem;
+}
+
+.resumen-barra-fondo {
+    height: 10px;
+    border-radius: 6px;
+    background: var(--surface-soft);
+    overflow: hidden;
+}
+
+.resumen-barra-relleno {
+    height: 100%;
+    border-radius: 6px;
+    background: linear-gradient(90deg, var(--primary), var(--purple));
+}
+
+.resumen-estado-fila {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.45rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.85rem;
+}
+
+.resumen-estado-fila.ok svg     { color: var(--green); }
+.resumen-estado-fila.falla svg  { color: var(--yellow); }
+
+.modo-oscuro .selector-sucursal {
+    background: #303842;
+    border-color: #414b56;
+}
+
+.modo-oscuro .selector-sucursal button {
+    color: #aeb6c0;
+}
+
+.modo-oscuro .selector-sucursal button.activo {
+    background: #456da5;
+    color: #ffffff;
+}
+
+.modo-oscuro .resumen-barra-fondo {
+    background: #303842;
+}
+
+@media (max-width: 900px) {
+    .resumen-cuerpo {
+        grid-template-columns: 1fr;
+    }
+}

@@ -5,6 +5,7 @@ import Sidebar from './components/Sidebar';
 import Topbar from './components/Topbar';
 
 import MainLayout from './components/MainLayout';
+import RutaProtegida from './components/RutaProtegida';
 
 import LoginPage from './pages/LoginPage';
 import ClientesPage from './pages/ClientesPage';
@@ -40,12 +41,13 @@ function App() {
                 <Route path="/" element={<LoginPage />} />
 
                 {/* Resto de la app, dentro del layout con Sidebar y Topbar */}
-                <Route element={<MainLayout />}>
-                    <Route path="/clientes" element={<ClientesPage />} />
-                    <Route path="/proveedores" element={<ProveedoresPage />} />
-                    <Route path="/inventario" element={<InventarioPage />} />
-                    <Route path="/ventas" element={<VentasPage />} />
-                    <Route path="/reportes" element={<ReportesPage />} />
+                {/* PY2: Administrador -> módulos de su sucursal. Corporativo -> Reportes. */}
+                <Route element={<RutaProtegida><MainLayout /></RutaProtegida>}>
+                    <Route path="/clientes" element={<RutaProtegida roles={['Administrador']}><ClientesPage /></RutaProtegida>} />
+                    <Route path="/proveedores" element={<RutaProtegida roles={['Administrador']}><ProveedoresPage /></RutaProtegida>} />
+                    <Route path="/inventario" element={<RutaProtegida roles={['Administrador']}><InventarioPage /></RutaProtegida>} />
+                    <Route path="/ventas" element={<RutaProtegida roles={['Administrador']}><VentasPage /></RutaProtegida>} />
+                    <Route path="/reportes" element={<RutaProtegida roles={['Corporativo']}><ReportesPage /></RutaProtegida>} />
                 </Route>
 
                 {/* Cualquier ruta desconocida vuelve al login */}

@@ -19,31 +19,52 @@
 *
 *---------------------------------------------------------------------------------------*/
 
-import { ChevronDown } from 'lucide-react';
+import { LogOut } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { obtenerUsuario, cerrarSesion } from '../services/sesion';
 
-
+/* PY2: muestra el usuario de la sesión, su rol y su sucursal, y permite salir. */
 function Topbar() {
+  const navigate = useNavigate();
+  const usuario = obtenerUsuario();
+
+  const iniciales = (usuario?.fullname || usuario?.username || '?')
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((parte) => parte[0].toUpperCase())
+    .join('');
+
+  const detalle = usuario?.rol === 'Corporativo'
+    ? 'Corporativo · Escazú'
+    : `Administrador · ${usuario?.sucursal ?? ''}`;
+
+  const salir = () => {
+    cerrarSesion();
+    navigate('/', { replace: true });
+  };
 
   return (
-
     <div className="topbar">
-
       <div className="user">
-
-
-        <div className="avatar">
-          AD
+        <div className="avatar">{iniciales}</div>
+        <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.2 }}>
+          <span>{usuario?.fullname}</span>
+          <small style={{ fontWeight: 500, opacity: 0.75 }}>{detalle}</small>
         </div>
-
-        Administrador
-
-        <ChevronDown size={16} />
-
+        <button
+          type="button"
+          className="btn-restaurar"
+          style={{ height: 34, marginLeft: '0.6rem' }}
+          onClick={salir}
+          title="Cerrar sesión"
+        >
+          <LogOut size={15} />
+          Salir
+        </button>
       </div>
-
     </div>
   );
 }
-
 
 export default Topbar;

@@ -4,6 +4,8 @@ import bannerImg from '../../assets/WorldWidebanner.png';
 import RoleSwitch from './RoleSwitch';
 import CampoTexto from './CampoTexto';
 import BotonIngresar from './BotonIngresar';
+import { iniciarSesion } from '../../services/api';
+import { guardarSesion, inicioSegunRol } from '../../services/sesion';
 import './LoginCard.css';
 
 function LoginCard() {
@@ -12,6 +14,8 @@ function LoginCard() {
     const [usuario, setUsuario] = useState('');
     const [contrasena, setContrasena] = useState('');
     const [intentoFallido, setIntentoFallido] = useState(false);
+    const [errorLogin, setErrorLogin] = useState('');
+    const [validando, setValidando] = useState(false);
 
     // Campos que aún faltan por llenar
     const faltantes = [];
@@ -21,8 +25,10 @@ function LoginCard() {
     const incompleto = faltantes.length > 0;
     const mostrarAviso = intentoFallido && incompleto;
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
+        if (validando) return;
+        setErrorLogin('');
 
         if (incompleto) {
             setIntentoFallido(true);
@@ -30,9 +36,17 @@ function LoginCard() {
             return;
         }
 
-        // TODO: validar credenciales antes de navegar
-        console.log({ rol, usuario, contrasena });
-        navigate('/clientes');
+        /* PY2: valida usuario y contraseña (encriptada) contra el Corporativo. */
+        setValidando(true);
+        try {
+            const sesion = await iniciarSesion(usuario.trim(), contrasena, rol);
+            guardarSesion(sesion);
+            navigate(inicioSegunRol(sesion.usuario), { replace: true });
+        } catch (err) {
+            setErrorLogin(err.message);
+        } finally {
+            setValidando(false);
+        }
     };
 
     return (
@@ -66,12 +80,19 @@ function LoginCard() {
                     error={intentoFallido && !contrasena}
                 />
 
-                <BotonIngresar bloqueado={incompleto} />
+                <BotonIngresar bloqueado={incompleto || validando} />
 
                 {/* Aviso: aparece al hacer clic con campos vacíos y se va solo al completarlos */}
                 {mostrarAviso && (
                     <p className='login-aviso' role='alert'>
                         Falta completar: {faltantes.map((f) => f.label).join(' y ')}
+                    </p>
+                )}
+
+                {/* PY2: usuario o contraseña incorrectos, rol equivocado o nodo caído */}
+                {errorLogin && (
+                    <p className='login-aviso' role='alert'>
+                        {errorLogin}
                     </p>
                 )}
             </form>

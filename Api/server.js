@@ -85,6 +85,13 @@ const inventarioRoutes = require('./routes/inventario.routes');
 const ventasRoutes = require('./routes/ventas.routes');
 const reportesRoutes = require('./routes/reportes.routes');
 const ciudadesRoutes = require('./routes/ciudades.routes'); // PY2: buscador de ciudades
+const authRoutes = require('./routes/auth.routes');          // PY2: inicio de sesión
+const { autenticar, requiereRol, soloConsulta, conPool } = require('./auth');
+
+/* PY2: cadenas de seguridad por rol. Cada petición se conecta al nodo del usuario. */
+const admin       = [autenticar, requiereRol('Administrador'), conPool];
+const adminLector = [autenticar, requiereRol('Administrador'), soloConsulta, conPool];
+const corporativo = [autenticar, requiereRol('Corporativo'), conPool];
 
 
 /*---------------------------------------------------------------------------------------*
@@ -164,7 +171,8 @@ app.use(express.json());
 *
 *---------------------------------------------------------------------------------------*/
 
-app.use('/api/clientes', clientesRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/clientes', ...adminLector, clientesRoutes);
 
 
 /*---------------------------------------------------------------------------------------*
@@ -184,7 +192,7 @@ app.use('/api/clientes', clientesRoutes);
 *
 *---------------------------------------------------------------------------------------*/
 
-app.use('/api/proveedores', proveedoresRoutes);
+app.use('/api/proveedores', ...adminLector, proveedoresRoutes);
 
 
 /*---------------------------------------------------------------------------------------*
@@ -204,7 +212,7 @@ app.use('/api/proveedores', proveedoresRoutes);
 *
 *---------------------------------------------------------------------------------------*/
 
-app.use('/api/inventarios', inventarioRoutes);
+app.use('/api/inventarios', ...admin, inventarioRoutes);
 
 
 /*---------------------------------------------------------------------------------------*
@@ -224,12 +232,12 @@ app.use('/api/inventarios', inventarioRoutes);
 *
 *---------------------------------------------------------------------------------------*/
 
-app.use('/api/ventas', ventasRoutes);
+app.use('/api/ventas', ...admin, ventasRoutes);
 
-app.use('/api/reportes', reportesRoutes);
+app.use('/api/reportes', ...corporativo, reportesRoutes);
 
 // PY2: búsqueda de ciudades para los formularios (SP_Ciudades_Buscar)
-app.use('/api/ciudades', ciudadesRoutes);
+app.use('/api/ciudades', ...admin, ciudadesRoutes);
 
 
 /*---------------------------------------------------------------------------------------*

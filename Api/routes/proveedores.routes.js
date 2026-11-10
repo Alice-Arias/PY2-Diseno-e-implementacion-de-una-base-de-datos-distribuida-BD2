@@ -27,7 +27,7 @@ const express = require('express');
 
 const router = express.Router();
 
-const { sql, poolPromise } = require('../db');
+const { sql } = require('../db');
 
 
 /*---------------------------------------------------------------------------------------*
@@ -257,7 +257,7 @@ router.get('/opciones', async (req, res) => {
     try {
 
         /* Obtiene la conexión con SQL Server. */
-        const pool = await poolPromise;
+        const pool = req.pool;   // PY2: pool del nodo del usuario (auth.js)
 
         /* Ejecuta el procedimiento almacenado de opciones. */
         const result = await pool.request().execute(
@@ -314,7 +314,7 @@ const txt = (v) => (v === undefined || v === null || String(v).trim() === '' ? n
 *-----------------------------------------------------------------------------------------*/
 router.get('/resumen', async (req, res) => {
     try {
-        const pool = await poolPromise;
+        const pool = req.pool;   // PY2: pool del nodo del usuario (auth.js)
         const result = await pool.request().execute('SP_Proveedores_Resumen');
         res.json({
             totales: result.recordsets[0][0],
@@ -334,7 +334,7 @@ router.get('/resumen', async (req, res) => {
 router.get('/', async (req, res) => {
     try {
         const q = req.query;
-        const pool = await poolPromise;
+        const pool = req.pool;   // PY2: pool del nodo del usuario (auth.js)
         const result = await pool.request()
             .input('Nombre', sql.NVarChar(100), txt(q.nombre))
             .input('Categoria', sql.NVarChar(100), txt(q.categoria))
@@ -379,7 +379,7 @@ router.get('/:id', async (req, res) => {
 
     try {
 
-        const pool = await poolPromise;
+        const pool = req.pool;   // PY2: pool del nodo del usuario (auth.js)
 
         const request = pool.request();
 
@@ -440,7 +440,7 @@ router.post('/', async (req, res) => {
 
     try {
 
-        const pool = await poolPromise;
+        const pool = req.pool;   // PY2: pool del nodo del usuario (auth.js)
 
         const request = pool.request();
 
@@ -493,7 +493,7 @@ router.put('/:id', async (req, res) => {
 
     try {
 
-        const pool = await poolPromise;
+        const pool = req.pool;   // PY2: pool del nodo del usuario (auth.js)
 
         const request = pool.request();
 
@@ -551,7 +551,7 @@ router.delete('/:id', async (req, res) => {
 
     try {
 
-        const pool = await poolPromise;
+        const pool = req.pool;   // PY2: pool del nodo del usuario (auth.js)
 
         const request = pool.request();
 
