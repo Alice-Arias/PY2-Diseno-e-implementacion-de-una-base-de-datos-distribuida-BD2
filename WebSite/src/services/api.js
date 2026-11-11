@@ -27,6 +27,17 @@ const fetch = async (url, opciones = {}) => {
     cerrarSesion();
     window.location.href = '/';
   }
+
+  /* PY2 (fallas): si el nodo de la sucursal no responde, la API devuelve 503 con el
+     mensaje real. Se avisa a MainLayout para que muestre la franja de aviso. */
+  if (res.status === 503) {
+    res.clone().json()
+      .then((data) => window.dispatchEvent(new CustomEvent('wwi-nodo-caido', { detail: data.error })))
+      .catch(() => {});
+  } else if (res.ok) {
+    window.dispatchEvent(new CustomEvent('wwi-nodo-ok'));
+  }
+
   return res;
 };
 

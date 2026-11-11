@@ -84,7 +84,7 @@ function getPool(nodo, perfil) {
             password: credenciales.password,
             connectionTimeout: 5000,
             requestTimeout: 60000,
-            options: { encrypt: false, trustServerCertificate: true }
+            options: { encrypt: false, trustServerCertificate: true, useUTC: false }
         });
 
         pool.on('error', () => { delete pools[clave]; });
