@@ -86,19 +86,23 @@ function ProveedoresTabla({
                   onClick={() => onVerUno(p.SupplierID)}
                 />
 
+                {onEditar && (
                 <Pencil
                   size={17}
                   className="editar"
                   title="Modificar proveedor"
                   onClick={() => onEditar(p)}
                 />
+                )}
 
+                {onEliminar && (
                 <Trash2
                   size={17}
                   className="eliminar"
                   title="Eliminar proveedor"
                   onClick={() => onEliminar(p)}
                 />
+                )}
 
               </div>
 

@@ -1,0 +1,88 @@
+/* PY2: página de solicitudes de acceso (rol Corporativo) */
+
+.solicitudes-horas {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: auto;
+    font-size: 0.88rem;
+    font-weight: 600;
+}
+
+.solicitudes-horas select {
+    min-width: 0 !important;
+    flex: 0 0 auto !important;
+    padding: 0.4rem 0.6rem !important;
+}
+
+.solicitudes-tabla th:nth-child(n),
+.solicitudes-tabla td:nth-child(n) {
+    width: auto;
+    text-align: left;
+}
+
+.solicitudes-acciones {
+    display: flex;
+    gap: 0.4rem;
+}
+
+.solicitudes-acciones button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.4rem 0.7rem;
+    border: none;
+    border-radius: 8px;
+    color: #ffffff;
+    font-family: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.solicitudes-acciones .aprobar  { background: var(--green); }
+.solicitudes-acciones .rechazar { background: var(--danger); }
+.solicitudes-acciones button:disabled { opacity: 0.6; cursor: wait; }
+
+.estado-solicitud {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.estado-solicitud.pendiente { background: rgba(200, 145, 50, 0.18); color: #e3b85c; }
+.estado-solicitud.aprobada  { background: rgba(60, 155, 104, 0.18); color: #7fd3a3; }
+.estado-solicitud.rechazada { background: rgba(214, 92, 97, 0.18); color: #e5a0a0; }
+.estado-solicitud.vencida   { background: rgba(150, 150, 150, 0.18); color: #aeb6c0; }
+
+/* Contador de pendientes en el menú lateral */
+.nav-badge {
+    margin-left: auto;
+    min-width: 22px;
+    padding: 0.05rem 0.45rem;
+    border-radius: 20px;
+    background: var(--danger);
+    color: #ffffff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-align: center;
+}
+/* La tabla de solicitudes usa sus propios anchos (no los de la tabla de clientes) */
+.table-card .solicitudes-tabla {
+    table-layout: auto;
+    min-width: 980px;
+}
+
+.table-card .solicitudes-tabla th,
+.table-card .solicitudes-tabla td {
+    width: auto !important;
+    text-align: left !important;
+    white-space: nowrap;
+}
+
+/* El motivo puede ser largo: ese sí puede ocupar varias líneas */
+.table-card .solicitudes-tabla td:nth-child(5) {
+    white-space: normal;
+    min-width: 200px;
+}

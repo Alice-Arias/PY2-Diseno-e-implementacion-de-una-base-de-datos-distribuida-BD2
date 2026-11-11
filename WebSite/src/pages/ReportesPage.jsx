@@ -53,6 +53,7 @@ import '../components/reportes/reportes.css';
 // ============================================================
 
 import { ejecutarReporte, obtenerOpcionesReportes } from '../services/api';
+import ResumenSucursales from '../components/reportes/ResumenSucursales';
 
 
 
@@ -189,6 +190,8 @@ function ReportesPage() {
   const [opciones, setOpciones] = useState(OPCIONES_VACIAS);
   const [errorOpciones, setErrorOpciones] = useState('');
   const [exportando, setExportando] = useState(false);
+  // PY2: '' = consolidado, '1' = San José, '2' = Limón. Filtra todos los reportes.
+  const [sucursal, setSucursal] = useState('');
 
   const listado = useListadoServidor(listarReporte, {
     porPagina: POR_PAGINA_REPORTES,
@@ -207,16 +210,22 @@ function ReportesPage() {
   const cambiarReporte = (id) => {
     setReporteId(id);
     setFiltros({});
-    listado.reemplazarFiltros({ reporte: id });
+    listado.reemplazarFiltros({ reporte: id, sucursal });
   };
 
   const generarReporte = () => {
-    listado.reemplazarFiltros({ reporte: reporteId, ...filtros });
+    listado.reemplazarFiltros({ reporte: reporteId, ...filtros, sucursal });
   };
 
   const restaurarFiltros = () => {
     setFiltros({});
-    listado.reemplazarFiltros({ reporte: reporteId });
+    listado.reemplazarFiltros({ reporte: reporteId, sucursal });
+  };
+
+  /* PY2: al cambiar de sucursal se vuelve a ejecutar el reporte con los mismos filtros. */
+  const cambiarSucursal = (valor) => {
+    setSucursal(valor);
+    listado.reemplazarFiltros({ ...listado.filtros, sucursal: valor });
   };
 
   const exportar = async () => {
@@ -247,7 +256,7 @@ function ReportesPage() {
           <div className="icon-box"><BarChart3 size={22} /></div>
           <div>
             <h1>Reportes</h1>
-            <p>Consulta datos estadísticos de ventas, compras e inventario.</p>
+            <p>Estadísticas de cada sucursal o consolidadas: ventas, compras e inventario.</p>
           </div>
         </div>
         <div className="header-right">
@@ -255,6 +264,8 @@ function ReportesPage() {
           <div className="sun-icon"><Sun size={16} /></div>
         </div>
       </div>
+
+      <ResumenSucursales sucursal={sucursal} onCambiarSucursal={cambiarSucursal} />
 
       <div className="stats-row">
         <StatCard

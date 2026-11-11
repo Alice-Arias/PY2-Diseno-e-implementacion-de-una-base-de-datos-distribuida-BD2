@@ -1,3 +1,4 @@
+import { obtenerToken, cerrarSesion } from './sesion';
 /*-----------------------------------------------------------------------
 CONSTANTE: API_URL
 DESCRIPCION: Dirección base del servidor backend (Node + Express).
@@ -5,7 +6,79 @@ RESTRICCIONES: La API debe estar en ejecución en ese puerto.
 OBJETIVO: Centralizar la ruta para no repetirla en cada petición.
 -----------------------------------*-----------------------------------*/
 
-const API_URL = 'http://localhost:4000/api';
+const API_URL = '/api';   // PY2: pasa por el proxy de Vite (vite.config.js)
+
+/*---------------------------------------------------------------------------------------*
+* PY2: todas las peticiones llevan el token de la sesión. Si la API responde 401
+* (sesión vencida), se cierra la sesión y se vuelve al login.
+* Esta función reemplaza a fetch dentro de este archivo, así que las funciones de
+* abajo no cambian.
+*-----------------------------------------------------------------------------------------*/
+const fetchNativo = window.fetch.bind(window);
+
+const fetch = async (url, opciones = {}) => {
+  const token = obtenerToken();
+  const headers = { ...(opciones.headers || {}) };
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const res = await fetchNativo(url, { ...opciones, headers });
+
+  if (res.status === 401 && token) {
+    cerrarSesion();
+    window.location.href = '/';
+  }
+
+  /* PY2 (fallas): si el nodo de la sucursal no responde, la API devuelve 503 con el
+     mensaje real. Se avisa a MainLayout para que muestre la franja de aviso. */
+  if (res.status === 503) {
+    res.clone().json()
+      .then((data) => window.dispatchEvent(new CustomEvent('wwi-nodo-caido', { detail: data.error })))
+      .catch(() => {});
+  } else if (res.ok) {
+    window.dispatchEvent(new CustomEvent('wwi-nodo-ok'));
+  }
+
+  return res;
+};
+
+/*---------------------------------------------------------------------------------------*
+* PY2: INICIO DE SESIÓN
+*-----------------------------------------------------------------------------------------*/
+export async function iniciarSesion(username, password, rol) {
+  let res;
+  try {
+    res = await fetchNativo(`${API_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password, rol })
+    });
+  } catch {
+    throw new Error('No se pudo conectar con la API. Revise que esté en ejecución.');
+  }
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'No se pudo iniciar sesión');
+  return data;
+}
+
+/*---------------------------------------------------------------------------------------*
+* PY2: ESTADÍSTICAS POR SUCURSAL (vistas materializadas del Corporativo)
+*-----------------------------------------------------------------------------------------*/
+export async function obtenerResumenSucursales(sucursal = '', anio = '') {
+  const params = new URLSearchParams();
+  if (sucursal) params.append('sucursal', sucursal);
+  if (anio) params.append('anio', anio);
+  const res = await fetch(`${API_URL}/reportes/resumen-sucursales?${params.toString()}`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'No se pudo obtener el resumen por sucursal');
+  return data;
+}
+
+export async function sincronizarEstadisticas() {
+  const res = await fetch(`${API_URL}/reportes/sincronizar`, { method: 'POST' });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'No se pudo sincronizar');
+  return data;
+}
 
 /*-------------------------------------
 MODULO: CLIENTES
@@ -931,3 +1004,42 @@ export async function obtenerCiudad(id) {
   }
   return cacheCiudades[id];
 }
+
+
+/*---------------------------------------------------------------------------------------*
+* PY2: SOLICITUDES DE ACCESO A DATOS SENSIBLES
+* Administrador: estadoSolicitud, solicitarAcceso, obtenerDatosSensibles.
+* Corporativo:   listarSolicitudes, contarSolicitudesPendientes, responderSolicitud.
+*-----------------------------------------------------------------------------------------*/
+async function pedir(url, opciones, mensaje) {
+  const res = await fetch(url, opciones);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || mensaje);
+  return data;
+}
+
+export const estadoSolicitud = (tipo, id) =>
+  pedir(`${API_URL}/solicitudes/estado/${tipo}/${id}`, {}, 'No se pudo consultar la solicitud');
+
+export const solicitarAcceso = (tipo, id, motivo) =>
+  pedir(`${API_URL}/solicitudes`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tipo, id, motivo })
+  }, 'No se pudo enviar la solicitud');
+
+export const obtenerDatosSensibles = (tipo, id) =>
+  pedir(`${API_URL}/solicitudes/datos/${tipo}/${id}`, {}, 'No se pudieron obtener los datos');
+
+export const listarSolicitudes = (estado = '') =>
+  pedir(`${API_URL}/solicitudes${estado ? `?estado=${estado}` : ''}`, {}, 'No se pudieron obtener las solicitudes');
+
+export const contarSolicitudesPendientes = () =>
+  pedir(`${API_URL}/solicitudes/pendientes`, {}, 'No se pudo consultar las solicitudes');
+
+export const responderSolicitud = (id, aprobar, horas = 8) =>
+  pedir(`${API_URL}/solicitudes/${id}/responder`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ aprobar, horas })
+  }, 'No se pudo responder la solicitud');

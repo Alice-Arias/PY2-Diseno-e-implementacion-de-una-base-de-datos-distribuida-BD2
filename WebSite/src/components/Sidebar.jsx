@@ -29,10 +29,15 @@ import {
   Truck,
   Package,
   ShoppingCart,
-  BarChart3
+  BarChart3,
+  ShieldCheck
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { contarSolicitudesPendientes } from '../services/api';
+import '../pages/pagesStyles/Solicitudes.css';
 
 import WorldWideBanner from "../assets/WorldWidebanner.png"
+import { obtenerUsuario } from '../services/sesion';
 
 
 /*---------------------------------------------------------------------------------------*
@@ -55,11 +60,12 @@ import WorldWideBanner from "../assets/WorldWidebanner.png"
 
 const items = [
   //{ id: 'inicio', label: 'Inicio', icon: Home },
-  { id: 'clientes', label: 'Clientes', icon: Users },
-  { id: 'proveedores', label: 'Proveedores', icon: Truck },
-  { id: 'inventario', label: 'Inventario', icon: Package },
-  { id: 'ventas', label: 'Ventas', icon: ShoppingCart },
-  { id: 'reportes', label: 'Reportes', icon: BarChart3 }
+  { id: 'clientes', label: 'Clientes', icon: Users, roles: ['Administrador'] },
+  { id: 'proveedores', label: 'Proveedores', icon: Truck, roles: ['Administrador'] },
+  { id: 'inventario', label: 'Inventario', icon: Package, roles: ['Administrador'] },
+  { id: 'ventas', label: 'Ventas', icon: ShoppingCart, roles: ['Administrador'] },
+  { id: 'reportes', label: 'Reportes', icon: BarChart3, roles: ['Corporativo'] },
+  { id: 'solicitudes', label: 'Solicitudes', icon: ShieldCheck, roles: ['Corporativo'] }
 ];
 
 
@@ -84,6 +90,24 @@ const items = [
 *---------------------------------------------------------------------------------------*/
 
 function Sidebar({ current, onNavigate }) {
+  /* PY2: notificación de solicitudes pendientes para el Corporativo (cada 20 s). */
+  const [pendientes, setPendientes] = useState(0);
+  const esCorporativo = obtenerUsuario()?.rol === 'Corporativo';
+
+  useEffect(() => {
+    if (!esCorporativo) return undefined;
+    const contar = () => contarSolicitudesPendientes()
+      .then((r) => setPendientes(r.pendientes))
+      .catch(() => {});
+    contar();
+    const intervalo = setInterval(contar, 20000);
+    window.addEventListener('wwi-solicitudes', contar);
+    return () => {
+      clearInterval(intervalo);
+      window.removeEventListener('wwi-solicitudes', contar);
+    };
+  }, [esCorporativo]);
+
 
   return (
 
@@ -103,7 +127,8 @@ function Sidebar({ current, onNavigate }) {
 
       <nav>
 
-        {items.map((item) => (
+        {/* PY2: solo los módulos del rol del usuario */}
+        {items.filter((item) => item.roles.includes(obtenerUsuario()?.rol)).map((item) => (
 
           <div
 
@@ -124,6 +149,9 @@ function Sidebar({ current, onNavigate }) {
             <item.icon size={18} />
 
             {item.label}
+            {item.id === 'solicitudes' && pendientes > 0 && (
+              <span className="nav-badge">{pendientes}</span>
+            )}
 
           </div>
 

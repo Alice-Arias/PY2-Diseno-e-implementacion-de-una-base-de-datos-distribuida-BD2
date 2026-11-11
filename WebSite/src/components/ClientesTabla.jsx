@@ -173,6 +173,7 @@ function ClientesTabla({
                     EDITAR
                     ============================================= */}
 
+                {onEditar && (
                 <Pencil
                   size={17}
                   className="editar"
@@ -185,11 +186,13 @@ function ClientesTabla({
                     onEditar(c)
                   }
                 />
+                )}
 
                 {/* =============================================
                     ELIMINAR
                     ============================================= */}
 
+                {onEliminar && (
                 <Trash2
                   size={17}
                   className="eliminar"
@@ -202,6 +205,7 @@ function ClientesTabla({
                     onEliminar(c)
                   }
                 />
+                )}
 
               </div>
 

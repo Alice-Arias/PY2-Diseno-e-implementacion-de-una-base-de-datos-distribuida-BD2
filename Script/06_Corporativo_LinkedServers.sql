@@ -52,6 +52,15 @@ EXEC sp_addlinkedsrvlogin
      @rmtuser     = N'enlace_corporativo',
      @rmtpassword = N'Enlace#2026Pass';
 
+/* Mapeo explícito para el login con el que entran las sucursales: la regla general
+   (@locallogin = NULL) no se aplica cuando la orden llega desde otra sucursal. */
+EXEC sp_addlinkedsrvlogin
+     @rmtsrvname  = N'LS_SANJOSE',
+     @useself     = N'FALSE',
+     @locallogin  = N'enlace_sucursal',
+     @rmtuser     = N'enlace_corporativo',
+     @rmtpassword = N'Enlace#2026Pass';
+
 EXEC sp_serveroption @server = N'LS_SANJOSE', @optname = N'rpc',     @optvalue = N'true';
 EXEC sp_serveroption @server = N'LS_SANJOSE', @optname = N'rpc out', @optvalue = N'true';
 GO
@@ -72,6 +81,15 @@ EXEC sp_addlinkedsrvlogin
      @rmtsrvname  = N'LS_LIMON',
      @useself     = N'FALSE',
      @locallogin  = NULL,
+     @rmtuser     = N'enlace_corporativo',
+     @rmtpassword = N'Enlace#2026Pass';
+
+/* Mapeo explícito para el login con el que entran las sucursales: la regla general
+   (@locallogin = NULL) no se aplica cuando la orden llega desde otra sucursal. */
+EXEC sp_addlinkedsrvlogin
+     @rmtsrvname  = N'LS_LIMON',
+     @useself     = N'FALSE',
+     @locallogin  = N'enlace_sucursal',
      @rmtuser     = N'enlace_corporativo',
      @rmtpassword = N'Enlace#2026Pass';
 

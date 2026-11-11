@@ -200,10 +200,7 @@ function ClientesPage() {
                         Ver seleccionados ({seleccionados.length})
                     </button>
 
-                    <button className="btn-nuevo" onClick={() => setMostrarNuevo(true)}>
-                        <Plus size={16} />
-                        Nuevo Cliente
-                    </button>
+                    {/* PY2: el Administrador solo consulta (enunciado, sección 2). */}
                 </div>
 
                 <div style={{ opacity: listado.cargando ? 0.5 : 1, transition: 'opacity .15s' }}>
@@ -212,8 +209,8 @@ function ClientesPage() {
                         seleccionados={seleccionados}
                         onToggleSeleccion={toggleSeleccion}
                         onVerUno={abrirDetalle}
-                        onEditar={setClienteEditar}
-                        onEliminar={setClienteEliminar}
+                        onEditar={null}
+                        onEliminar={null}
                     />
                 </div>
 

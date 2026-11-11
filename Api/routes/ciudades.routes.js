@@ -12,12 +12,12 @@
 
 const express = require('express');
 const router = express.Router();
-const { sql, poolPromise } = require('../db');
+const { sql } = require('../db');
 
 router.get('/', async (req, res) => {
     try {
         const texto = String(req.query.buscar || '').trim().slice(0, 50);
-        const pool = await poolPromise;
+        const pool = req.pool;   // PY2: pool del nodo del usuario (auth.js)
         const result = await pool.request()
             .input('Texto', sql.NVarChar(50), texto || null)
             .input('CityID', sql.Int, null)
@@ -35,7 +35,7 @@ router.get('/:id', async (req, res) => {
         if (!Number.isInteger(id)) {
             return res.status(400).json({ error: 'ID de ciudad inválido' });
         }
-        const pool = await poolPromise;
+        const pool = req.pool;   // PY2: pool del nodo del usuario (auth.js)
         const result = await pool.request()
             .input('Texto', sql.NVarChar(50), null)
             .input('CityID', sql.Int, id)

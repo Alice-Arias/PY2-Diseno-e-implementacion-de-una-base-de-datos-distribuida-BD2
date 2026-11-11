@@ -1,5 +1,6 @@
 
 import { useState } from 'react';
+import DatosProtegidos from './DatosProtegidos';   // PY2: control de acceso
 
 // ============================================================
 // MODAL PRINCIPAL
@@ -215,12 +216,16 @@ function ClienteDetalleModal({
 // ============================================================
 
 function TarjetaCliente({
-    cliente: c,
+    cliente: cBase,
     indice,
     ultimo,
     onEditar,
     onVolver
 }) {
+
+    /* PY2: datos sensibles autorizados por el Corporativo (si los hay) */
+    const [sensibles, setSensibles] = useState(null);
+    const c = sensibles ? { ...cBase, ...sensibles } : cBase;
 
     // ========================================================
     // MAPA
@@ -352,6 +357,13 @@ function TarjetaCliente({
                 </div>
 
             </header>
+
+            {/* PY2: datos sensibles protegidos en el Corporativo */}
+            <DatosProtegidos
+                tipo="cliente"
+                id={cBase.CustomerID}
+                onDatos={setSensibles}
+            />
 
             {/* ==================================================
                 CONTACTOS

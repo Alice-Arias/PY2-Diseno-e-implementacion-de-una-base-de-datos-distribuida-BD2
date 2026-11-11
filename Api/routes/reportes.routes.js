@@ -22,7 +22,7 @@
 *-----------------------------------------------------------------------------------------*/
 
 const express = require('express');
-const { sql, poolPromise } = require('../db');
+const { sql } = require('../db');
 
 const router = express.Router();
 
@@ -121,11 +121,14 @@ const entero = (request, query, parameter) => {
 *
 *-----------------------------------------------------------------------------------------*/
 
+/* PY2: ?sucursal=1 (San José), ?sucursal=2 (Limón), vacío = consolidado. */
+const sucursalDe = (q) => ([1, 2].includes(Number(q.sucursal)) ? Number(q.sucursal) : null);
+
 const ejecutarReporte = (procedimiento, configurar = () => {}) => async (req, res) => {
     /* CORREGIDO PY2: la paginación la hace el SP.
        ?pagina=N&tamano=10 -> solo esa página.  ?exportar=1 -> todas las filas (CSV). */
     try {
-        const pool = await poolPromise;
+        const pool = req.pool;   // PY2: pool del nodo del usuario (auth.js)
         const request = pool.request();
         configurar(request, req.query);
 
@@ -135,6 +138,8 @@ const ejecutarReporte = (procedimiento, configurar = () => {}) => async (req, re
 
         request.input('Pagina', sql.Int, exportar ? null : (Number.isInteger(pagina) && pagina > 0 ? pagina : 1));
         request.input('TamanoPagina', sql.Int, Number.isInteger(tamano) && tamano > 0 ? tamano : 10);
+
+        request.input('Sucursal', sql.TinyInt, sucursalDe(req.query));   // PY2: filtro por sucursal
 
         const result = await request.execute(procedimiento);
 
@@ -174,8 +179,10 @@ const ejecutarReporte = (procedimiento, configurar = () => {}) => async (req, re
 
 router.get('/opciones', async (req, res) => {
     try {
-        const pool = await poolPromise;
-        const result = await pool.request().execute('SP_Reportes_Opciones');
+        const pool = req.pool;   // PY2: pool del nodo del usuario (auth.js)
+        const result = await pool.request()
+            .input('Sucursal', sql.TinyInt, sucursalDe(req.query))
+            .execute('SP_Reportes_Opciones');
         /* PY2: las categorías de proveedores ahora vienen del mismo SP (resultado 7). */
 
         res.json({
@@ -480,5 +487,45 @@ router.get('/metodo-envio-favorito', ejecutarReporte(
         texto(request, query.producto, 'Producto', 100);
     }
 ));
+
+/*---------------------------------------------------------------------------------------*
+* PY2: GET /api/reportes/resumen-sucursales?sucursal=&anio=
+* Lee las vistas materializadas (Estadisticas.SP_Resumen_Sucursales).
+*-----------------------------------------------------------------------------------------*/
+router.get('/resumen-sucursales', async (req, res) => {
+    try {
+        const pool = req.pool;
+        const anio = Number(req.query.anio);
+        const result = await pool.request()
+            .input('Sucursal', sql.TinyInt, sucursalDe(req.query))
+            .input('Anio', sql.Int, Number.isInteger(anio) && anio > 0 ? anio : null)
+            .execute('Estadisticas.SP_Resumen_Sucursales');
+
+        res.json({
+            totales: (result.recordsets[0] || [])[0] || null,
+            porMes: result.recordsets[1] || [],
+            comparativo: result.recordsets[2] || [],
+            sincronizacion: result.recordsets[3] || []
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'No se pudo obtener el resumen por sucursal' });
+    }
+});
+
+/*---------------------------------------------------------------------------------------*
+* PY2: POST /api/reportes/sincronizar
+* Trae ya mismo los datos nuevos de las sucursales (normalmente lo hace el job cada 5 min).
+*-----------------------------------------------------------------------------------------*/
+router.post('/sincronizar', async (req, res) => {
+    try {
+        const pool = req.pool;
+        const result = await pool.request().execute('Estadisticas.SP_Sincronizar');
+        res.json({ sincronizacion: result.recordset || [] });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'No se pudo sincronizar' });
+    }
+});
 
 module.exports = router;
