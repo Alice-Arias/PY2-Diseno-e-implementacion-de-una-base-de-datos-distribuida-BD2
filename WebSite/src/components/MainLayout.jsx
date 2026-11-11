@@ -24,13 +24,17 @@ function MainLayout() {
     const location = useLocation();
     const navigate = useNavigate();
     const [avisoNodo, setAvisoNodo] = useState('');
+    const [cargando, setCargando] = useState(false);   // PY2: barra de carga global
 
     useEffect(() => {
         const caido = (e) => setAvisoNodo(e.detail || 'El nodo no está disponible en este momento.');
         const ok = () => setAvisoNodo('');
+        const carga = (e) => setCargando(e.detail > 0);
+        window.addEventListener('wwi-cargando', carga);
         window.addEventListener('wwi-nodo-caido', caido);
         window.addEventListener('wwi-nodo-ok', ok);
         return () => {
+            window.removeEventListener('wwi-cargando', carga);
             window.removeEventListener('wwi-nodo-caido', caido);
             window.removeEventListener('wwi-nodo-ok', ok);
         };
@@ -41,6 +45,8 @@ function MainLayout() {
 
     return (
         <div className="app-shell">
+            {/* PY2: barra de carga: aparece mientras hay consultas en curso */}
+            <div className={`barra-carga ${cargando ? 'activa' : ''}`} role="progressbar" aria-label="Cargando" aria-busy={cargando} />
 
             <Sidebar
                 current={current}
@@ -55,8 +61,7 @@ function MainLayout() {
                         <div style={estiloAviso} role="alert">
                             <AlertTriangle size={20} />
                             <span>
-                                {avisoNodo} Los datos de esta sucursal se podrán consultar
-                                cuando vuelva a responder; las demás sucursales siguen funcionando.
+                                {avisoNodo} Intente de nuevo en unos momentos.
                             </span>
                         </div>
                     )}

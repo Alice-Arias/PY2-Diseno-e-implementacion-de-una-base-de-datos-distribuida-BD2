@@ -16,12 +16,25 @@ const API_URL = '/api';   // PY2: pasa por el proxy de Vite (vite.config.js)
 *-----------------------------------------------------------------------------------------*/
 const fetchNativo = window.fetch.bind(window);
 
+/* PY2: cantidad de peticiones en curso; MainLayout muestra la barra de carga. */
+let peticionesEnCurso = 0;
+const avisarCarga = (delta) => {
+  peticionesEnCurso = Math.max(0, peticionesEnCurso + delta);
+  window.dispatchEvent(new CustomEvent('wwi-cargando', { detail: peticionesEnCurso }));
+};
+
 const fetch = async (url, opciones = {}) => {
   const token = obtenerToken();
   const headers = { ...(opciones.headers || {}) };
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const res = await fetchNativo(url, { ...opciones, headers });
+  let res;
+  avisarCarga(1);
+  try {
+    res = await fetchNativo(url, { ...opciones, headers });
+  } finally {
+    avisarCarga(-1);
+  }
 
   if (res.status === 401 && token) {
     cerrarSesion();
@@ -1043,3 +1056,16 @@ export const responderSolicitud = (id, aprobar, horas = 8) =>
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ aprobar, horas })
   }, 'No se pudo responder la solicitud');
+
+
+/*---------------------------------------------------------------------------------------*
+* PY2: SUGERENCIAS PARA LOS BUSCADORES (primeros 8 resultados que coinciden)
+*-----------------------------------------------------------------------------------------*/
+export const sugerirClientes = async (texto) =>
+  ((await listarClientes({ nombre: texto, pagina: 1, tamano: 8 })).datos || []).map((c) => c.Nombre_Cliente);
+
+export const sugerirProveedores = async (texto) =>
+  ((await listarProveedores({ nombre: texto, pagina: 1, tamano: 8 })).datos || []).map((p) => p.Nombre_Proveedor);
+
+export const sugerirProductos = async (texto) =>
+  ((await listarInventarios({ nombre: texto, pagina: 1, tamano: 8 })).datos || []).map((p) => p.Producto);

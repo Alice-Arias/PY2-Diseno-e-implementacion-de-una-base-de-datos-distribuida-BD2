@@ -11,6 +11,9 @@
 *-----------------------------------------------------------------------------------------*/
 
 import { useEffect, useState } from 'react';
+import RelojTema from '../components/RelojTema';   // PY2: hora en vivo y tema
+import BuscadorSugerencias from '../components/BuscadorSugerencias';
+import { sugerirProveedores } from '../services/api';
 import { Truck, CheckCircle2, Tag, Search, Plus, Sun, Eye } from 'lucide-react';
 
 import ProveedoresTabla from '../components/proveedores/ProveedoresTabla';
@@ -141,8 +144,7 @@ function ProveedoresPage() {
                     </div>
                 </div>
                 <div className="header-right">
-                    <span>{fechaTexto} | {horaTexto}</span>
-                    <div className="sun-icon"><Sun size={16} /></div>
+                    <RelojTema />
                 </div>
             </div>
 
@@ -154,16 +156,14 @@ function ProveedoresPage() {
 
             <div className="table-card">
                 <div className="toolbar">
-                    <div className="search-box">
-                        <Search size={16} />
-                        <input
-                            placeholder="Buscar por nombre... (Enter)"
-                            value={nombreEscrito}
-                            maxLength={100}
-                            onChange={(e) => setNombreEscrito(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && filtrar({ nombre: nombreEscrito.trim() })}
-                        />
-                    </div>
+                    <BuscadorSugerencias
+                        valor={nombreEscrito}
+                        onCambiar={setNombreEscrito}
+                        onBuscar={(texto) => filtrar({ nombre: texto })}
+                        cargarSugerencias={sugerirProveedores}
+                        placeholder="Nombre del proveedor (escriba 2 letras para ver sugerencias)"
+                        etiqueta="Buscar por nombre del proveedor"
+                    />
 
                     <select
                         value={listado.filtros.categoria}

@@ -1,5 +1,6 @@
 
 import { useState } from 'react';
+import { MarcaCampo, LeyendaObligatorios } from '../MarcaCampo';   // PY2: obligatorio / opcional
 
 import {
     Package,
@@ -78,7 +79,7 @@ function InventarioFormulario({
             )}
         >
 
-            <label>{etiqueta}</label>
+            <label>{etiqueta}<MarcaCampo requerido={requerido} /></label>
 
             <input
                 type={tipo}
@@ -117,7 +118,7 @@ function InventarioFormulario({
 
         <div className={clase(nombre)}>
 
-            <label>{etiqueta}</label>
+            <label>{etiqueta}<MarcaCampo requerido={requerido} /></label>
 
             <select
                 name={nombre}
@@ -173,6 +174,8 @@ function InventarioFormulario({
                     Información principal
 
                 </h3>
+
+                <LeyendaObligatorios />
 
 
                 <div className="form-grid">
@@ -398,7 +401,7 @@ function InventarioFormulario({
 
                     {entrada(
                         'UnitPrice',
-                        'Precio unitario',
+                        'Precio unitario (USD)',
                         {
                             tipo: 'number',
                             requerido: true,
@@ -411,7 +414,7 @@ function InventarioFormulario({
 
                     {entrada(
                         'RecommendedRetailPrice',
-                        'Precio de venta recomendado',
+                        'Precio de venta recomendado (USD)',
                         {
                             tipo: 'number',
                             min: 0,
@@ -446,7 +449,7 @@ function InventarioFormulario({
 
                     {entrada(
                         'Weight',
-                        'Peso por unidad',
+                        'Peso por unidad (kg)',
                         {
                             tipo: 'number',
                             requerido: true,
@@ -476,8 +479,8 @@ function InventarioFormulario({
 
                 <div className="form-grid">
                     <div className={clase('StockGroupIDs', 'campo-completo')}>
-                        <label>Grupos (seleccione al menos uno)</label>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem 1.25rem', paddingTop: 4 }}>
+                        <label>Grupos<MarcaCampo requerido /> <span className="campo-ayuda">Marque uno o varios</span></label>
+                        <div className="grupos-chips">
                             {(opciones.grupos || []).length === 0 && (
                                 <span style={{ opacity: 0.6 }}>
                                     {cargandoOpciones ? 'Cargando...' : 'No hay grupos disponibles'}
@@ -489,7 +492,7 @@ function InventarioFormulario({
                                 return (
                                     <label
                                         key={id}
-                                        style={{ display: 'flex', gap: 6, alignItems: 'center', fontWeight: 400, cursor: 'pointer' }}
+                                        className={`grupo-chip ${marcado ? 'marcado' : ''}`}
                                     >
                                         <input
                                             type="checkbox"
@@ -510,16 +513,16 @@ function InventarioFormulario({
                         </div>
                     </div>
 
-                    {entrada('QuantityOnHand', 'Cantidad en inventario', { tipo: 'number', min: 0 })}
+                    {entrada('QuantityOnHand', 'Cantidad en inventario (unidades)', { tipo: 'number', min: 0 })}
                     {entrada('BinLocation', 'Ubicación en bodega', { max: 20, placeholder: 'Ej: L-1' })}
-                    {entrada('LastCostPrice', 'Último costo', {
+                    {entrada('LastCostPrice', 'Último costo (USD)', {
                         tipo: 'number',
                         min: 0,
                         step: '0.01',
                         placeholder: 'Vacío = precio unitario'
                     })}
-                    {entrada('ReorderLevel', 'Nivel de reorden', { tipo: 'number', min: 0 })}
-                    {entrada('TargetStockLevel', 'Nivel objetivo', { tipo: 'number', min: 0 })}
+                    {entrada('ReorderLevel', 'Nivel de reorden (unidades)', { tipo: 'number', min: 0 })}
+                    {entrada('TargetStockLevel', 'Nivel objetivo (unidades)', { tipo: 'number', min: 0 })}
                 </div>
             </div>
 

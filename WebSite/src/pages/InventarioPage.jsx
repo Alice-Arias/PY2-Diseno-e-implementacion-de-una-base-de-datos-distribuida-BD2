@@ -12,6 +12,9 @@
 *-----------------------------------------------------------------------------------------*/
 
 import { useEffect, useState } from 'react';
+import RelojTema from '../components/RelojTema';   // PY2: hora en vivo y tema
+import BuscadorSugerencias from '../components/BuscadorSugerencias';
+import { sugerirProductos } from '../services/api';
 import { Package, Layers, CheckCircle2, Search, Plus, Sun, Eye } from 'lucide-react';
 
 import InventariosTabla from '../components/inventario/InventariosTabla';
@@ -142,8 +145,7 @@ function InventariosPage() {
                     </div>
                 </div>
                 <div className="header-right">
-                    <span>{fechaTexto} | {horaTexto}</span>
-                    <div className="sun-icon"><Sun size={16} /></div>
+                    <RelojTema />
                 </div>
             </div>
 
@@ -155,16 +157,14 @@ function InventariosPage() {
 
             <div className="table-card">
                 <div className="toolbar">
-                    <div className="search-box">
-                        <Search size={16} />
-                        <input
-                            placeholder="Buscar por nombre... (Enter)"
-                            value={nombreEscrito}
-                            maxLength={100}
-                            onChange={(e) => setNombreEscrito(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && filtrar({ nombre: nombreEscrito.trim() })}
-                        />
-                    </div>
+                    <BuscadorSugerencias
+                        valor={nombreEscrito}
+                        onCambiar={setNombreEscrito}
+                        onBuscar={(texto) => filtrar({ nombre: texto })}
+                        cargarSugerencias={sugerirProductos}
+                        placeholder="Nombre del producto (escriba 2 letras para ver sugerencias)"
+                        etiqueta="Buscar por nombre del producto"
+                    />
 
                     <select
                         value={listado.filtros.grupo}

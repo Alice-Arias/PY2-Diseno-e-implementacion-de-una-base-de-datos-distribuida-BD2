@@ -198,9 +198,14 @@ function ReportesTabla({
   // asigna un tipo que define su alineación y formato.
   // ----------------------------------------------------------
 
-  const columnas = filas.length
-    ? Object.keys(filas[0]).map((nombre) => ({ nombre, tipo: tipoColumna(nombre, filas) }))
-    : [];
+  /* PY2: las columnas con nombre de año (2013, 2014...) van después de las de texto.
+     JavaScript pone primero las llaves numéricas y movía "Categoria" al final. */
+  const claves = filas.length ? Object.keys(filas[0]) : [];
+  const ordenadas = [
+    ...claves.filter((k) => !/^\d+$/.test(k)),
+    ...claves.filter((k) => /^\d+$/.test(k))
+  ];
+  const columnas = ordenadas.map((nombre) => ({ nombre, tipo: tipoColumna(nombre, filas) }));
 
 
   // ============================================================
@@ -217,10 +222,21 @@ function ReportesTabla({
 
       {/* CARGANDO / TABLA / SIN RESULTADOS */}
 
+      {/* PY2: aviso de carga también cuando ya hay un reporte en pantalla */}
+      {cargando && filas.length > 0 && (
+        <div className="reportes-actualizando" role="status">
+          <span className="reportes-spinner" aria-hidden="true" />
+          Generando el reporte...
+        </div>
+      )}
+
       {cargando && filas.length === 0 ? (
-        <p className="reportes-estado">Cargando reporte...</p>
+        <p className="reportes-estado" role="status">
+          <span className="reportes-spinner" aria-hidden="true" />
+          Generando el reporte...
+        </p>
       ) : filas.length ? (
-        <div className="reportes-tabla-contenedor">
+        <div className={`reportes-tabla-contenedor ${cargando ? 'esta-cargando' : ''}`}>
           <table className="reportes-tabla tabla-coherente">
 
             {/* ENCABEZADOS */}

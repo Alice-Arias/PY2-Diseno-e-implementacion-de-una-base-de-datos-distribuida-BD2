@@ -299,31 +299,42 @@ BEGIN
         INTO   #Hol FROM Warehouse.StockItemHoldings;
 
         BEGIN TRY
-            /* 1. Leer de la sucursal (fuera de transacción: no requiere transacción distribuida). */
+            /* 1. Leer de la sucursal (fuera de transacción: no requiere transacción distribuida).
+                  Con OPENQUERY la consulta se ejecuta COMPLETA en la sucursal y solo viajan
+                  las filas nuevas o modificadas (antes viajaban todas las líneas de factura). */
+            DECLARE @Filtro NVARCHAR(400) =
+                N'i.InvoiceID > ' + CAST(@MaxID AS NVARCHAR(20)) +
+                N' OR i.LastEditedWhen > ''''' + CONVERT(NVARCHAR(30), @Desde, 126) + N'''''';
+
             SET @sql = N'
                 INSERT INTO #Inv
-                SELECT InvoiceID, CustomerID, BillToCustomerID, OrderID, DeliveryMethodID, ContactPersonID,
-                       AccountsPersonID, SalespersonPersonID, PackedByPersonID, InvoiceDate, CustomerPurchaseOrderNumber,
-                       IsCreditNote, CreditNoteReason, Comments, DeliveryInstructions, InternalComments,
-                       TotalDryItems, TotalChillerItems, DeliveryRun, RunPosition, ReturnedDeliveryData,
-                       LastEditedBy, LastEditedWhen, @id
-                FROM   ' + @Enlace + N'.WideWorldImporters.Sales.Invoices
-                WHERE  InvoiceID > @max OR LastEditedWhen > @desde;
+                SELECT r.*, @id
+                FROM OPENQUERY(' + @Enlace + N', ''
+                    SELECT i.InvoiceID, i.CustomerID, i.BillToCustomerID, i.OrderID, i.DeliveryMethodID, i.ContactPersonID,
+                           i.AccountsPersonID, i.SalespersonPersonID, i.PackedByPersonID, i.InvoiceDate, i.CustomerPurchaseOrderNumber,
+                           i.IsCreditNote, i.CreditNoteReason, i.Comments, i.DeliveryInstructions, i.InternalComments,
+                           i.TotalDryItems, i.TotalChillerItems, i.DeliveryRun, i.RunPosition, i.ReturnedDeliveryData,
+                           i.LastEditedBy, i.LastEditedWhen
+                    FROM   WideWorldImporters.Sales.Invoices AS i
+                    WHERE  ' + @Filtro + N''') AS r;
 
                 INSERT INTO #Lin
-                SELECT il.InvoiceLineID, il.InvoiceID, il.StockItemID, il.Description, il.PackageTypeID, il.Quantity,
-                       il.UnitPrice, il.TaxRate, il.TaxAmount, il.LineProfit, il.ExtendedPrice,
-                       il.LastEditedBy, il.LastEditedWhen
-                FROM   ' + @Enlace + N'.WideWorldImporters.Sales.InvoiceLines AS il
-                JOIN   ' + @Enlace + N'.WideWorldImporters.Sales.Invoices     AS i ON i.InvoiceID = il.InvoiceID
-                WHERE  i.InvoiceID > @max OR i.LastEditedWhen > @desde;
+                SELECT r.*
+                FROM OPENQUERY(' + @Enlace + N', ''
+                    SELECT il.InvoiceLineID, il.InvoiceID, il.StockItemID, il.Description, il.PackageTypeID, il.Quantity,
+                           il.UnitPrice, il.TaxRate, il.TaxAmount, il.LineProfit, il.ExtendedPrice,
+                           il.LastEditedBy, il.LastEditedWhen
+                    FROM   WideWorldImporters.Sales.InvoiceLines AS il
+                    JOIN   WideWorldImporters.Sales.Invoices     AS i ON i.InvoiceID = il.InvoiceID
+                    WHERE  ' + @Filtro + N''') AS r;
 
                 INSERT INTO #Hol
-                SELECT StockItemID, QuantityOnHand, BinLocation, LastCostPrice, ReorderLevel, TargetStockLevel
-                FROM   ' + @Enlace + N'.WideWorldImporters.Warehouse.StockItemHoldings;';
+                SELECT r.*
+                FROM OPENQUERY(' + @Enlace + N', ''
+                    SELECT StockItemID, QuantityOnHand, BinLocation, LastCostPrice, ReorderLevel, TargetStockLevel
+                    FROM   WideWorldImporters.Warehouse.StockItemHoldings'') AS r;';
 
-            EXEC sp_executesql @sql, N'@id TINYINT, @max INT, @desde DATETIME2(7)',
-                 @id = @ID, @max = @MaxID, @desde = @Desde;
+            EXEC sp_executesql @sql, N'@id TINYINT', @id = @ID;
 
             /* 2. Aplicar en el Corporativo (transacción local). */
             BEGIN TRANSACTION;
@@ -787,6 +798,8 @@ CREATE OR ALTER PROCEDURE dbo.SP_Resumen_VentasCategorias
     @Sucursal TINYINT = NULL,     -- NULL = consolidado, 1 = San José, 2 = Limón
     @Pagina       INT = 1,      -- NULL = todas las filas (CSV)
     @TamanoPagina INT = 10
+WITH EXECUTE AS OWNER   -- el PIVOT usa SQL dinámico: sin esto, app_corporativo
+                        -- necesitaría permiso de lectura sobre las tablas
 AS
 BEGIN
     SET NOCOUNT ON;
