@@ -941,21 +941,54 @@
     opacity: 0.8;
 }
 
-/* Todas las casillas del mismo tamaño y con el color de la empresa */
+/* Casillas dibujadas por la aplicación (no las del navegador): mismo tamaño en todas
+   partes, fondo claro en ambos modos y check blanco sobre azul al marcarlas. */
 .wwi .app-shell input[type="checkbox"] {
-    appearance: auto !important;
-    -webkit-appearance: checkbox !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    display: inline-block;
     flex: 0 0 auto;
     width: 18px !important;
     height: 18px !important;
     min-height: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
-    border: none !important;
-    background: none !important;
+    border: 1.5px solid var(--wwi-borde-fuerte) !important;
+    border-radius: 4px !important;
+    background: #ffffff !important;
     box-shadow: none !important;
-    accent-color: var(--wwi-primario);
+    vertical-align: middle;
     cursor: pointer;
+    transition: background-color 0.15s, border-color 0.15s;
+}
+
+.wwi.modo-oscuro .app-shell input[type="checkbox"] {
+    border-color: #6b7a8b !important;
+    background: #eef2f6 !important;
+}
+
+.wwi .app-shell input[type="checkbox"]:hover {
+    border-color: var(--wwi-primario) !important;
+}
+
+.wwi .app-shell input[type="checkbox"]:checked {
+    border-color: #1f4e79 !important;
+    background: #1f4e79 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.5l3 3 6-7' fill='none' stroke='white' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 13px no-repeat !important;
+}
+
+.wwi.modo-oscuro .app-shell input[type="checkbox"]:checked {
+    border-color: #3a6fa8 !important;
+    background-color: #3a6fa8 !important;
+}
+
+.wwi .app-shell input[type="checkbox"]:focus-visible {
+    outline: 2px solid var(--wwi-primario);
+    outline-offset: 2px;
+}
+
+.wwi .app-shell input[type="checkbox"]:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 /* Grupos del producto como fichas: se ve claro cuáles están elegidos */
