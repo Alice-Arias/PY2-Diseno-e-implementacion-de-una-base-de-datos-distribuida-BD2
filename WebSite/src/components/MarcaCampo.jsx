@@ -8,11 +8,3 @@ export function MarcaCampo({ requerido }) {
     ? <span className="campo-req" title="Obligatorio" aria-label="obligatorio"> *</span>
     : <span className="campo-opc">(opcional)</span>;
 }
-
-export function LeyendaObligatorios() {
-  return (
-    <p className="leyenda-obligatorios">
-      Los campos con <span className="campo-req">*</span> son obligatorios. Los demás se pueden dejar vacíos.
-    </p>
-  );
-}

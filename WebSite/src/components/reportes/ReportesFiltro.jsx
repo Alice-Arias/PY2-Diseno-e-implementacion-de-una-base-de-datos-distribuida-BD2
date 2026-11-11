@@ -169,16 +169,12 @@ function ReportesFiltro({
         disabled={!hayResultados || cargando}
         onClick={onExportar}
         type="button"
-        title="Descarga TODAS las filas del reporte en un archivo de Excel"
       >
         <Download size={15} />
         Descargar Excel
       </button>
 
       <p className="reportes-ayuda">
-        <strong>Ver reporte</strong> lo muestra aquí, por páginas.{' '}
-        <strong>Descargar Excel</strong> guarda el reporte completo en un archivo, con título,
-        sucursal, filtros y montos en dólares.
       </p>
 
     </form>

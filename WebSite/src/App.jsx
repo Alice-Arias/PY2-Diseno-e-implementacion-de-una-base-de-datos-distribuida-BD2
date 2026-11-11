@@ -17,6 +17,7 @@ import SolicitudesPage from './pages/SolicitudesPage';
 
 import './App.css';
 import './tema.css';   // PY2: tema profesional claro / oscuro (va después de App.css)
+import './mejoras.css'; // PY2: animaciones, alineación y accesibilidad (va después de tema.css)
 import { temaGuardado } from './components/RelojTema';
 
 
