@@ -1004,3 +1004,42 @@ export async function obtenerCiudad(id) {
   }
   return cacheCiudades[id];
 }
+
+
+/*---------------------------------------------------------------------------------------*
+* PY2: SOLICITUDES DE ACCESO A DATOS SENSIBLES
+* Administrador: estadoSolicitud, solicitarAcceso, obtenerDatosSensibles.
+* Corporativo:   listarSolicitudes, contarSolicitudesPendientes, responderSolicitud.
+*-----------------------------------------------------------------------------------------*/
+async function pedir(url, opciones, mensaje) {
+  const res = await fetch(url, opciones);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || mensaje);
+  return data;
+}
+
+export const estadoSolicitud = (tipo, id) =>
+  pedir(`${API_URL}/solicitudes/estado/${tipo}/${id}`, {}, 'No se pudo consultar la solicitud');
+
+export const solicitarAcceso = (tipo, id, motivo) =>
+  pedir(`${API_URL}/solicitudes`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tipo, id, motivo })
+  }, 'No se pudo enviar la solicitud');
+
+export const obtenerDatosSensibles = (tipo, id) =>
+  pedir(`${API_URL}/solicitudes/datos/${tipo}/${id}`, {}, 'No se pudieron obtener los datos');
+
+export const listarSolicitudes = (estado = '') =>
+  pedir(`${API_URL}/solicitudes${estado ? `?estado=${estado}` : ''}`, {}, 'No se pudieron obtener las solicitudes');
+
+export const contarSolicitudesPendientes = () =>
+  pedir(`${API_URL}/solicitudes/pendientes`, {}, 'No se pudo consultar las solicitudes');
+
+export const responderSolicitud = (id, aprobar, horas = 8) =>
+  pedir(`${API_URL}/solicitudes/${id}/responder`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ aprobar, horas })
+  }, 'No se pudo responder la solicitud');

@@ -1,5 +1,6 @@
 
 import { useState } from 'react';
+import DatosProtegidos from '../DatosProtegidos';   // PY2: control de acceso
 
 
 import './proveedores.css';
@@ -138,11 +139,15 @@ function ProveedorDetalleModal({
 // ============================================================
 
 function TarjetaProveedor({
-    proveedor: p,
+    proveedor: pBase,
     indice,
     onEditar,
     onVolver
 }) {
+
+    /* PY2: datos sensibles autorizados por el Corporativo (si los hay) */
+    const [sensibles, setSensibles] = useState(null);
+    const p = sensibles ? { ...pBase, ...sensibles } : pBase;
 
     // ---------- MAPA (OpenStreetMap) ----------
 
@@ -208,6 +213,13 @@ function TarjetaProveedor({
                 <div></div>
 
             </header>
+
+            {/* PY2: datos sensibles protegidos en el Corporativo */}
+            <DatosProtegidos
+                tipo="proveedor"
+                id={pBase.SupplierID}
+                onDatos={setSensibles}
+            />
 
 
             {/* ================= BOTONES ================= */}

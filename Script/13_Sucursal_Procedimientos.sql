@@ -44,6 +44,14 @@ BEGIN
 END
 GO
 
+/* Los procedimientos que leen o escriben en el Corporativo (detalle de clientes y
+   proveedores, y crear/modificar/eliminar productos) se ejecutan "como su dueño"
+   (WITH EXECUTE AS OWNER): app_admin no es administrador y SQL Server no le permite
+   usar el linked server CORPORATIVO por su cuenta. Para que SQL Server acepte esa
+   identidad al salir hacia otro servidor, la base debe ser TRUSTWORTHY. */
+ALTER DATABASE WideWorldImporters SET TRUSTWORTHY ON;
+GO
+
 /*---------------------------------------------------------------------------------------*
 * SP_Clientes_Listar  (versión actual del proyecto, sin cambios: datos locales)
 *-----------------------------------------------------------------------------------------*/
@@ -1607,15 +1615,12 @@ GO
 GO
 
 /*---------------------------------------------------------------------------------------*
-* SP_Clientes_Detalle  (adaptado a la fragmentación vertical)
+* SP_Clientes_Detalle  (adaptado a la fragmentación vertical + control de acceso)
 *
-* Une los dos fragmentos del cliente:
-*   - Datos generales: tabla local de la sucursal (dbo.ClientesActuales).
-*   - Contacto, teléfonos, web y direcciones: Corporativo (dbo.ClientesSensibles).
-*
-* Tolerancia a fallas: los datos sensibles se leen en un SQL dinámico dentro de
-* TRY/CATCH. Si el Corporativo no responde, el procedimiento NO falla: devuelve los
-* datos locales, deja los sensibles en NULL e indica Corporativo_Disponible = 0.
+* La sucursal NO lee los datos sensibles (contactos, teléfonos, web, direcciones y
+* ubicación): se devuelven como "xxxx". El Administrador puede pedir acceso al
+* Corporativo; si lo aprueba, la web los obtiene directamente del Corporativo con
+* Seguridad.SP_DatosSensibles_Obtener (17_Corporativo_SolicitudesAcceso.sql).
 *-----------------------------------------------------------------------------------------*/
 
 CREATE OR ALTER PROCEDURE dbo.SP_Clientes_Detalle
@@ -1623,52 +1628,6 @@ CREATE OR ALTER PROCEDURE dbo.SP_Clientes_Detalle
 AS
 BEGIN
     SET NOCOUNT ON;
-    SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
-
-    DECLARE @Ids TABLE (CustomerID INT PRIMARY KEY);
-
-    INSERT INTO @Ids (CustomerID)
-    SELECT DISTINCT TRY_CAST(value AS INT)
-    FROM   STRING_SPLIT(@CustomerID, ',')
-    WHERE  TRY_CAST(value AS INT) IS NOT NULL;
-
-    CREATE TABLE #Sensibles
-    (
-        CustomerID               INT PRIMARY KEY,
-        PrimaryContactPersonID   INT,
-        AlternateContactPersonID INT,
-        PhoneNumber              NVARCHAR(50),
-        FaxNumber                NVARCHAR(50),
-        WebsiteURL               NVARCHAR(256),
-        DeliveryAddressLine1     NVARCHAR(100),
-        DeliveryAddressLine2     NVARCHAR(100),
-        DeliveryPostalCode       NVARCHAR(20),
-        DeliveryLatitude         FLOAT,
-        DeliveryLongitude        FLOAT,
-        PostalAddressLine1       NVARCHAR(100),
-        PostalAddressLine2       NVARCHAR(100),
-        PostalPostalCode         NVARCHAR(20)
-    );
-
-    DECLARE @CorporativoDisponible BIT = 1;
-
-    BEGIN TRY
-        EXEC sp_executesql N'
-            INSERT INTO #Sensibles
-            SELECT s.CustomerID, s.PrimaryContactPersonID, s.AlternateContactPersonID,
-                   s.PhoneNumber, s.FaxNumber, s.WebsiteURL,
-                   s.DeliveryAddressLine1, s.DeliveryAddressLine2, s.DeliveryPostalCode,
-                   s.DeliveryLatitude, s.DeliveryLongitude,
-                   s.PostalAddressLine1, s.PostalAddressLine2, s.PostalPostalCode
-            FROM   dbo.ClientesSensibles AS s
-            WHERE  s.CustomerID IN (SELECT TRY_CAST(value AS INT)
-                                    FROM STRING_SPLIT(@ids, '',''));',
-            N'@ids NVARCHAR(MAX)',
-            @ids = @CustomerID;
-    END TRY
-    BEGIN CATCH
-        SET @CorporativoDisponible = 0;
-    END CATCH
 
     SELECT
         c.CustomerID,
@@ -1677,59 +1636,48 @@ BEGIN
         cat.CustomerCategoryName       AS Categoria,
         c.BuyingGroupID                AS Grupo_Compra_ID,
         bg.BuyingGroupName             AS Grupo_Compra,
-        s.PrimaryContactPersonID       AS Contacto_Primario_ID,
-        p1.FullName                    AS Contacto_Primario,
-        s.AlternateContactPersonID     AS Contacto_Alternativo_ID,
-        p2.FullName                    AS Contacto_Alternativo,
+        CAST(NULL AS INT)              AS Contacto_Primario_ID,
+        N'xxxx'                        AS Contacto_Primario,
+        CAST(NULL AS INT)              AS Contacto_Alternativo_ID,
+        N'xxxx'                        AS Contacto_Alternativo,
         c.BillToCustomerID             AS Cliente_Por_Facturar_ID,
         bc.CustomerName                AS Cliente_Por_Facturar,
         c.DeliveryMethodID             AS Metodo_Entrega_ID,
         dm.DeliveryMethodName          AS Metodo_Entrega,
         c.DeliveryCityID               AS Ciudad_Entrega_ID,
         ciu.CityName                   AS Ciudad_Entrega,
-        s.DeliveryPostalCode           AS Codigo_Postal,
-        s.PhoneNumber                  AS Telefono,
-        s.FaxNumber                    AS Fax,
-        s.WebsiteURL                   AS Sitio_Web,
+        N'xxxx'                        AS Codigo_Postal,
+        N'xxxx'                        AS Telefono,
+        N'xxxx'                        AS Fax,
+        N'xxxx'                        AS Sitio_Web,
         c.PaymentDays                  AS Dias_De_Gracia,
         c.CreditLimit                  AS Limite_Credito,
         c.StandardDiscountPercentage   AS Descuento,
-        s.DeliveryAddressLine1         AS Direccion_Entrega1,
-        s.DeliveryAddressLine2         AS Direccion_Entrega2,
-        s.PostalAddressLine1           AS Direccion_Postal1,
-        s.PostalAddressLine2           AS Direccion_Postal2,
-        s.DeliveryLatitude             AS Latitud,
-        s.DeliveryLongitude            AS Longitud,
-        @CorporativoDisponible         AS Corporativo_Disponible
+        N'xxxx'                        AS Direccion_Entrega1,
+        CAST(NULL AS NVARCHAR(60))     AS Direccion_Entrega2,
+        N'xxxx'                        AS Direccion_Postal1,
+        CAST(NULL AS NVARCHAR(60))     AS Direccion_Postal2,
+        CAST(NULL AS FLOAT)            AS Latitud,
+        CAST(NULL AS FLOAT)            AS Longitud,
+        CAST(1 AS BIT)                 AS Datos_Protegidos
     FROM dbo.ClientesActuales AS c
-    INNER JOIN dbo.TiposCliente AS cat
-        ON c.CustomerCategoryID = cat.CustomerCategoryID
-    LEFT JOIN #Sensibles AS s
-        ON s.CustomerID = c.CustomerID
-    LEFT JOIN dbo.GruposCompradores AS bg
-        ON c.BuyingGroupID = bg.BuyingGroupID
-    LEFT JOIN dbo.Contactos AS p1
-        ON s.PrimaryContactPersonID = p1.PersonID
-    LEFT JOIN dbo.Contactos AS p2
-        ON s.AlternateContactPersonID = p2.PersonID
-    LEFT JOIN dbo.ClientesActuales AS bc
-        ON c.BillToCustomerID = bc.CustomerID
-    LEFT JOIN dbo.FormasEntrega AS dm
-        ON c.DeliveryMethodID = dm.DeliveryMethodID
-    LEFT JOIN dbo.Ciudades AS ciu
-        ON c.DeliveryCityID = ciu.CityID
-    WHERE c.CustomerID IN (SELECT CustomerID FROM @Ids);
+    INNER JOIN dbo.TiposCliente AS cat     ON c.CustomerCategoryID = cat.CustomerCategoryID
+    LEFT JOIN dbo.GruposCompradores AS bg  ON c.BuyingGroupID = bg.BuyingGroupID
+    LEFT JOIN dbo.ClientesActuales AS bc   ON c.BillToCustomerID = bc.CustomerID
+    LEFT JOIN dbo.FormasEntrega AS dm      ON c.DeliveryMethodID = dm.DeliveryMethodID
+    LEFT JOIN dbo.Ciudades AS ciu          ON c.DeliveryCityID = ciu.CityID
+    WHERE c.CustomerID IN (SELECT TRY_CAST(value AS INT)
+                           FROM STRING_SPLIT(@CustomerID, ',')
+                           WHERE TRY_CAST(value AS INT) IS NOT NULL);
 END
 GO
 
 
 /*---------------------------------------------------------------------------------------*
-* SP_Proveedores_Detalle  (adaptado a la fragmentación vertical; incluye los campos
-* agregados en SP_Formularios_Rapidos.sql: código bancario, comentarios y ciudad postal)
+* SP_Proveedores_Detalle  (adaptado a la fragmentación vertical + control de acceso)
 *
-* Igual que SP_Clientes_Detalle: datos generales locales + datos sensibles
-* (contacto, teléfonos, direcciones y datos bancarios) desde el Corporativo, con
-* tolerancia a fallas si el Corporativo no responde.
+* Igual que SP_Clientes_Detalle: contactos, teléfonos, direcciones y datos bancarios
+* se devuelven como "xxxx" hasta que el Corporativo autorice el acceso.
 *-----------------------------------------------------------------------------------------*/
 
 CREATE OR ALTER PROCEDURE dbo.SP_Proveedores_Detalle
@@ -1737,112 +1685,51 @@ CREATE OR ALTER PROCEDURE dbo.SP_Proveedores_Detalle
 AS
 BEGIN
     SET NOCOUNT ON;
-    SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
-
-    DECLARE @Ids TABLE (SupplierID INT PRIMARY KEY);
-
-    INSERT INTO @Ids (SupplierID)
-    SELECT DISTINCT TRY_CAST(value AS INT)
-    FROM   STRING_SPLIT(@SupplierID, ',')
-    WHERE  TRY_CAST(value AS INT) IS NOT NULL;
-
-    CREATE TABLE #Sensibles
-    (
-        SupplierID               INT PRIMARY KEY,
-        PrimaryContactPersonID   INT,
-        AlternateContactPersonID INT,
-        PhoneNumber              NVARCHAR(50),
-        FaxNumber                NVARCHAR(50),
-        WebsiteURL               NVARCHAR(256),
-        DeliveryAddressLine1     NVARCHAR(100),
-        DeliveryAddressLine2     NVARCHAR(100),
-        DeliveryPostalCode       NVARCHAR(20),
-        DeliveryLatitude         FLOAT,
-        DeliveryLongitude        FLOAT,
-        PostalAddressLine1       NVARCHAR(100),
-        PostalAddressLine2       NVARCHAR(100),
-        PostalPostalCode         NVARCHAR(20),
-        BankAccountName          NVARCHAR(100),
-        BankAccountBranch        NVARCHAR(100),
-        BankAccountCode          NVARCHAR(50),
-        BankAccountNumber        NVARCHAR(50),
-        BankInternationalCode    NVARCHAR(50)
-    );
-
-    DECLARE @CorporativoDisponible BIT = 1;
-
-    BEGIN TRY
-        EXEC sp_executesql N'
-            INSERT INTO #Sensibles
-            SELECT s.SupplierID, s.PrimaryContactPersonID, s.AlternateContactPersonID,
-                   s.PhoneNumber, s.FaxNumber, s.WebsiteURL,
-                   s.DeliveryAddressLine1, s.DeliveryAddressLine2, s.DeliveryPostalCode,
-                   s.DeliveryLatitude, s.DeliveryLongitude,
-                   s.PostalAddressLine1, s.PostalAddressLine2, s.PostalPostalCode,
-                   s.BankAccountName, s.BankAccountBranch, s.BankAccountCode,
-                   s.BankAccountNumber, s.BankInternationalCode
-            FROM   dbo.ProveedoresSensibles AS s
-            WHERE  s.SupplierID IN (SELECT TRY_CAST(value AS INT)
-                                    FROM STRING_SPLIT(@ids, '',''));',
-            N'@ids NVARCHAR(MAX)',
-            @ids = @SupplierID;
-    END TRY
-    BEGIN CATCH
-        SET @CorporativoDisponible = 0;
-    END CATCH
 
     SELECT
         p.SupplierID,
         p.SupplierName                 AS Nombre_Proveedor,
         p.SupplierCategoryID           AS Categoria_ID,
         cat.SupplierCategoryName       AS Categoria,
-        s.PrimaryContactPersonID       AS Contacto_Primario_ID,
-        p1.FullName                    AS Contacto_Primario,
-        s.AlternateContactPersonID     AS Contacto_Alternativo_ID,
-        p2.FullName                    AS Contacto_Alternativo,
+        CAST(NULL AS INT)              AS Contacto_Primario_ID,
+        N'xxxx'                        AS Contacto_Primario,
+        CAST(NULL AS INT)              AS Contacto_Alternativo_ID,
+        N'xxxx'                        AS Contacto_Alternativo,
         p.DeliveryMethodID             AS Metodo_Entrega_ID,
         dm.DeliveryMethodName          AS Metodo_Entrega,
         p.DeliveryCityID               AS Ciudad_Entrega_ID,
         ciu.CityName                   AS Ciudad_Entrega,
-        s.DeliveryPostalCode           AS Codigo_Postal,
+        N'xxxx'                        AS Codigo_Postal,
         p.SupplierReference            AS Referencia_Proveedor,
-        s.BankAccountName              AS Nombre_Cuenta_Bancaria,
-        s.BankAccountBranch            AS Sucursal_Cuenta_Bancaria,
-        s.BankAccountCode              AS Codigo_Cuenta_Bancaria,
-        s.BankAccountNumber            AS Numero_Cuenta_Bancaria,
-        s.BankInternationalCode        AS Codigo_Bancario_Internacional,
+        N'xxxx'                        AS Nombre_Cuenta_Bancaria,
+        N'xxxx'                        AS Sucursal_Cuenta_Bancaria,
+        N'xxxx'                        AS Codigo_Cuenta_Bancaria,
+        N'xxxx'                        AS Numero_Cuenta_Bancaria,
+        N'xxxx'                        AS Codigo_Bancario_Internacional,
         p.PaymentDays                  AS Dias_De_Gracia,
         p.InternalComments             AS Comentarios_Internos,
-        s.PhoneNumber                  AS Telefono,
-        s.FaxNumber                    AS Fax,
-        s.WebsiteURL                   AS Sitio_Web,
-        s.DeliveryAddressLine1         AS Direccion_Entrega1,
-        s.DeliveryAddressLine2         AS Direccion_Entrega2,
-        s.DeliveryPostalCode           AS Codigo_Postal_Entrega,
-        s.PostalAddressLine1           AS Direccion_Postal1,
-        s.PostalAddressLine2           AS Direccion_Postal2,
-        s.DeliveryLatitude             AS Latitud,
-        s.DeliveryLongitude            AS Longitud,
+        N'xxxx'                        AS Telefono,
+        N'xxxx'                        AS Fax,
+        N'xxxx'                        AS Sitio_Web,
+        N'xxxx'                        AS Direccion_Entrega1,
+        CAST(NULL AS NVARCHAR(60))     AS Direccion_Entrega2,
+        N'xxxx'                        AS Codigo_Postal_Entrega,
+        N'xxxx'                        AS Direccion_Postal1,
+        CAST(NULL AS NVARCHAR(60))     AS Direccion_Postal2,
+        CAST(NULL AS FLOAT)            AS Latitud,
+        CAST(NULL AS FLOAT)            AS Longitud,
         p.PostalCityID                 AS Ciudad_Postal_ID,
         pc.CityName                    AS Ciudad_Postal,
-        s.PostalPostalCode             AS Codigo_Postal_Postal,
-        @CorporativoDisponible         AS Corporativo_Disponible
+        N'xxxx'                        AS Codigo_Postal_Postal,
+        CAST(1 AS BIT)                 AS Datos_Protegidos
     FROM dbo.ProveedoresActuales AS p
-    INNER JOIN dbo.CategoriaProveedores AS cat
-        ON p.SupplierCategoryID = cat.SupplierCategoryID
-    LEFT JOIN #Sensibles AS s
-        ON s.SupplierID = p.SupplierID
-    LEFT JOIN dbo.Contactos AS p1
-        ON s.PrimaryContactPersonID = p1.PersonID
-    LEFT JOIN dbo.Contactos AS p2
-        ON s.AlternateContactPersonID = p2.PersonID
-    LEFT JOIN dbo.FormasEntrega AS dm
-        ON p.DeliveryMethodID = dm.DeliveryMethodID
-    LEFT JOIN dbo.Ciudades AS ciu
-        ON p.DeliveryCityID = ciu.CityID
-    LEFT JOIN dbo.Ciudades AS pc
-        ON p.PostalCityID = pc.CityID
-    WHERE p.SupplierID IN (SELECT SupplierID FROM @Ids);
+    INNER JOIN dbo.CategoriaProveedores AS cat ON p.SupplierCategoryID = cat.SupplierCategoryID
+    LEFT JOIN dbo.FormasEntrega AS dm          ON p.DeliveryMethodID = dm.DeliveryMethodID
+    LEFT JOIN dbo.Ciudades AS ciu              ON p.DeliveryCityID = ciu.CityID
+    LEFT JOIN dbo.Ciudades AS pc               ON p.PostalCityID = pc.CityID
+    WHERE p.SupplierID IN (SELECT TRY_CAST(value AS INT)
+                           FROM STRING_SPLIT(@SupplierID, ',')
+                           WHERE TRY_CAST(value AS INT) IS NOT NULL);
 END
 GO
 
@@ -1850,6 +1737,15 @@ GO
 /*---------------------------------------------------------------------------------------*
 * Permisos y verificación
 *-----------------------------------------------------------------------------------------*/
+
+/* Control de acceso: el Administrador no puede leer los datos sensibles desde la sucursal. */
+IF OBJECT_ID(N'dbo.ClientesSensibles', N'SN') IS NOT NULL
+BEGIN
+    REVOKE SELECT ON dbo.ClientesSensibles    FROM rol_admin_sucursal;
+    REVOKE SELECT ON dbo.ProveedoresSensibles FROM rol_admin_sucursal;
+    REVOKE SELECT ON dbo.ContactosSensibles   FROM rol_admin_sucursal;
+END
+GO
 
 EXEC dbo.usp_OtorgarPermisosApp;
 GO
@@ -1861,7 +1757,7 @@ WHERE   p.grantee_principal_id = DATABASE_PRINCIPAL_ID(N'rol_admin_sucursal')
   AND   p.permission_name = N'EXECUTE'
 ORDER BY Procedimiento;
 
-/* Prueba: detalle de un cliente, uniendo datos locales y sensibles del Corporativo. */
+/* Prueba: detalle de un cliente (los datos sensibles salen como xxxx). */
 EXEC dbo.SP_Clientes_Detalle @CustomerID = N'1';
 GO
 

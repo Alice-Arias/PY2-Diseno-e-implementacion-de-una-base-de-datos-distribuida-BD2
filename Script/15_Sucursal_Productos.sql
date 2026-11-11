@@ -44,6 +44,14 @@ BEGIN
 END
 GO
 
+/* Los procedimientos que leen o escriben en el Corporativo (detalle de clientes y
+   proveedores, y crear/modificar/eliminar productos) se ejecutan "como su dueño"
+   (WITH EXECUTE AS OWNER): app_admin no es administrador y SQL Server no le permite
+   usar el linked server CORPORATIVO por su cuenta. Para que SQL Server acepte esa
+   identidad al salir hacia otro servidor, la base debe ser TRUSTWORTHY. */
+ALTER DATABASE WideWorldImporters SET TRUSTWORTHY ON;
+GO
+
 /*---------------------------------------------------------------------------------------*
 * SP_Inventario_Insertar
 *-----------------------------------------------------------------------------------------*/
@@ -74,6 +82,7 @@ CREATE OR ALTER PROCEDURE dbo.SP_Inventario_Insertar
     @ReorderLevel           INT           = 0,
     @TargetStockLevel       INT           = 0,
     @LastEditedBy           INT           = 1
+WITH EXECUTE AS OWNER
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -184,6 +193,7 @@ CREATE OR ALTER PROCEDURE dbo.SP_Inventario_Actualizar
     @TargetStockLevel       INT           = NULL,
     @LastEditedBy           INT           = 1,
     @Version                NVARCHAR(30)  = NULL
+WITH EXECUTE AS OWNER
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -280,6 +290,7 @@ GO
 
 CREATE OR ALTER PROCEDURE dbo.SP_Inventario_Eliminar
     @StockItemID INT
+WITH EXECUTE AS OWNER
 AS
 BEGIN
     SET NOCOUNT ON;

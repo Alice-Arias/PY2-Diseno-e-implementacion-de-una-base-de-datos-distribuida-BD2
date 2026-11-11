@@ -13,6 +13,7 @@ import ProveedoresPage from './pages/ProveedoresPage';
 import InventarioPage from './pages/InventarioPage';
 import VentasPage from './pages/VentasPage';
 import ReportesPage from './pages/ReportesPage';
+import SolicitudesPage from './pages/SolicitudesPage';
 
 import './App.css';
 
@@ -48,6 +49,7 @@ function App() {
                     <Route path="/inventario" element={<RutaProtegida roles={['Administrador']}><InventarioPage /></RutaProtegida>} />
                     <Route path="/ventas" element={<RutaProtegida roles={['Administrador']}><VentasPage /></RutaProtegida>} />
                     <Route path="/reportes" element={<RutaProtegida roles={['Corporativo']}><ReportesPage /></RutaProtegida>} />
+                    <Route path="/solicitudes" element={<RutaProtegida roles={['Corporativo']}><SolicitudesPage /></RutaProtegida>} />
                 </Route>
 
                 {/* Cualquier ruta desconocida vuelve al login */}

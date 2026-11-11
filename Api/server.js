@@ -86,6 +86,7 @@ const ventasRoutes = require('./routes/ventas.routes');
 const reportesRoutes = require('./routes/reportes.routes');
 const ciudadesRoutes = require('./routes/ciudades.routes'); // PY2: buscador de ciudades
 const authRoutes = require('./routes/auth.routes');          // PY2: inicio de sesión
+const solicitudesRoutes = require('./routes/solicitudes.routes'); // PY2: acceso a datos sensibles
 const { autenticar, requiereRol, soloConsulta, conPool } = require('./auth');
 
 /* PY2: cadenas de seguridad por rol. Cada petición se conecta al nodo del usuario. */
@@ -172,6 +173,7 @@ app.use(express.json());
 *---------------------------------------------------------------------------------------*/
 
 app.use('/api/auth', authRoutes);
+app.use('/api/solicitudes', autenticar, solicitudesRoutes);
 app.use('/api/clientes', ...adminLector, clientesRoutes);
 
 

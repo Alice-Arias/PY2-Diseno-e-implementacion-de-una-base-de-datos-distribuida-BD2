@@ -94,13 +94,12 @@ CLOSE cur;
 DEALLOCATE cur;
 GO
 
-/* Los procedimientos de detalle leen los datos sensibles con SQL dinámico (para poder
-   seguir funcionando si el Corporativo no responde), por eso el rol necesita SELECT
-   sobre estos tres sinónimos. Solo exponen datos de contacto, que el Administrador
-   tiene permitido consultar. */
-GRANT SELECT ON dbo.ClientesSensibles    TO rol_admin_sucursal;
-GRANT SELECT ON dbo.ProveedoresSensibles TO rol_admin_sucursal;
-GRANT SELECT ON dbo.ContactosSensibles   TO rol_admin_sucursal;
+/* El rol Administrador NO tiene permiso sobre estos tres sinónimos: los datos
+   sensibles solo se entregan desde el Corporativo, con autorización
+   (17_Corporativo_SolicitudesAcceso.sql). */
+REVOKE SELECT ON dbo.ClientesSensibles    FROM rol_admin_sucursal;
+REVOKE SELECT ON dbo.ProveedoresSensibles FROM rol_admin_sucursal;
+REVOKE SELECT ON dbo.ContactosSensibles   FROM rol_admin_sucursal;
 GO
 
 /* Verificación */
