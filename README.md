@@ -3,9 +3,9 @@
 **Wide World Importers** · Bases de Datos II
 
 | | |
-| --- | --- |
-| **Integrantes** | _[Alice Arias Salazar]_ · _[Heldyis Agüero Espinoza]_ |
-| **Profesor** | _[Cristian Paz Campos Agüero]_ |
+|---|---|
+| **Integrantes** | Alice Arias Salazar · Heldyis Agüero Espinoza |
+| **Profesor** | Cristian Paz Campos Agüero |
 | **Infraestructura** | 3 nodos SQL Server 2022 (1 Windows + 2 Linux), API Node.js/Express, web React + Vite |
 
 ---
@@ -15,7 +15,7 @@
 **Se completó todo lo solicitado en el enunciado.** Cada punto se probó desde SQL Server y desde la aplicación web.
 
 | Requisito | Estado | Dónde |
-| --- | --- | --- |
+|---|---|---|
 | 3 nodos independientes (Corporativo, San José, Limón), con distinto sistema operativo | ✅ | §2 |
 | Roles **Administrador** y **Corporativo** | ✅ | §8 |
 | Tabla de usuarios (`iduser, username, password, fullname, active, rol, email, hiredate`) con contraseña **encriptada** con el cifrado nativo de SQL Server | ✅ | §8.1 |
@@ -27,10 +27,11 @@
 | Vistas materializadas en el Corporativo | ✅ | §7 |
 | Concurrencia en catálogos replicados | ✅ | §6 |
 | Respuesta ante la falla de un nodo | ✅ | §9 |
+| Aplicación web con login, roles y estadísticas por sucursal | ✅ | §10 |
 
 ### Decisiones que conviene conocer
 
-- **Clientes y proveedores son de solo consulta para el Administrador.** El enunciado define que el Administrador _"podrá consultar clientes, proveedores, productos y facturas"_ y _"crear, modificar y eliminar productos"_. Por eso se retiraron de la web las opciones de crear, modificar y eliminar clientes y proveedores del Proyecto 1. Las demás funcionalidades del Proyecto 1 se mantienen: consultas con filtros y paginación, detalle, ventas, inventario y reportes.
+- **Clientes y proveedores son de solo consulta para el Administrador.** El enunciado define que el Administrador *"podrá consultar clientes, proveedores, productos y facturas"* y *"crear, modificar y eliminar productos"*. Por eso se retiraron de la web las opciones de crear, modificar y eliminar clientes y proveedores del Proyecto 1. Las demás funcionalidades del Proyecto 1 se mantienen: consultas con filtros y paginación, detalle, ventas, inventario y reportes.
 - **Los datos sensibles requieren autorización.** Además de guardarse solo en el Corporativo, el Administrador los ve como `xxxx` hasta que el Corporativo aprueba una solicitud de acceso (§8.4).
 
 ---
@@ -63,7 +64,7 @@
 ```
 
 | Nodo | Motor y sistema operativo | Cómo se conecta |
-| --- | --- | --- |
+|---|---|---|
 | Corporativo | SQL Server 2022 Developer en **Windows** | `corporativo_escazu` (alias a `127.0.0.1,1433`) |
 | San José | SQL Server 2022 en **Linux** (contenedor Docker en WSL) | `sanjose` (alias que actualiza `levantar.sh`) |
 | Limón | SQL Server 2022 en **Linux** (contenedor Docker en WSL) | `limon` (alias que actualiza `levantar.sh`) |
@@ -79,7 +80,7 @@ La aplicación conserva la arquitectura del Proyecto 1 (React → API Node.js �
 **Tablas:** `Sales.Customers`, `Purchasing.Suppliers`, `Application.People`.
 
 | Fragmento | Columnas | Nodo |
-| --- | --- | --- |
+|---|---|---|
 | **Sensible** | Contactos (`PrimaryContactPersonID`, `AlternateContactPersonID`), `PhoneNumber`, `FaxNumber`, `WebsiteURL`, direcciones de entrega y postales, códigos postales, `DeliveryLocation` y, en proveedores, los **datos bancarios**. En personas: teléfono, fax, correo, foto y contraseña | **Corporativo** |
 | **Operativo** | Identificador, nombre, categoría, grupo de compra, método de entrega, ciudad, crédito, descuento, días de pago, etc. | **San José y Limón** (y Corporativo) |
 
@@ -175,7 +176,7 @@ Se probó desde la web, con dos pestañas editando el mismo producto: la primera
 
 `16_Corporativo_Estadisticas.sql`
 
-- **Consolidación:** `Estadisticas.SP_Sincronizar` trae, por los linked servers, las facturas nuevas o modificadas y las existencias de cada sucursal. Lo ejecuta un **job de SQL Server Agent cada 5 minutos**, y también se puede lanzar desde la web con *Actualizar datos de sucursales*.
+- **Consolidación:** `Estadisticas.SP_Sincronizar` trae, por los linked servers, las facturas nuevas o modificadas y las existencias de cada sucursal. Lo ejecuta un **job de SQL Server Agent cada 5 minutos**, y también se puede lanzar desde la web con *Actualizar datos de sucursales*. Usa `OPENQUERY`: la consulta se ejecuta **completa dentro de la sucursal** y por la red viajan solo las filas nuevas o modificadas (§11).
 - **Vistas materializadas** (vistas indexadas de SQL Server), que se mantienen al día solas cuando entran datos:
   - `Estadisticas.vw_VentasSucursalMes`: ventas, ganancia y unidades por sucursal, año y mes.
   - `Estadisticas.vw_TotalesFactura`: totales por factura.
@@ -215,7 +216,7 @@ Entre los nodos, los linked servers usan logins dedicados: `enlace_sucursal` (de
 
 ### 8.3 Ejecución con permisos del dueño
 
-SQL Server no permite que un login que no es administrador use un linked server. Los procedimientos que **sí** necesitan otro nodo (los de productos, la eliminación verificada y la sincronización) se declaran `WITH EXECUTE AS OWNER`, y la base es `TRUSTWORTHY`. Así, `app_admin` y `app_corporativo` **no** pueden usar los linked servers por su cuenta: solo a través de esos procedimientos. Es un compromiso conocido entre seguridad y funcionalidad, y queda acotado a esos procedimientos.
+SQL Server no permite que un login que no es administrador use un linked server. Los procedimientos que **sí** necesitan otro nodo (los de productos, el detalle verificado, la eliminación y la sincronización) se declaran `WITH EXECUTE AS OWNER`, y la base es `TRUSTWORTHY`. Lo mismo aplica al reporte *Ventas por categoría y año*, que arma su consulta con **SQL dinámico** (`PIVOT` por año): una consulta dinámica no hereda los permisos del procedimiento, y sin `EXECUTE AS OWNER` el login de la aplicación necesitaría permiso de lectura sobre las tablas. Así, `app_admin` y `app_corporativo` **no** pueden usar los linked servers por su cuenta: solo a través de esos procedimientos. Es un compromiso conocido entre seguridad y funcionalidad, y queda acotado a esos procedimientos.
 
 ### 8.4 Acceso controlado a los datos sensibles
 
@@ -240,7 +241,69 @@ Se probó deteniendo el contenedor de Limón (`docker stop limon`) durante la ap
 
 ---
 
-## 10. Scripts (`Script/`)
+## 10. Aplicación web
+
+La web conserva la estructura del Proyecto 1 y agrega:
+
+| Función | Detalle |
+|---|---|
+| **Inicio de sesión** | Valida contra `Seguridad.Usuarios` en el Corporativo. El selector de rol se compara con el rol real del usuario |
+| **Menú según el rol** | El Administrador ve Clientes, Proveedores, Inventario y Ventas de **su** sucursal; el Corporativo ve Reportes y Solicitudes. Las rutas también se protegen en la API |
+| **Estadísticas** | Selector *Consolidado / San José / Limón*, comparativo animado entre sucursales, estado de los datos de cada una y los 11 reportes del Proyecto 1 con el mismo filtro |
+| **Descarga en Excel** | *Descargar Excel* genera un `.xlsx` con empresa, reporte, sucursal, filtros, fecha y usuario, montos con formato de dólares y filtros en los encabezados. *Ver reporte* lo muestra en pantalla, por páginas |
+| **Solicitudes de acceso** | Aviso con contador para el Corporativo; aprobación por horas (§8.4) |
+| **Avisos de falla** | Si el nodo del usuario no responde, aparece una franja con el mensaje real (§9) |
+| **Concurrencia** | Mensaje claro si otro usuario modificó el producto mientras se editaba (§6) |
+| **Usabilidad** | Modo claro y oscuro, hora en vivo, barra de carga en cada consulta, buscadores con sugerencias y botón *Buscar*, campos con unidades (*USD*, *kg*, *unidades*) y marca de **obligatorio** u **opcional** en los formularios |
+
+La web se comunica con la API a través del **proxy de Vite** (`/api` → `localhost:4000`), así el navegador de Windows no depende del reenvío de puertos de WSL.
+
+---
+
+## 11. Rendimiento: tres SQL Server en una sola computadora
+
+Para el desarrollo y la revisión, los tres nodos corren en **una misma laptop**: el Corporativo en Windows y las dos sucursales en Docker. Al medir los reportes, la misma consulta tardaba a veces 17 segundos y a veces 26 milisegundos: la computadora estaba saturada.
+
+**Cómo se midió.** La API registra en su terminal cuánto tarda cada petición:
+
+```
+GET /api/reportes/top-productos?pagina=1&tamano=10 -> 200 en 340 ms
+```
+
+**Causa.** SQL Server está diseñado para tener un servidor dedicado, así que **toma toda la memoria disponible** para guardar datos en caché. Con tres instancias a la vez, se quitaban la memoria entre ellas y Windows terminaba usando el disco como memoria.
+
+**Solución: límite de memoria por nodo** (laptop de 16 GB):
+
+| Nodo | Cómo se configura | Límite |
+|---|---|---|
+| Corporativo | `EXEC sp_configure 'max server memory (MB)', 3072; RECONFIGURE;` | 3 GB |
+| San José | `MSSQL_MEMORY_LIMIT_MB: "2048"` en `docker-compose.yml` | 2 GB |
+| Limón | `MSSQL_MEMORY_LIMIT_MB: "2048"` en `docker-compose.yml` | 2 GB |
+
+En total, unos 7 GB para los tres SQL Server, y el resto queda libre para Windows, el navegador y el editor. En un ambiente real, cada nodo estaría en su propio servidor y este límite no haría falta.
+
+**Sincronización liviana.** La primera versión de `SP_Sincronizar` hacía la unión entre facturas y líneas **en el Corporativo**, así que traía todas las líneas de cada sucursal (unas 114 000) cada 5 minutos. Con `OPENQUERY`, la unión y el filtro se ejecutan **en la sucursal**, y solo viajan los cambios.
+
+**Primera consulta.** La primera vez que se abre cada reporte tarda más, porque SQL Server carga los datos del disco a la memoria. Las siguientes son rápidas.
+
+---
+
+## 12. Operación y problemas frecuentes
+
+| Síntoma | Causa | Solución |
+|---|---|---|
+| *"El Corporativo no está disponible"* y en PowerShell `MSSQLSERVER` aparece como `Start...` | **Windows Update** instaló un parche de SQL Server y está actualizando sus bases internas (el `ERRORLOG` muestra *upgrade* y *MSDB.SQL*) | **Esperar**, sin matar el proceso. Luego `Start-Service SQLSERVERAGENT`, porque el Agent no vuelve a encenderse solo |
+| SQL Server apagado después de reiniciar la computadora | Servicio en inicio manual | En PowerShell como administrador: `Set-Service MSSQLSERVER -StartupType Automatic` y lo mismo para `SQLSERVERAGENT` |
+| `Login failed for user 'app_login'` | Contraseña cortada en `Api/.env` (el `#` inicia un comentario), login sin crear o SQL Server solo con autenticación de Windows | Contraseñas **entre comillas** en `.env`; ejecutar los scripts 09 y 10; activar *SQL Server and Windows Authentication mode*. El motivo exacto aparece en el `ERRORLOG` |
+| `npm install` falla con `ETIMEDOUT` | La red no permite IPv6 y npm lo intenta primero | Desactivar IPv6 en WSL: `wsl -u root sysctl -w net.ipv6.conf.all.disable_ipv6=1` |
+| Pantalla en negro | Un error de JavaScript detiene la aplicación | **F12 → Console**: la línea roja indica el archivo |
+| Colores distintos a los del tema | Extensiones como Dark Reader oscurecen la página por su cuenta | Desactivarlas para `127.0.0.1` |
+
+**Antes de la revisión:** instalar con tiempo las actualizaciones pendientes de Windows, pausar Windows Update ese día, verificar que `MSSQLSERVER` y `SQLSERVERAGENT` estén en *Running*, ejecutar `./levantar.sh` y abrir cada reporte una vez para cargarlo en memoria.
+
+---
+
+## 13. Scripts (`Script/`)
 
 | # | Script | Nodo | Contenido |
 |---|---|---|---|
@@ -262,13 +325,21 @@ Se probó deteniendo el contenedor de Limón (`docker stop limon`) durante la ap
 | 16 | `16_Corporativo_Estadisticas.sql` | Corporativo | Sincronización, vistas materializadas y reportes con `@Sucursal` |
 | 17 | `17_Corporativo_SolicitudesAcceso.sql` | Corporativo | Solicitudes de acceso a datos sensibles |
 
+Los archivos del Proyecto 1 (`SP_*.sql`, `Sinonimos.sql`) se conservan en `Script/Proyecto1_original/` como referencia. **No se deben ejecutar** en los nodos: su contenido ya está adaptado en los scripts 13, 15 y 16.
+
 Los scripts de sucursal son **los mismos** para San José y Limón: detectan el nodo con `@@SERVERNAME`. Todos se pueden volver a ejecutar sin dañar nada, y se detienen solos si se ejecutan en el nodo equivocado.
 
 ---
 
-## 11. Instalación y ejecución
+## 14. Instalación y ejecución
 
 La instalación completa en una computadora nueva está en **[INSTALACION.md](INSTALACION.md)**: requisitos de Windows y `./instalar_todo.sh`, que restaura los tres nodos y ejecuta los scripts en orden.
+
+**Configuración:**
+
+- `Api/.env`: se copia de `Api/.env.ejemplo`. Las contraseñas van **entre comillas**, porque contienen `#`. No se sube a GitHub.
+- `docker-compose.yml`: incluye el límite de memoria de cada sucursal (§11).
+- Corporativo: `max server memory` en 3072 MB (§11), y los servicios `MSSQLSERVER` y `SQLSERVERAGENT` en inicio automático.
 
 **Día a día:**
 
@@ -289,9 +360,10 @@ cd WebSite && npm run dev         # Web
 
 ---
 
-## 12. Limitaciones conocidas
+## 15. Limitaciones conocidas
 
 - **Regla de reparto histórico.** Los datos originales no indicaban la sucursal, así que se repartieron por la paridad del número de pedido. Las ventas nuevas sí pertenecen a la sucursal donde se crean.
 - **Estadísticas con hasta 5 minutos de retraso.** El Corporativo trabaja sobre una copia consolidada. Es un retraso aceptable para informes, y se puede sincronizar en el momento desde la web.
 - **Ventana al eliminar productos.** Entre la verificación de movimientos y la eliminación, una sucursal podría registrar una venta del producto. El riesgo es bajo, y la replicación reportaría el conflicto en el monitor.
+- **Tres nodos en una laptop.** El rendimiento depende de la memoria de la computadora (§11). La primera consulta de cada reporte tarda más mientras SQL Server carga los datos.
 - **Red de WSL.** Las direcciones de Ubuntu cambian al reiniciar. `levantar.sh` actualiza los alias de Windows automáticamente. Las sucursales usan los puertos 1436 y 1437, porque el 1434 está reservado para la conexión de administración (DAC) de SQL Server en Windows.
