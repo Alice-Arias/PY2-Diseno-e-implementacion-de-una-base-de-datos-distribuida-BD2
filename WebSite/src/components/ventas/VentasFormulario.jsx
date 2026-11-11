@@ -6,6 +6,7 @@ import {
     Package,
     AlertTriangle
 } from 'lucide-react';
+import { MarcaCampo, LeyendaObligatorios } from '../MarcaCampo';   // PY2: obligatorio / opcional
 
 
 function VentasFormulario({
@@ -70,7 +71,7 @@ function VentasFormulario({
             }
         >
 
-            <label>{etiqueta}</label>
+            <label>{etiqueta}<MarcaCampo requerido={requerido} /></label>
 
             <input
                 type={tipo}
@@ -103,7 +104,7 @@ function VentasFormulario({
 
         <div className="campo">
 
-            <label>{etiqueta}</label>
+            <label>{etiqueta}<MarcaCampo requerido={requerido} /></label>
 
             <select
                 name={nombre}
@@ -156,7 +157,7 @@ function VentasFormulario({
 
         <div className="campo campo-completo">
 
-            <label>{etiqueta}</label>
+            <label>{etiqueta}<MarcaCampo requerido={false} /></label>
 
             <textarea
                 name={nombre}
@@ -192,7 +193,7 @@ function VentasFormulario({
 
             <div className="campo">
 
-                <label>{etiqueta}</label>
+                <label>{etiqueta}<MarcaCampo requerido={requerido} /></label>
 
                 <select
                     name={nombre}
@@ -275,7 +276,7 @@ function VentasFormulario({
                 }
             >
 
-                <label>{etiqueta}</label>
+                <label>{etiqueta}<MarcaCampo requerido={requerido} /></label>
 
                 <input
                     type={tipo}
@@ -318,6 +319,8 @@ function VentasFormulario({
                     Cliente y facturación
 
                 </h3>
+
+                <LeyendaObligatorios />
 
                 <div className="form-grid">
 
@@ -365,7 +368,7 @@ function VentasFormulario({
                         Ahora se escribe el número; el SP valida que exista. */}
                     {entrada(
                         'OrderID',
-                        'Pedido relacionado (número, opcional)',
+                        'Pedido relacionado (número)',
                         {
                             tipo: 'number',
                             min: 1,
@@ -723,7 +726,7 @@ function VentasFormulario({
                                         {entradaLinea(
                                             indice,
                                             'UnitPrice',
-                                            'Precio unitario',
+                                            'Precio unitario (USD)',
                                             {
                                                 tipo: 'number',
                                                 min: 0,
@@ -818,7 +821,7 @@ function VentasFormulario({
 
                         {entrada(
                             'UnitPrice',
-                            'Precio unitario',
+                            'Precio unitario (USD)',
                             {
                                 tipo: 'number',
                                 min: 0,

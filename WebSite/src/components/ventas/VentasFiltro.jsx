@@ -1,5 +1,7 @@
 import { useState, useRef } from 'react';
 import { Search, RotateCcw, Calendar, Plus } from 'lucide-react';
+import BuscadorSugerencias from '../BuscadorSugerencias';   // PY2
+import { sugerirClientes } from '../../services/api';
 
 import './ventas.css';
 
@@ -66,9 +68,11 @@ function VentasFiltro({ metodosEntrega = [], onBuscar, onRestaurar, onNuevo }) {
         <div className="vf-filtro">
 
             <div className="vf-campo vf-factura">
+                <label className="vf-etiqueta">N.° de factura</label>
                 <input
                     type="number"
-                    placeholder="N.° de factura"
+                    min="1"
+                    placeholder="Ej: 1296"
                     value={numeroFactura}
                     onChange={(e) => setNumeroFactura(e.target.value)}
                     onKeyDown={porEnter}
@@ -76,16 +80,20 @@ function VentasFiltro({ metodosEntrega = [], onBuscar, onRestaurar, onNuevo }) {
             </div>
 
             <div className="vf-campo vf-cliente">
-                <input
-                    type="text"
-                    placeholder="Buscar por cliente..."
-                    value={cliente}
-                    onChange={(e) => setCliente(e.target.value)}
-                    onKeyDown={porEnter}
+                <label className="vf-etiqueta">Cliente</label>
+                <BuscadorSugerencias
+                    valor={cliente}
+                    onCambiar={setCliente}
+                    onBuscar={() => buscar()}
+                    cargarSugerencias={sugerirClientes}
+                    placeholder="Nombre del cliente"
+                    etiqueta="Buscar por cliente"
+                    sinBoton
                 />
             </div>
 
             <div className="vf-campo vf-metodo">
+                <label className="vf-etiqueta">Método de entrega</label>
                 <select
                     value={metodoEntrega}
                     onChange={(e) => setMetodoEntrega(e.target.value)}
@@ -100,6 +108,7 @@ function VentasFiltro({ metodosEntrega = [], onBuscar, onRestaurar, onNuevo }) {
             </div>
 
 <div className="vf-campo vf-fecha">
+    <label className="vf-etiqueta">Fecha desde</label>
     <div
         className="vf-fecha-wrap"
         onClick={() => abrirCalendario(refFechaInicio)}
@@ -110,7 +119,7 @@ function VentasFiltro({ metodosEntrega = [], onBuscar, onRestaurar, onNuevo }) {
         <span className={fechaInicio ? "vf-fecha-valor" : "vf-fecha-placeholder"}>
             {fechaInicio
                 ? new Date(fechaInicio + 'T00:00:00').toLocaleDateString('es-CR')
-                : "Fecha inicio"}
+                : "Elegir fecha"}
         </span>
 
         <input
@@ -124,6 +133,7 @@ function VentasFiltro({ metodosEntrega = [], onBuscar, onRestaurar, onNuevo }) {
 </div>
 
 <div className="vf-campo vf-fecha">
+    <label className="vf-etiqueta">Fecha hasta</label>
     <div
         className="vf-fecha-wrap"
         onClick={() => abrirCalendario(refFechaFin)}
@@ -134,7 +144,7 @@ function VentasFiltro({ metodosEntrega = [], onBuscar, onRestaurar, onNuevo }) {
         <span className={fechaFin ? "vf-fecha-valor" : "vf-fecha-placeholder"}>
             {fechaFin
                 ? new Date(fechaFin + 'T00:00:00').toLocaleDateString('es-CR')
-                : "Fecha fin"}
+                : "Elegir fecha"}
         </span>
 
         <input
@@ -148,9 +158,12 @@ function VentasFiltro({ metodosEntrega = [], onBuscar, onRestaurar, onNuevo }) {
 </div>
 
             <div className="vf-campo vf-monto">
+                <label className="vf-etiqueta">Monto desde (USD)</label>
                 <input
                     type="number"
-                    placeholder="Monto desde"
+                    min="0"
+                    step="0.01"
+                    placeholder="Ej: 100"
                     value={montoInicio}
                     onChange={(e) => setMontoInicio(e.target.value)}
                     onKeyDown={porEnter}
@@ -158,9 +171,12 @@ function VentasFiltro({ metodosEntrega = [], onBuscar, onRestaurar, onNuevo }) {
             </div>
 
             <div className="vf-campo vf-monto">
+                <label className="vf-etiqueta">Monto hasta (USD)</label>
                 <input
                     type="number"
-                    placeholder="Monto hasta"
+                    min="0"
+                    step="0.01"
+                    placeholder="Ej: 5000"
                     value={montoFin}
                     onChange={(e) => setMontoFin(e.target.value)}
                     onKeyDown={porEnter}

@@ -12,6 +12,8 @@
 
 import { useEffect, useState } from 'react';
 import RelojTema from '../components/RelojTema';   // PY2: hora en vivo y tema
+import BuscadorSugerencias from '../components/BuscadorSugerencias';
+import { sugerirClientes } from '../services/api';
 import { Users, CheckCircle2, Tag, Search, Plus, Sun, Eye } from 'lucide-react';
 
 import ClientesTabla from '../components/ClientesTabla';
@@ -154,16 +156,14 @@ function ClientesPage() {
 
             <div className="table-card">
                 <div className="toolbar">
-                    <div className="search-box">
-                        <Search size={16} />
-                        <input
-                            placeholder="Buscar por nombre... (Enter)"
-                            value={nombreEscrito}
-                            maxLength={100}
-                            onChange={(e) => setNombreEscrito(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && filtrar({ nombre: nombreEscrito.trim() })}
-                        />
-                    </div>
+                    <BuscadorSugerencias
+                        valor={nombreEscrito}
+                        onCambiar={setNombreEscrito}
+                        onBuscar={(texto) => filtrar({ nombre: texto })}
+                        cargarSugerencias={sugerirClientes}
+                        placeholder="Nombre del cliente (escriba 2 letras para ver sugerencias)"
+                        etiqueta="Buscar por nombre del cliente"
+                    />
 
                     <select
                         value={listado.filtros.categoria}

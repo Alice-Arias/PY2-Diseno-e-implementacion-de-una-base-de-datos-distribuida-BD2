@@ -435,7 +435,22 @@
 .wwi.modo-oscuro .app-shell .btn-nuevo,
 .wwi.modo-oscuro .app-shell .vf-btn-nuevo,
 .wwi.modo-oscuro .app-shell .btn-filtros {
-    color: #11202e !important;
+    background: #3a6fa8 !important;
+    border-color: #3a6fa8 !important;
+    color: #ffffff !important;
+}
+
+.wwi.modo-oscuro .app-shell .btn-nuevo:hover,
+.wwi.modo-oscuro .app-shell .vf-btn-nuevo:hover,
+.wwi.modo-oscuro .app-shell .btn-filtros:hover {
+    background: #4a82bd !important;
+    border-color: #4a82bd !important;
+}
+
+.wwi .app-shell .btn-nuevo:disabled,
+.wwi .app-shell .btn-filtros:disabled {
+    opacity: 0.6;
+    cursor: wait;
 }
 
 .wwi .app-shell .btn-nuevo:hover,
@@ -675,6 +690,309 @@
     opacity: 0.45;
     pointer-events: none;
     transition: opacity 0.15s;
+}
+
+/* ======================================================================
+   11. Barra de carga global
+   ====================================================================== */
+
+.barra-carga {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 2000;
+    height: 3px;
+    overflow: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+}
+
+.barra-carga.activa {
+    opacity: 1;
+}
+
+.barra-carga::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 35%;
+    background: var(--wwi-primario);
+    animation: barra-carga-avance 1.1s ease-in-out infinite;
+}
+
+@keyframes barra-carga-avance {
+    from { left: -35%; }
+    to   { left: 100%; }
+}
+
+/* ======================================================================
+   12. Marca en el menú (en lugar de la imagen con fondo negro)
+   ====================================================================== */
+
+.wwi .app-shell .sidebar .logo {
+    display: flex;
+    justify-content: flex-start;
+    padding: 1.4rem 1.2rem 1.6rem !important;
+}
+
+.marca {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: #ffffff;
+}
+
+.marca-simbolo {
+    flex: 0 0 auto;
+    width: 44px;
+    height: 44px;
+    color: #8fc1ea;
+}
+
+.marca-texto {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.05;
+}
+
+.marca-nombre {
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+}
+
+.marca-sub {
+    color: #a9c4df;
+    font-size: 0.86rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+}
+
+/* ======================================================================
+   13. Buscador con sugerencias y botón
+   ====================================================================== */
+
+.wwi .app-shell .buscador {
+    display: flex;
+    flex: 1 1 320px;
+    gap: 0.5rem;
+    min-width: 0;
+}
+
+.wwi .app-shell .buscador-campo {
+    position: relative;
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    min-width: 0;
+}
+
+.wwi .app-shell .buscador-campo svg {
+    position: absolute;
+    left: 0.75rem;
+    color: var(--wwi-texto-2);
+    pointer-events: none;
+}
+
+.wwi .app-shell .buscador-campo input {
+    width: 100%;
+    min-height: 40px;
+    padding: 0 0.8rem 0 2.2rem !important;
+    background: var(--wwi-superficie) !important;
+    color: var(--wwi-texto) !important;
+    border: 1px solid var(--wwi-borde-fuerte) !important;
+    border-radius: 8px !important;
+    font-family: inherit;
+    font-size: 0.9rem;
+}
+
+.wwi .app-shell .buscador-campo input:focus {
+    outline: none;
+    border-color: var(--wwi-primario) !important;
+    box-shadow: 0 0 0 3px var(--wwi-primario-suave) !important;
+}
+
+.wwi .app-shell .buscador .btn-buscar {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0 1rem;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+/* En el filtro de Ventas el buscador ocupa solo su casilla */
+.wwi .app-shell .vf-campo .buscador {
+    flex: 1 1 auto;
+}
+
+/* ======================================================================
+   14. Etiquetas de los filtros de Ventas y ayuda de Reportes
+   ====================================================================== */
+
+.wwi .app-shell .vf-campo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.wwi .app-shell .vf-etiqueta {
+    color: var(--wwi-texto-2);
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-align: left;
+}
+
+.wwi .app-shell .vf-acciones {
+    align-self: flex-end;
+}
+
+.wwi .app-shell .reportes-filtro-texto-grupo {
+    display: contents;
+}
+
+.wwi .app-shell .reportes-ayuda {
+    flex-basis: 100%;
+    margin: 0.2rem 0 0;
+    color: var(--wwi-texto-2);
+    font-size: 0.82rem;
+    text-align: left;
+}
+
+.wwi .app-shell .reportes-ayuda strong {
+    color: var(--wwi-texto);
+}
+
+/* ======================================================================
+   15. Formularios (inventario y ventas): obligatorios, campos y grupos
+   ====================================================================== */
+
+.leyenda-obligatorios {
+    margin: 0 0 1rem;
+    padding: 0.6rem 0.85rem;
+    border-radius: 8px;
+    background: var(--wwi-primario-suave);
+    color: var(--wwi-texto);
+    font-size: 0.85rem;
+    text-align: left;
+}
+
+.campo-req {
+    color: #c0392b;
+    font-weight: 700;
+}
+
+.wwi.modo-oscuro .campo-req {
+    color: #f08a80;
+}
+
+.campo-opc,
+.campo-ayuda {
+    margin-left: 0.35rem;
+    color: var(--wwi-texto-2);
+    font-size: 0.78rem;
+    font-weight: 400;
+}
+
+/* Etiqueta arriba y alineada a la izquierda; campos de la misma altura */
+.wwi .app-shell .form-grid .campo {
+    text-align: left;
+}
+
+.wwi .app-shell .form-grid .campo > label {
+    display: block;
+    margin-bottom: 0.35rem;
+    color: var(--wwi-texto) !important;
+    font-size: 0.86rem;
+    font-weight: 600;
+    text-align: left;
+}
+
+.wwi .app-shell .form-grid .campo input:not([type="checkbox"]),
+.wwi .app-shell .form-grid .campo select,
+.wwi .app-shell .form-grid .campo textarea {
+    width: 100%;
+    min-height: 42px;
+    padding: 0.55rem 0.8rem;
+    background: var(--wwi-superficie) !important;
+    color: var(--wwi-texto) !important;
+    border: 1px solid var(--wwi-borde-fuerte) !important;
+    border-radius: 8px !important;
+    box-shadow: none !important;
+    font-family: inherit;
+    font-size: 0.92rem;
+    text-align: left;
+}
+
+.wwi .app-shell .form-grid .campo input:not([type="checkbox"]):focus,
+.wwi .app-shell .form-grid .campo select:focus,
+.wwi .app-shell .form-grid .campo textarea:focus {
+    outline: none;
+    border-color: var(--wwi-primario) !important;
+    box-shadow: 0 0 0 3px var(--wwi-primario-suave) !important;
+}
+
+.wwi .app-shell .form-grid .campo input::placeholder,
+.wwi .app-shell .form-grid .campo textarea::placeholder {
+    color: var(--wwi-texto-2) !important;
+    opacity: 0.8;
+}
+
+/* Todas las casillas del mismo tamaño y con el color de la empresa */
+.wwi .app-shell input[type="checkbox"] {
+    appearance: auto !important;
+    -webkit-appearance: checkbox !important;
+    flex: 0 0 auto;
+    width: 18px !important;
+    height: 18px !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    background: none !important;
+    box-shadow: none !important;
+    accent-color: var(--wwi-primario);
+    cursor: pointer;
+}
+
+/* Grupos del producto como fichas: se ve claro cuáles están elegidos */
+.grupos-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding-top: 0.2rem;
+}
+
+.wwi .app-shell .grupo-chip {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 0.45rem;
+    margin: 0 !important;
+    padding: 0.45rem 0.85rem;
+    border: 1px solid var(--wwi-borde-fuerte);
+    border-radius: 999px;
+    background: var(--wwi-superficie);
+    color: var(--wwi-texto) !important;
+    font-size: 0.86rem;
+    font-weight: 500 !important;
+    line-height: 1.2;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: border-color 0.15s, background-color 0.15s;
+}
+
+.wwi .app-shell .grupo-chip:hover {
+    border-color: var(--wwi-primario);
+}
+
+.wwi .app-shell .grupo-chip.marcado {
+    border-color: var(--wwi-primario);
+    background: var(--wwi-primario-suave);
+    color: var(--wwi-primario) !important;
+    font-weight: 600 !important;
 }
 
 /* ======================================================================

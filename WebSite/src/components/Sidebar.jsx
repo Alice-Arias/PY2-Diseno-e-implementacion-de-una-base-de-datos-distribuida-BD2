@@ -117,7 +117,19 @@ function Sidebar({ current, onNavigate }) {
 
       <div className="logo">
 
-        <img src={WorldWideBanner} alt="World Wide Importers" />
+        {/* PY2: marca dibujada (la imagen tenía fondo negro y no combinaba con el menú) */}
+        <div className="marca" aria-label="Wide World Importers">
+          <svg className="marca-simbolo" viewBox="0 0 48 48" aria-hidden="true">
+            <path d="M6 9h36L24 41z" fill="currentColor" opacity="0.18" />
+            <path d="M6 9h36L24 41z" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinejoin="round" />
+            <path d="M14.5 15.5l4.2 11 5.3-8.4 5.3 8.4 4.2-11" fill="none" stroke="currentColor"
+                  strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <div className="marca-texto">
+            <span className="marca-nombre">Wide World</span>
+            <span className="marca-sub">Importers</span>
+          </div>
+        </div>
 
 
       </div>

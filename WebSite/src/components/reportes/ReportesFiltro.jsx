@@ -113,14 +113,25 @@ function ReportesFiltro({
 
       {reporte.filtros.map((campo) => (
         campo.tipo === 'text' ? (
-          <input
-            className="reportes-filtro-texto"
-            key={campo.id}
-            aria-label={campo.label}
-            placeholder={`${campo.label}...`}
-            value={filtros[campo.id] || ''}
-            onChange={(event) => onCambiarFiltro(campo.id, event.target.value)}
-          />
+          <span key={campo.id} className="reportes-filtro-texto-grupo">
+            <input
+              className="reportes-filtro-texto"
+              aria-label={campo.label}
+              list={campo.id === 'proveedor' ? 'reportes-lista-proveedores' : undefined}
+              placeholder={campo.id === 'proveedor'
+                ? 'Proveedor (elija de la lista o escriba)'
+                : `${campo.label} (ej: Tailspin Toys)`}
+              value={filtros[campo.id] || ''}
+              onChange={(event) => onCambiarFiltro(campo.id, event.target.value)}
+            />
+            {campo.id === 'proveedor' && (
+              <datalist id="reportes-lista-proveedores">
+                {opcionesDeFiltro('proveedores').map((opcion) => (
+                  <option key={opcion.valor} value={opcion.nombre} />
+                ))}
+              </datalist>
+            )}
+          </span>
         ) : (
           <select
             key={campo.id}
@@ -138,9 +149,10 @@ function ReportesFiltro({
 
       {/* Generar reporte (se desactiva mientras carga) */}
 
-      <button className="btn-filtros" disabled={cargando} type="submit">
+      <button className="btn-filtros" disabled={cargando} type="submit"
+              title="Muestra el reporte en esta pantalla con los filtros elegidos">
         <FileBarChart2 size={16} />
-        Generar reporte
+        Ver reporte
       </button>
 
       {/* Restaurar filtros */}
@@ -157,11 +169,17 @@ function ReportesFiltro({
         disabled={!hayResultados || cargando}
         onClick={onExportar}
         type="button"
-        title="Descargar resultados como CSV"
+        title="Descarga TODAS las filas del reporte en un archivo de Excel"
       >
         <Download size={15} />
-        CSV
+        Descargar Excel
       </button>
+
+      <p className="reportes-ayuda">
+        <strong>Ver reporte</strong> lo muestra aquí, por páginas.{' '}
+        <strong>Descargar Excel</strong> guarda el reporte completo en un archivo, con título,
+        sucursal, filtros y montos en dólares.
+      </p>
 
     </form>
   );

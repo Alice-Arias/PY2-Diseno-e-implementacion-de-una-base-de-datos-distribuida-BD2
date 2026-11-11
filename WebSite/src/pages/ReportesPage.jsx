@@ -55,6 +55,8 @@ import '../components/reportes/reportes.css';
 
 import { ejecutarReporte, obtenerOpcionesReportes } from '../services/api';
 import ResumenSucursales from '../components/reportes/ResumenSucursales';
+import * as XLSX from 'xlsx';   // PY2: descarga en Excel
+import { obtenerUsuario } from '../services/sesion';
 
 
 
@@ -168,20 +170,62 @@ const POR_PAGINA_REPORTES = 10;
 /* Adaptador para el hook: separa el id del reporte de sus filtros. */
 const listarReporte = ({ reporte, ...filtros }) => ejecutarReporte(reporte, filtros);
 
-function descargarCSV(filas, titulo) {
+/*---------------------------------------------------------------------------------------*
+* PY2: DESCARGA EN EXCEL (.xlsx)
+* Encabezado con empresa, reporte, sucursal, filtros, fecha y usuario; columnas con
+* nombres legibles, montos con formato de dólares y anchos ajustados al contenido.
+*-----------------------------------------------------------------------------------------*/
+const COLUMNA_MONEDA = /monto|ganancia|precio|costo|venta|compra|total_fact/i;
+
+const nombreLegible = (columna) =>
+  /^\d+$/.test(columna) ? columna : columna.replaceAll('_', ' ').replace(/^./, (l) => l.toUpperCase());
+
+function descargarExcel(filas, { titulo, sucursal, filtrosTexto, usuario }) {
   if (!filas.length) return;
-  const columnas = Object.keys(filas[0]);
-  const escapar = (valor) => `"${String(valor ?? '').replaceAll('"', '""')}"`;
-  const contenido = [
-    columnas.map(escapar).join(','),
-    ...filas.map((fila) => columnas.map((columna) => escapar(fila[columna])).join(','))
-  ].join('\n');
-  const archivo = new Blob([`\uFEFF${contenido}`], { type: 'text/csv;charset=utf-8' });
-  const enlace = document.createElement('a');
-  enlace.href = URL.createObjectURL(archivo);
-  enlace.download = `${titulo.toLowerCase().replaceAll(' ', '-')}.csv`;
-  enlace.click();
-  URL.revokeObjectURL(enlace.href);
+
+  const claves = Object.keys(filas[0]);
+  const columnas = [...claves.filter((k) => !/^\d+$/.test(k)), ...claves.filter((k) => /^\d+$/.test(k))];
+  const esMoneda = columnas.map((c) => /^\d+$/.test(c) || (COLUMNA_MONEDA.test(c) && !/cantidad|posicion/i.test(c)));
+  const ahora = new Date().toLocaleString('es-CR', { dateStyle: 'long', timeStyle: 'short' });
+
+  const encabezado = [
+    ['Wide World Importers'],
+    [titulo],
+    [`Sucursal: ${sucursal}`],
+    [`Filtros: ${filtrosTexto || 'ninguno'}`],
+    [`Generado el ${ahora} por ${usuario}`],
+    []
+  ];
+  const filaTitulos = columnas.map(nombreLegible);
+  const datos = filas.map((fila) => columnas.map((c) => {
+    const valor = fila[c];
+    return valor === null || valor === undefined ? '' : valor;
+  }));
+
+  const hoja = XLSX.utils.aoa_to_sheet([...encabezado, filaTitulos, ...datos]);
+  const inicioDatos = encabezado.length + 1;
+
+  /* Formato de dólares en las columnas de montos */
+  datos.forEach((fila, i) => {
+    fila.forEach((valor, j) => {
+      if (esMoneda[j] && typeof valor === 'number') {
+        const celda = hoja[XLSX.utils.encode_cell({ r: inicioDatos + i, c: j })];
+        if (celda) celda.z = '"$"#,##0.00';
+      }
+    });
+  });
+
+  /* Título combinado y anchos de columna según el contenido */
+  hoja['!merges'] = encabezado.slice(0, 5).map((_, r) => ({ s: { r, c: 0 }, e: { r, c: Math.max(columnas.length - 1, 0) } }));
+  hoja['!cols'] = columnas.map((c, j) => ({
+    wch: Math.min(45, Math.max(filaTitulos[j].length, ...datos.slice(0, 200).map((f) => String(f[j]).length)) + 3)
+  }));
+  hoja['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: encabezado.length, c: 0 }, e: { r: encabezado.length + datos.length, c: columnas.length - 1 } }) };
+
+  const libro = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(libro, hoja, titulo.slice(0, 31));
+  const archivo = `${titulo.toLowerCase().replaceAll(' ', '-')}-${sucursal.toLowerCase().replaceAll(' ', '-')}.xlsx`;
+  XLSX.writeFile(libro, archivo.normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
 }
 
 function ReportesPage() {
@@ -234,7 +278,17 @@ function ReportesPage() {
     try {
       const { reporte: id, ...aplicados } = listado.filtros;
       const respuesta = await ejecutarReporte(id, { ...aplicados, exportar: 1 });
-      descargarCSV(respuesta.datos || [], reporte.titulo);
+      const nombresSucursal = { '': 'Consolidado', 1: 'San José', 2: 'Limón' };
+      const filtrosTexto = reporte.filtros
+        .filter((campo) => aplicados[campo.id])
+        .map((campo) => `${campo.label}: ${aplicados[campo.id]}`)
+        .join(' | ');
+      descargarExcel(respuesta.datos || [], {
+        titulo: reporte.titulo,
+        sucursal: nombresSucursal[aplicados.sucursal ?? ''] ?? 'Consolidado',
+        filtrosTexto,
+        usuario: obtenerUsuario()?.fullname ?? ''
+      });
     } catch (err) {
       console.error(err);
     } finally {
