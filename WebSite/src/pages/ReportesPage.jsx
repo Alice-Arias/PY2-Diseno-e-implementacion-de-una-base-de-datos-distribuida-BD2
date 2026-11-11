@@ -31,6 +31,7 @@
 // ============================================================
 
 import { useEffect, useState } from 'react';
+import RelojTema from '../components/RelojTema';   // PY2: hora en vivo y tema
 import useListadoServidor from '../hooks/useListadoServidor';
 
 // ============================================================
@@ -260,8 +261,7 @@ function ReportesPage() {
           </div>
         </div>
         <div className="header-right">
-          <span>{fechaTexto} | {horaTexto}</span>
-          <div className="sun-icon"><Sun size={16} /></div>
+          <RelojTema />
         </div>
       </div>
 

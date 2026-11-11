@@ -14,6 +14,7 @@
 *-----------------------------------------------------------------------------------------*/
 
 import { useEffect, useState } from 'react';
+import RelojTema from '../components/RelojTema';   // PY2: hora en vivo y tema
 import { Receipt, DollarSign, FileText, Sun } from 'lucide-react';
 
 import VentasFiltro from '../components/ventas/VentasFiltro';
@@ -106,8 +107,7 @@ function VentasPage() {
                     </div>
                 </div>
                 <div className="header-right">
-                    <span>{fechaTexto} | {horaTexto}</span>
-                    <div className="sun-icon"><Sun size={16} /></div>
+                    <RelojTema />
                 </div>
             </div>
 

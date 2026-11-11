@@ -11,6 +11,7 @@
 *-----------------------------------------------------------------------------------------*/
 
 import { useEffect, useState } from 'react';
+import RelojTema from '../components/RelojTema';   // PY2: hora en vivo y tema
 import { Users, CheckCircle2, Tag, Search, Plus, Sun, Eye } from 'lucide-react';
 
 import ClientesTabla from '../components/ClientesTabla';
@@ -141,8 +142,7 @@ function ClientesPage() {
                     </div>
                 </div>
                 <div className="header-right">
-                    <span>{fechaTexto} | {horaTexto}</span>
-                    <div className="sun-icon"><Sun size={16} /></div>
+                    <RelojTema />
                 </div>
             </div>
 

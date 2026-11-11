@@ -11,6 +11,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ShieldCheck, Check, X, RefreshCw } from 'lucide-react';
 import StatCard from '../components/StatCard';
+import RelojTema from '../components/RelojTema';
 import { listarSolicitudes, responderSolicitud } from '../services/api';
 import './pagesStyles/Solicitudes.css';
 
@@ -65,6 +66,9 @@ function SolicitudesPage() {
             <h1>Solicitudes de acceso</h1>
             <p>Autorice o rechace el acceso de las sucursales a datos sensibles de clientes y proveedores.</p>
           </div>
+        </div>
+        <div className="header-right">
+          <RelojTema />
         </div>
       </div>
 

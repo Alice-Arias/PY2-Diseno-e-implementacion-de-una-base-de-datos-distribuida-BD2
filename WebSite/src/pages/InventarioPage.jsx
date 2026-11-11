@@ -12,6 +12,7 @@
 *-----------------------------------------------------------------------------------------*/
 
 import { useEffect, useState } from 'react';
+import RelojTema from '../components/RelojTema';   // PY2: hora en vivo y tema
 import { Package, Layers, CheckCircle2, Search, Plus, Sun, Eye } from 'lucide-react';
 
 import InventariosTabla from '../components/inventario/InventariosTabla';
@@ -142,8 +143,7 @@ function InventariosPage() {
                     </div>
                 </div>
                 <div className="header-right">
-                    <span>{fechaTexto} | {horaTexto}</span>
-                    <div className="sun-icon"><Sun size={16} /></div>
+                    <RelojTema />
                 </div>
             </div>
 

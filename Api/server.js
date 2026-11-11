@@ -153,7 +153,14 @@ app.use(cors());
 *---------------------------------------------------------------------------------------*/
 
 app.use(express.json());
-
+/* Medición: muestra en la terminal cuánto tarda cada petición */
+app.use((req, res, next) => {
+    const inicio = Date.now();
+    res.on('finish', () => {
+        console.log(`${req.method} ${req.originalUrl} -> ${res.statusCode} en ${Date.now() - inicio} ms`);
+    });
+    next();
+});
 
 /*---------------------------------------------------------------------------------------*
 *

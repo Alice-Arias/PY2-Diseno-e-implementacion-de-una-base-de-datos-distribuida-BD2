@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 
 import Sidebar from './components/Sidebar';
@@ -16,6 +16,8 @@ import ReportesPage from './pages/ReportesPage';
 import SolicitudesPage from './pages/SolicitudesPage';
 
 import './App.css';
+import './tema.css';   // PY2: tema profesional claro / oscuro (va después de App.css)
+import { temaGuardado } from './components/RelojTema';
 
 
 /*--------------------------------------------------------------------------------------------------------------------------------
@@ -35,8 +37,17 @@ function App() {
     -------------------------------------------------------------------*/
     const [page, setPage] = useState('clientes');
 
+    /* PY2: modo claro / oscuro elegido por el usuario (botón junto a la hora). */
+    const [tema, setTema] = useState(temaGuardado);
+
+    useEffect(() => {
+        const cambiar = (e) => setTema(e.detail);
+        window.addEventListener('wwi-tema', cambiar);
+        return () => window.removeEventListener('wwi-tema', cambiar);
+    }, []);
+
     return (
-        <div className="modo-oscuro">
+        <div className={`wwi ${tema === 'oscuro' ? 'modo-oscuro' : 'modo-claro'}`}>
             <Routes>
                 {/* Login: siempre es la primera pantalla */}
                 <Route path="/" element={<LoginPage />} />
