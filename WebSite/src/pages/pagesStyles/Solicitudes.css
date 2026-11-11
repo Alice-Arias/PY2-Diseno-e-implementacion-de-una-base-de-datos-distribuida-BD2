@@ -68,3 +68,21 @@
     font-weight: 700;
     text-align: center;
 }
+/* La tabla de solicitudes usa sus propios anchos (no los de la tabla de clientes) */
+.table-card .solicitudes-tabla {
+    table-layout: auto;
+    min-width: 980px;
+}
+
+.table-card .solicitudes-tabla th,
+.table-card .solicitudes-tabla td {
+    width: auto !important;
+    text-align: left !important;
+    white-space: nowrap;
+}
+
+/* El motivo puede ser largo: ese sí puede ocupar varias líneas */
+.table-card .solicitudes-tabla td:nth-child(5) {
+    white-space: normal;
+    min-width: 200px;
+}
