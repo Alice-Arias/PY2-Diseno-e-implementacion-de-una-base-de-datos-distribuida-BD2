@@ -17,6 +17,7 @@
 import { useEffect, useState } from 'react';
 import { RefreshCw, Building2, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { obtenerResumenSucursales, sincronizarEstadisticas } from '../../services/api';
+import NumeroAnimado from '../NumeroAnimado';
 
 const OPCIONES = [
   { valor: '', texto: 'Consolidado' },
@@ -26,6 +27,11 @@ const OPCIONES = [
 
 const dinero = (v) =>
   `USD ${Number(v ?? 0).toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+const unidades = (v) => Math.round(Number(v ?? 0)).toLocaleString('es-CR');
+
+const porcentaje = (v) =>
+  `${Number(v).toLocaleString('es-CR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`;
 
 const fecha = (v) =>
   v ? new Date(v).toLocaleString('es-CR', { dateStyle: 'short', timeStyle: 'short' }) : 'Nunca';
@@ -58,6 +64,7 @@ function ResumenSucursales({ sucursal, onCambiarSucursal }) {
 
   const totales = resumen?.totales;
   const maximo = Math.max(1, ...(resumen?.comparativo || []).map((c) => Number(c.Monto)));
+  const sumaSucursales = (resumen?.comparativo || []).reduce((s, c) => s + Number(c.Monto), 0) || 1;
 
   return (
     <div className="table-card resumen-sucursales">
@@ -88,22 +95,47 @@ function ResumenSucursales({ sucursal, onCambiarSucursal }) {
       {totales && (
         <div className="resumen-cuerpo">
           <div className="resumen-totales">
-            <div><span>Ventas ({totales.Vista})</span><strong>{dinero(totales.Monto_Total)}</strong></div>
-            <div><span>Ganancia</span><strong>{dinero(totales.Ganancia_Total)}</strong></div>
-            <div><span>Unidades vendidas</span><strong>{Number(totales.Unidades_Vendidas).toLocaleString('es-CR')}</strong></div>
+            <div>
+              <span>Ventas ({totales.Vista})</span>
+              <strong><NumeroAnimado valor={totales.Monto_Total} formato={dinero} /></strong>
+            </div>
+            <div>
+              <span>Ganancia</span>
+              <strong><NumeroAnimado valor={totales.Ganancia_Total} formato={dinero} /></strong>
+            </div>
+            <div>
+              <span>Unidades vendidas</span>
+              <strong><NumeroAnimado valor={totales.Unidades_Vendidas} formato={unidades} /></strong>
+            </div>
           </div>
 
           <div className="resumen-comparativo">
             <h3><Building2 size={16} /> Comparativo entre sucursales</h3>
-            {resumen.comparativo.map((c) => (
-              <div key={c.SucursalID} className="resumen-barra">
-                <span className="resumen-barra-nombre">{c.Sucursal}</span>
-                <div className="resumen-barra-fondo">
-                  <div className="resumen-barra-relleno" style={{ width: `${(Number(c.Monto) / maximo) * 100}%` }} />
+            {resumen.comparativo.map((c) => {
+              const participacion = (Number(c.Monto) / sumaSucursales) * 100;
+              const elegida = !sucursal || String(c.SucursalID) === sucursal;
+              return (
+                <div
+                  key={c.SucursalID}
+                  className={`resumen-barra ${elegida ? '' : 'atenuada'}`}
+                  title={`${c.Sucursal}: ${porcentaje(participacion)} de las ventas`}
+                >
+                  <span className="resumen-barra-nombre">{c.Sucursal}</span>
+                  <div className="resumen-barra-fondo">
+                    {/* key: al cambiar los datos, la barra vuelve a crecer desde cero */}
+                    <div
+                      key={`${sucursal}-${c.Monto}`}
+                      className="resumen-barra-relleno"
+                      style={{ width: `${(Number(c.Monto) / maximo) * 100}%` }}
+                    />
+                  </div>
+                  <span className="resumen-barra-valor">
+                    <NumeroAnimado valor={c.Monto} formato={dinero} />
+                    <small className="resumen-barra-porcentaje">{porcentaje(participacion)}</small>
+                  </span>
                 </div>
-                <span className="resumen-barra-valor">{dinero(c.Monto)}</span>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="resumen-estado">

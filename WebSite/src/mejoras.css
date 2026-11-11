@@ -1,8 +1,18 @@
-/*
- * MEJORAS DE INTERFAZ
- * Cargar este archivo DESPUÉS de tema.css.
- * Mantiene los colores existentes y mejora alineación, animaciones y accesibilidad.
- */
+/*---------------------------------------------------------------------------------------*
+*
+* NOMBRE: mejoras.css (PY2)
+*
+* DESCRIPCION: Mejoras de interfaz. Se carga DESPUÉS de tema.css.
+* Mantiene los colores existentes y mejora alineación, animaciones y accesibilidad.
+*
+* Ajustes respecto a la primera versión:
+*   - display: inline-flex solo a las clases de botón (no a todo <button>), para no
+*     mostrar botones que otros estilos esconden con display: none.
+*   - La animación de entrada termina en transform: none, para que las ventanas
+*     emergentes no queden ubicadas respecto a la tarjeta.
+*   - En "movimiento reducido" no se borra transform (rompía modales y el spinner).
+*
+*-----------------------------------------------------------------------------------------*/
 
 /* 1. Movimiento general: corto y discreto */
 .wwi .app-shell button,
@@ -30,7 +40,7 @@
     }
     to {
         opacity: 1;
-        transform: translateY(0);
+        transform: none;
     }
 }
 
@@ -93,10 +103,12 @@
     min-width: 0;
 }
 
-.wwi .app-shell button,
 .wwi .app-shell .btn-nuevo,
+.wwi .app-shell .vf-btn-nuevo,
 .wwi .app-shell .btn-restaurar,
-.wwi .app-shell .btn-buscar {
+.wwi .app-shell .btn-buscar,
+.wwi .app-shell .btn-filtros,
+.wwi .app-shell .btn-salir {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -206,7 +218,124 @@
     transform: scale(0.98);
 }
 
-/* 9. Evitar que las animaciones interfieran con usuarios sensibles al movimiento */
+/* 8b. Reportes: panel de sucursales animado */
+
+/* Las barras crecen desde la izquierda al cargar o cambiar de sucursal */
+@keyframes wwi-barra-crecer {
+    from { transform: scaleX(0); }
+    to   { transform: scaleX(1); }
+}
+
+/* Brillo que recorre la barra */
+@keyframes wwi-barra-brillo {
+    0%   { left: -40%; }
+    60%  { left: 110%; }
+    100% { left: 110%; }
+}
+
+.wwi .app-shell .resumen-barra-fondo {
+    position: relative;
+    overflow: hidden;
+}
+
+.wwi .app-shell .resumen-barra-relleno {
+    position: relative;
+    overflow: hidden;
+    transform-origin: left center;
+    animation: wwi-barra-crecer 900ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.wwi .app-shell .resumen-barra:nth-of-type(2) .resumen-barra-relleno {
+    animation-delay: 120ms;
+}
+
+.wwi .app-shell .resumen-barra-relleno::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 40%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+    animation: wwi-barra-brillo 3.2s ease-in-out 1s infinite;
+}
+
+.wwi .app-shell .resumen-barra {
+    padding: 0.35rem 0.4rem;
+    border-radius: 8px;
+    transition: background-color 180ms ease, opacity 180ms ease;
+}
+
+.wwi .app-shell .resumen-barra:hover {
+    background: var(--wwi-primario-suave);
+}
+
+/* La sucursal que no está elegida se atenúa */
+.wwi .app-shell .resumen-barra.atenuada {
+    opacity: 0.45;
+}
+
+.wwi .app-shell .resumen-barra-valor {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    line-height: 1.2;
+}
+
+.wwi .app-shell .resumen-barra-porcentaje {
+    color: var(--wwi-texto-2);
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+/* Estado de cada sucursal: OK palpita suave; sin conexión, con alerta */
+@keyframes wwi-pulso-ok {
+    0%   { box-shadow: 0 0 0 0 rgba(46, 125, 91, 0.35); }
+    70%  { box-shadow: 0 0 0 7px rgba(46, 125, 91, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(46, 125, 91, 0); }
+}
+
+@keyframes wwi-pulso-alerta {
+    0%   { box-shadow: 0 0 0 0 rgba(200, 145, 50, 0.45); }
+    70%  { box-shadow: 0 0 0 8px rgba(200, 145, 50, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(200, 145, 50, 0); }
+}
+
+.wwi .app-shell .resumen-estado-fila svg {
+    border-radius: 50%;
+}
+
+.wwi .app-shell .resumen-estado-fila.ok svg {
+    animation: wwi-pulso-ok 2.4s ease-out infinite;
+}
+
+.wwi .app-shell .resumen-estado-fila.falla svg {
+    animation: wwi-pulso-alerta 1.4s ease-out infinite;
+}
+
+.wwi .app-shell .resumen-estado-fila {
+    animation: wwi-aparecer 320ms ease-out both;
+}
+
+.wwi .app-shell .resumen-estado-fila + .resumen-estado-fila {
+    animation-delay: 90ms;
+}
+
+/* Icono de "Actualizar datos de sucursales" gira mientras sincroniza */
+@keyframes wwi-girar {
+    to { transform: rotate(360deg); }
+}
+
+.wwi .app-shell .girando {
+    animation: wwi-girar 0.8s linear infinite;
+}
+
+/* Números que cuentan: ancho fijo por dígito para que no "bailen" */
+.numero-animado {
+    font-variant-numeric: tabular-nums;
+}
+
+/* 9. Movimiento reducido: se apagan animaciones y transiciones, pero no se toca
+      "transform" (lo usan los modales centrados y el indicador de carga). */
 @media (prefers-reduced-motion: reduce) {
     .wwi .app-shell *,
     .wwi .app-shell *::before,
@@ -215,7 +344,12 @@
         animation-iteration-count: 1 !important;
         scroll-behavior: auto !important;
         transition-duration: 0.01ms !important;
-        transform: none !important;
+    }
+
+    .wwi .app-shell .stat-card:hover,
+    .wwi .app-shell .sidebar .nav-item:hover,
+    .wwi .app-shell button:active:not(:disabled) {
+        transform: none;
     }
 }
 
