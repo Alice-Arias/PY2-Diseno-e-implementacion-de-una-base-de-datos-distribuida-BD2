@@ -677,7 +677,7 @@
 }
 
 .modo-oscuro .prov-cerrar {
-    background: #303842;
+    background: transparent;
     border-color: #414b56;
     color: #c2cad3;
 }
