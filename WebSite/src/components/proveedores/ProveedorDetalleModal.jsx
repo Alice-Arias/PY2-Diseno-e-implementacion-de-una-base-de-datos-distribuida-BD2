@@ -2,6 +2,10 @@
 import { useState } from 'react';
 import DatosProtegidos from '../DatosProtegidos';   // PY2: control de acceso
 
+import { PiBankBold } from "react-icons/pi";
+import { FiUser } from "react-icons/fi";
+import { BsEnvelopePaperFill } from "react-icons/bs";
+import { FaClipboardList, FaMapPin, FaTruck, FaRegAddressCard } from "react-icons/fa";
 
 import './proveedores.css';
 
@@ -194,7 +198,7 @@ function TarjetaProveedor({
             <header className="prov-encabezado">
 
                 <div className="prov-avatar">
-                    🚚
+                    <FaTruck />
                 </div>
 
                 <div className="prov-titulo">
@@ -256,7 +260,7 @@ function TarjetaProveedor({
                 <div className="prov-caja-titulo ambar">
 
                     <span className="prov-ico ambar">
-                        🏦
+                        <PiBankBold />
                     </span>
 
                     Datos bancarios
@@ -315,7 +319,7 @@ function TarjetaProveedor({
                     <div className="prov-caja-titulo">
 
                         <span className="prov-ico verde">
-                            👤
+                            <FiUser/>
                         </span>
 
                         Contacto principal
@@ -334,7 +338,7 @@ function TarjetaProveedor({
                     <div className="prov-caja-titulo">
 
                         <span className="prov-ico verde">
-                            👤
+                            <FiUser/>
                         </span>
 
                         Contacto alternativo
@@ -362,7 +366,7 @@ function TarjetaProveedor({
                     <h3 className="prov-panel-titulo">
 
                         <span className="prov-ico">
-                            📋
+                            <FaClipboardList/>
                         </span>
 
                         Información general
@@ -463,7 +467,7 @@ function TarjetaProveedor({
                         <h3 className="prov-panel-titulo">
 
                             <span className="prov-ico">
-                                📍
+                                <FaMapPin className="icono-rojo" />
                             </span>
 
                             Direcciones
@@ -474,7 +478,7 @@ function TarjetaProveedor({
                         <div className="prov-direccion">
 
                             <span className="prov-ico">
-                                🚚
+                                <FaTruck />
                             </span>
 
                             <div>
@@ -495,7 +499,7 @@ function TarjetaProveedor({
                         <div className="prov-direccion">
 
                             <span className="prov-ico">
-                                ✉️
+                                <FaRegAddressCard />
                             </span>
 
                             <div>

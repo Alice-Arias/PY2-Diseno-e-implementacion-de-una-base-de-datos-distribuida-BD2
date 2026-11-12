@@ -647,7 +647,7 @@
 }
 
 .modo-oscuro .prov-modal {
-    background: #292f36;
+    background: #0d0d0d;
     border-color: #414b56;
     color: #e2e6eb;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.34);
@@ -664,7 +664,11 @@
 
 .modo-oscuro .prov-titulo h2,
 .modo-oscuro .prov-panel-titulo {
-    color: #e2e6eb;
+    color: #ebe2e2;
+}
+
+.modo-oscuro .icono-rojo{
+    color: red;
 }
 
 .modo-oscuro .prov-titulo p {
@@ -698,13 +702,13 @@
 
 .modo-oscuro .prov-caja,
 .modo-oscuro .prov-panel {
-    background: #252b32;
+    background: #0d0d0d;
     border-color: #3b444e;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.10);
 }
 
 .modo-oscuro .prov-caja-ambar {
-    background: #35332d;
+    background: #2e2b23;
     border-color: #4a4538;
 }
 
