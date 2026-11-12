@@ -749,15 +749,15 @@
 }
 
 .modo-oscuro .prov-ico {
-    background: #303b49;
+    background: transparent;
 }
 
 .modo-oscuro .prov-ico.verde {
-    background: #2b3d34;
+    background: transparent;
 }
 
 .modo-oscuro .prov-ico.ambar {
-    background: #3d382b;
+    background: transparent;
 }
 
 .modo-oscuro .prov-chip-verde {
