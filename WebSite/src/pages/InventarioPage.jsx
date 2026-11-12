@@ -162,7 +162,7 @@ function InventariosPage() {
                         onCambiar={setNombreEscrito}
                         onBuscar={(texto) => filtrar({ nombre: texto })}
                         cargarSugerencias={sugerirProductos}
-                        placeholder="Nombre del producto (escriba 2 letras para ver sugerencias)"
+                        placeholder="Nombre del producto"
                         etiqueta="Buscar por nombre del producto"
                     />
 
@@ -170,7 +170,7 @@ function InventariosPage() {
                         value={listado.filtros.grupo}
                         onChange={(e) => filtrar({ grupo: e.target.value })}
                     >
-                        <option value="">Todos los grupos</option>
+                        <option value="">Grupos</option>
                         {resumen.grupos.map((g) => (
                             <option key={g.ID} value={g.Nombre}>{g.Nombre}</option>
                         ))}
