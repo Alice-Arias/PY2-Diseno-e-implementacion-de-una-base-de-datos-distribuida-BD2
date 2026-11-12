@@ -5,6 +5,10 @@
 import { useEffect, useState } from 'react';
 import './inventario.css';
 
+import { FaBoxOpen } from "react-icons/fa";
+import { BsEnvelopePaperFill } from "react-icons/bs";
+import { FaClipboardList, FaMapPin, FaTruck, FaRegAddressCard, FaBalanceScale } from "react-icons/fa";
+
 
 const valorOGuion = (valor) =>
     valor != null && valor !== '' ? valor : '-';
@@ -211,15 +215,15 @@ function TarjetaInventario({
 
             <div className="inv-stats">
 
-                <Dato color="verde" icono="📦" etiqueta="Cantidad disponible">
+                <Dato color="verde" icono={<FaBoxOpen />} etiqueta="Cantidad disponible">
                     {valorOGuion(p.Cantidad_Disponible)}
                 </Dato>
 
-                <Dato color="azul" icono="📍" etiqueta="Ubicación">
+                <Dato color="azul" icono={<FaMapPin/>} etiqueta="Ubicación">
                     {valorOGuion(p.Ubicacion)}
                 </Dato>
 
-                <Dato color="morado" icono="⚖️" etiqueta="Peso por unidad">
+                <Dato color="morado" icono={<FaBalanceScale />} etiqueta="Peso por unidad">
                     {valorOGuion(p.Peso)}
                 </Dato>
 

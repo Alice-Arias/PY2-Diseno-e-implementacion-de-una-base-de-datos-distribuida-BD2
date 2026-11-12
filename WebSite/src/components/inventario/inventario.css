@@ -915,9 +915,9 @@
 .modo-oscuro .inv-stat-azul .inv-stat-valor   { color: #a9c4e8; }
 .modo-oscuro .inv-stat-morado .inv-stat-valor { color: #b9aef0; }
 
-.modo-oscuro .inv-stat-verde .inv-stat-icono  { background: transparent; }
-.modo-oscuro .inv-stat-azul .inv-stat-icono   { background: transparent; }
-.modo-oscuro .inv-stat-morado .inv-stat-icono { background: transparent; }
+.modo-oscuro .inv-stat-verde .inv-stat-icono  { background: transparent; color: #7fd3a3 }
+.modo-oscuro .inv-stat-azul .inv-stat-icono   { background: transparent; color: red;}
+.modo-oscuro .inv-stat-morado .inv-stat-icono { background: transparent; color: #b9aef0 }
 
 .modo-oscuro .inv-ico        { background: transparent; }
 .modo-oscuro .inv-ico.ambar  { background: transparent; }
