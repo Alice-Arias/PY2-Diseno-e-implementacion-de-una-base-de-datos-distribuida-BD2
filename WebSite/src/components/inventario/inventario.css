@@ -495,7 +495,7 @@
 }
 
 .inv-stat-verde  .inv-stat-icono { background: var(--green-light); }
-.inv-stat-azul   .inv-stat-icono { background: var(--primary-light); }
+.inv-stat-azul   .inv-stat-icono { background: var(--primary-light); color: red; }
 .inv-stat-morado .inv-stat-icono { background: var(--purple-light); }
 
 .inv-stat-texto {

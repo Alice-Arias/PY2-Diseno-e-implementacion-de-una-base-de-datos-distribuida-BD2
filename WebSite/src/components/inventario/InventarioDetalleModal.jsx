@@ -6,8 +6,7 @@ import { useEffect, useState } from 'react';
 import './inventario.css';
 
 import { FaBoxOpen } from "react-icons/fa";
-import { BsEnvelopePaperFill } from "react-icons/bs";
-import { FaClipboardList, FaMapPin, FaTruck, FaRegAddressCard, FaBalanceScale } from "react-icons/fa";
+import { FaClipboardList, FaMapPin, FaBalanceScale, FaBox, FaCoins   } from "react-icons/fa";
 
 
 const valorOGuion = (valor) =>
@@ -175,7 +174,9 @@ function TarjetaInventario({
 
             <header className="inv-encabezado">
 
-                <div className="inv-avatar">📦</div>
+                <div className="inv-avatar">
+                    <FaBox />
+                </div>
 
                 <div className="inv-titulo">
                     <h2>{p.Producto || '-'}</h2>
@@ -235,7 +236,9 @@ function TarjetaInventario({
                 <div className="inv-panel">
 
                     <h3 className="inv-panel-titulo">
-                        <span className="inv-ico">📋</span>
+                        <span className="inv-ico">
+                            <FaClipboardList/>
+                        </span>
                         Información general
                     </h3>
 
@@ -281,7 +284,9 @@ function TarjetaInventario({
                 <div className="inv-panel">
 
                     <h3 className="inv-panel-titulo">
-                        <span className="inv-ico ambar">💰</span>
+                        <span className="inv-ico ambar">
+                            <FaCoins  />
+                        </span>
                         Precios e impuestos
                     </h3>
 
