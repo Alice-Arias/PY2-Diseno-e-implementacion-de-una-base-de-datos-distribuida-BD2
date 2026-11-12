@@ -964,7 +964,7 @@
 
 .wwi.modo-oscuro .app-shell input[type="checkbox"] {
     border-color: #6b7a8b !important;
-    background: #eef2f6 !important;
+    background: transparent !important;
 }
 
 .wwi .app-shell input[type="checkbox"]:hover {

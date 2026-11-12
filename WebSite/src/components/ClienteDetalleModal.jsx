@@ -4,6 +4,7 @@ import DatosProtegidos from './DatosProtegidos';   // PY2: control de acceso
 
 import { FiUser } from "react-icons/fi";
 import { BsEnvelopePaperFill } from "react-icons/bs";
+import { FaClipboardList, FaMapPin, FaTruck, FaRegAddressCard } from "react-icons/fa";
 
 // ============================================================
 // MODAL PRINCIPAL
@@ -489,7 +490,7 @@ function TarjetaCliente({
                     <h3 className="cd-panel-titulo">
 
                         <span className="cd-ico azul">
-                            📋
+                            < FaClipboardList  />
                         </span>
 
                         Información general
@@ -626,7 +627,7 @@ function TarjetaCliente({
                         <h3 className="cd-panel-titulo">
 
                             <span className="cd-ico azul">
-                                📍
+                                <FaMapPin className="icono-rojo" />
                             </span>
 
                             Direcciones
@@ -636,7 +637,7 @@ function TarjetaCliente({
                         <div className="cd-direccion">
 
                             <span className="cd-ico azul">
-                                🚚
+                                <FaTruck />
                             </span>
 
                             <div>
@@ -656,7 +657,7 @@ function TarjetaCliente({
                         <div className="cd-direccion">
 
                             <span className="cd-ico azul">
-                                ✉️
+                                <FaRegAddressCard />
                             </span>
 
                             <div>
