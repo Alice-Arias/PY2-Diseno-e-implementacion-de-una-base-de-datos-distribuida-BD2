@@ -1311,9 +1311,9 @@ input[type="number"]::-webkit-inner-spin-button {
 }
 
 .modal-contenido .btn-claro {
-    background: var(--primary-light);
-    border: 1px solid #cbdcf5;
-    color: var(--primary);
+    background: rgb(153, 20, 20);
+    border: 1px solid transparent;
+    color: rgb(255, 255, 255);
 }
 
 .modal-contenido .btn-azul {
