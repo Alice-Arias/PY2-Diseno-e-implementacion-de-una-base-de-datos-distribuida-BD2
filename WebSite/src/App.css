@@ -152,7 +152,7 @@ input[type="number"]::-webkit-inner-spin-button {
 }
 
 .sidebar .logo span {
-    color: var(--primary);
+    color: white;
 }
 
 .sidebar nav {
@@ -2662,7 +2662,7 @@ input[type="number"]::-webkit-inner-spin-button {
 }
 
 .modo-oscuro .sidebar .logo span {
-    color: #8fb2e5;
+    color: #ffffff;
 }
 
 .modo-oscuro .sidebar .nav-item {
@@ -3523,7 +3523,7 @@ input[type="number"]::-webkit-inner-spin-button {
 }
 
 .modo-oscuro .sidebar .logo span {
-    color: #4d83d8;
+    color: #ffffff;
 }
 
 .modo-oscuro .sidebar .nav-item {

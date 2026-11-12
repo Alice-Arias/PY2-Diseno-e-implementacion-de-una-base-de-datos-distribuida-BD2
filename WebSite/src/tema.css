@@ -749,7 +749,7 @@
     flex: 0 0 auto;
     width: 44px;
     height: 44px;
-    color: #8fc1ea;
+    color: #ffffff;
 }
 
 .marca-texto {
@@ -953,7 +953,7 @@
     min-height: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
-    border: 1.5px solid var(--wwi-borde-fuerte) !important;
+    border: 1.5px solid var(#0d0d0e) !important;
     border-radius: 4px !important;
     background: #ffffff !important;
     box-shadow: none !important;
@@ -963,7 +963,7 @@
 }
 
 .wwi.modo-oscuro .app-shell input[type="checkbox"] {
-    border-color: #6b7a8b !important;
+    border-color: #3e4247 !important;
     background: transparent !important;
 }
 
