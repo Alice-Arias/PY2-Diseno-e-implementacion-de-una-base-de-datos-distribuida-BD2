@@ -161,7 +161,7 @@ function ProveedoresPage() {
                         onCambiar={setNombreEscrito}
                         onBuscar={(texto) => filtrar({ nombre: texto })}
                         cargarSugerencias={sugerirProveedores}
-                        placeholder="Nombre del proveedor (escriba 2 letras para ver sugerencias)"
+                        placeholder="Nombre del proveedor"
                         etiqueta="Buscar por nombre del proveedor"
                     />
 
@@ -169,7 +169,7 @@ function ProveedoresPage() {
                         value={listado.filtros.categoria}
                         onChange={(e) => filtrar({ categoria: e.target.value })}
                     >
-                        <option value="">Todas las categorías</option>
+                        <option value="">Categorías</option>
                         {resumen.categorias.map((c) => (
                             <option key={c.Nombre} value={c.Nombre}>{c.Nombre}</option>
                         ))}
@@ -179,7 +179,7 @@ function ProveedoresPage() {
                         value={listado.filtros.metodoEntrega}
                         onChange={(e) => filtrar({ metodoEntrega: e.target.value })}
                     >
-                        <option value="">Todos los métodos</option>
+                        <option value="">Métodos</option>
                         {resumen.metodos.map((m) => (
                             <option key={m.Nombre} value={m.Nombre}>{m.Nombre}</option>
                         ))}

@@ -593,7 +593,7 @@ a.vta-caja-nombre.vta-link-producto {
 }
 
 .modo-oscuro .vta-modal {
-    background: #292f36;
+    background: #0d0d0d;
     border-color: #414b56;
     color: #e2e6eb;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.34);
@@ -619,7 +619,7 @@ a.vta-caja-nombre.vta-link-producto {
 }
 
 .modo-oscuro .vta-cerrar {
-    background: #303842;
+    background: transparent;
     border-color: #414b56;
     color: #c2cad3;
 }
@@ -632,7 +632,7 @@ a.vta-caja-nombre.vta-link-producto {
 
 .modo-oscuro .vta-caja,
 .modo-oscuro .vta-panel {
-    background: #252b32;
+    background: #0d0d0d;
     border-color: #3b444e;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.10);
 }
@@ -642,12 +642,12 @@ a.vta-caja-nombre.vta-link-producto {
 }
 
 .modo-oscuro .vta-caja-ico {
-    background: #303b49;
+    background: transparent;
     color: #a9c4e8;
 }
 
 .modo-oscuro .vta-caja-ico.verde {
-    background: #2b3d34;
+    background: transparent;
     color: #7fd3a3;
 }
 
@@ -696,11 +696,11 @@ a.vta-caja-nombre.vta-link-producto {
 }
 
 .modo-oscuro .vta-ico {
-    background: #303b49;
+    background: transparent;
 }
 
 .modo-oscuro .vta-ico.verde {
-    background: #2b3d34;
+    background: transparent;
 }
 
 .modo-oscuro .vta-tabla th {
@@ -1262,13 +1262,13 @@ a.vta-caja-nombre.vta-link-producto {
 }
 
 .modo-oscuro .vta-tabla th {
-    background: #303842;
+    background: #1a1919;
     color: #cbd2da;
     border-bottom-color: #46515c;
 }
 
 .modo-oscuro .vta-tabla td {
-    background: #292f36;
+    background: #0d0d0d;
     color: #e2e6eb;
     border-bottom-color: #3b444e;
 }

@@ -6,6 +6,9 @@ import InventarioDetalleModal from '../inventario/InventarioDetalleModal';
 
 import ClienteDetalleModal from '../ClienteDetalleModal';
 
+import { FaFileInvoiceDollar } from "react-icons/fa";
+import { FaClipboardList, FaMapPin, FaBalanceScale, FaBox, FaCoins, FaTruck, FaBoxOpen   } from "react-icons/fa";
+
 import {
     obtenerDetalleInventarios,
     obtenerDetalleClientes
@@ -162,7 +165,9 @@ function VentaDetalleModal({ venta, onCerrar }) {
 
                     <header className="vta-encabezado vta-animar" style={{ animationDelay: '0s' }}>
 
-                        <div className="vta-avatar">🧾</div>
+                        <div className="vta-avatar">
+                            <FaFileInvoiceDollar/>
+                        </div>
 
                         <div className="vta-titulo">
                             <h2>Factura #{e.InvoiceID}</h2>
@@ -228,7 +233,9 @@ function VentaDetalleModal({ venta, onCerrar }) {
                     <div className="vta-panel vta-animar" style={{ animationDelay: '0.1s' }}>
 
                         <h3 className="vta-panel-titulo">
-                            <span className="vta-ico">📋</span>
+                            <span className="vta-ico">
+                                <FaClipboardList/>
+                            </span>
                             Información de la factura
                         </h3>
 
@@ -261,7 +268,9 @@ function VentaDetalleModal({ venta, onCerrar }) {
                         </div>
 
                         <div className="vta-direccion">
-                            <span className="vta-ico verde">🚚</span>
+                            <span className="vta-ico verde">
+                                <FaTruck/>
+                            </span>
                             <div>
                                 <strong>Instrucciones de entrega</strong>
                                 <p>{e.Intrucciones_Entrega || '-'}</p>
@@ -277,7 +286,9 @@ function VentaDetalleModal({ venta, onCerrar }) {
                     <div className="vta-panel vta-animar" style={{ animationDelay: '0.18s' }}>
 
                         <h3 className="vta-panel-titulo">
-                            <span className="vta-ico verde">📦</span>
+                            <span className="vta-ico verde">
+                                <FaBoxOpen/>
+                            </span>
                             Detalle de la factura
                         </h3>
 

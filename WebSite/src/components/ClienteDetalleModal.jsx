@@ -2,6 +2,10 @@
 import { useState } from 'react';
 import DatosProtegidos from './DatosProtegidos';   // PY2: control de acceso
 
+import { FiUser } from "react-icons/fi";
+import { BsEnvelopePaperFill } from "react-icons/bs";
+import { FaClipboardList, FaMapPin, FaTruck, FaRegAddressCard } from "react-icons/fa";
+
 // ============================================================
 // MODAL PRINCIPAL
 // ============================================================
@@ -294,7 +298,7 @@ function TarjetaCliente({
             <header className="cd-encabezado">
 
                 <div className="cd-avatar">
-                    👤
+                    <FiUser />
                 </div>
 
                 <div className="cd-titulo">
@@ -378,7 +382,7 @@ function TarjetaCliente({
                     <div className="cd-caja-titulo">
 
                         <span className="cd-ico verde">
-                            👤
+                            <FiUser />
                         </span>
 
                         Contacto principal
@@ -414,7 +418,7 @@ function TarjetaCliente({
                     <div className="cd-caja-titulo">
 
                         <span className="cd-ico verde">
-                            👤
+                            <FiUser />
                         </span>
 
                         Contacto alternativo
@@ -450,7 +454,7 @@ function TarjetaCliente({
                     <div className="cd-caja-titulo ambar">
 
                         <span className="cd-ico ambar">
-                            📄
+                            < BsEnvelopePaperFill />
                         </span>
 
                         Cliente por facturar
@@ -486,7 +490,7 @@ function TarjetaCliente({
                     <h3 className="cd-panel-titulo">
 
                         <span className="cd-ico azul">
-                            📋
+                            < FaClipboardList  />
                         </span>
 
                         Información general
@@ -623,7 +627,7 @@ function TarjetaCliente({
                         <h3 className="cd-panel-titulo">
 
                             <span className="cd-ico azul">
-                                📍
+                                <FaMapPin className="icono-rojo" />
                             </span>
 
                             Direcciones
@@ -633,7 +637,7 @@ function TarjetaCliente({
                         <div className="cd-direccion">
 
                             <span className="cd-ico azul">
-                                🚚
+                                <FaTruck />
                             </span>
 
                             <div>
@@ -653,7 +657,7 @@ function TarjetaCliente({
                         <div className="cd-direccion">
 
                             <span className="cd-ico azul">
-                                ✉️
+                                <FaRegAddressCard />
                             </span>
 
                             <div>

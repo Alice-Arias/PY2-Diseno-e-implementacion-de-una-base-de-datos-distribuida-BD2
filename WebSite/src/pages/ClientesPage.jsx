@@ -14,7 +14,7 @@ import { useEffect, useState } from 'react';
 import RelojTema from '../components/RelojTema';   // PY2: hora en vivo y tema
 import BuscadorSugerencias from '../components/BuscadorSugerencias';
 import { sugerirClientes } from '../services/api';
-import { Users, CheckCircle2, Tag, Search, Plus, Sun, Eye } from 'lucide-react';
+import { Users, CheckCircle2, Tag, Eye } from 'lucide-react';
 
 import ClientesTabla from '../components/ClientesTabla';
 import ClienteDetalleModal from '../components/ClienteDetalleModal';
@@ -161,7 +161,7 @@ function ClientesPage() {
                         onCambiar={setNombreEscrito}
                         onBuscar={(texto) => filtrar({ nombre: texto })}
                         cargarSugerencias={sugerirClientes}
-                        placeholder="Nombre del cliente (escriba 2 letras para ver sugerencias)"
+                        placeholder="Nombre del cliente"
                         etiqueta="Buscar por nombre del cliente"
                     />
 
@@ -169,7 +169,7 @@ function ClientesPage() {
                         value={listado.filtros.categoria}
                         onChange={(e) => filtrar({ categoria: e.target.value })}
                     >
-                        <option value="">Todas las categorías</option>
+                        <option value="">Categorías</option>
                         {resumen.categorias.map((c) => (
                             <option key={c.Nombre} value={c.Nombre}>{c.Nombre}</option>
                         ))}
@@ -179,7 +179,7 @@ function ClientesPage() {
                         value={listado.filtros.metodoEntrega}
                         onChange={(e) => filtrar({ metodoEntrega: e.target.value })}
                     >
-                        <option value="">Todos los métodos</option>
+                        <option value="">Métodos</option>
                         {resumen.metodos.map((m) => (
                             <option key={m.Nombre} value={m.Nombre}>{m.Nombre}</option>
                         ))}

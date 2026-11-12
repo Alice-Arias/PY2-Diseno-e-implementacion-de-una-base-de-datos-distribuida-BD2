@@ -45,30 +45,30 @@
 }
 
 .wwi.modo-oscuro {
-    --wwi-fondo:          #1a2028;
-    --wwi-superficie:     #222a33;
-    --wwi-superficie-2:   #29323d;
-    --wwi-borde:          #36414e;
-    --wwi-borde-fuerte:   #475463;
-    --wwi-texto:          #e7ecf2;
-    --wwi-texto-2:        #9facbb;
-    --wwi-primario:       #7faedb;
-    --wwi-primario-hover: #9cc2e6;
-    --wwi-primario-suave: #253446;
-    --wwi-fila-alterna:   #252e38;
-    --wwi-fila-hover:     #2b3949;
+    --wwi-fondo:          #0c0c0e;
+    --wwi-superficie:     #151517;
+    --wwi-superficie-2:   #1c1c1f;
+    --wwi-borde:          #29292d;
+    --wwi-borde-fuerte:   #3a3a40;
+    --wwi-texto:          #ececee;
+    --wwi-texto-2:        #9b9ba4;
+    --wwi-primario:       #7db3e6;
+    --wwi-primario-hover: #9cc4ee;
+    --wwi-primario-suave: #172230;
+    --wwi-fila-alterna:   #121214;
+    --wwi-fila-hover:     #1d2229;
 
-    --wwi-menu:           #161c23;
-    --wwi-menu-texto:     #a9b6c4;
-    --wwi-menu-activo:    rgba(127, 174, 219, 0.16);
+    --wwi-menu:           #08080a;
+    --wwi-menu-texto:     #a1a1aa;
+    --wwi-menu-activo:    rgba(125, 179, 230, 0.14);
 
-    --wwi-azul-fondo:     #243a52;  --wwi-azul:     #9cc4ee;
-    --wwi-verde-fondo:    #20402f;  --wwi-verde:    #85d4a6;
-    --wwi-ambar-fondo:    #46391e;  --wwi-ambar:    #efc069;
-    --wwi-morado-fondo:   #352f52;  --wwi-morado:   #c1b5f2;
-    --wwi-rojo-fondo:     #4a2829;  --wwi-rojo:     #f0a3a3;
+    --wwi-azul-fondo:     #172433;  --wwi-azul:     #9cc4ee;
+    --wwi-verde-fondo:    #14281d;  --wwi-verde:    #85d4a6;
+    --wwi-ambar-fondo:    #2c2412;  --wwi-ambar:    #efc069;
+    --wwi-morado-fondo:   #231f38;  --wwi-morado:   #c1b5f2;
+    --wwi-rojo-fondo:     #301a1b;  --wwi-rojo:     #f0a3a3;
 
-    --wwi-sombra:         0 1px 2px rgba(0, 0, 0, 0.25);
+    --wwi-sombra:         0 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 /* ======================================================================
@@ -167,7 +167,7 @@
     align-items: center;
     min-height: 64px;
     padding: 0 2rem;
-    background: var(--wwi-superficie) !important;
+    background: var(--wwi-fondo) !important;
     border-bottom: 1px solid var(--wwi-borde) !important;
     box-shadow: none !important;
 }
@@ -749,7 +749,7 @@
     flex: 0 0 auto;
     width: 44px;
     height: 44px;
-    color: #8fc1ea;
+    color: #ffffff;
 }
 
 .marca-texto {
@@ -953,7 +953,7 @@
     min-height: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
-    border: 1.5px solid var(--wwi-borde-fuerte) !important;
+    border: 1.5px solid var(#0d0d0e) !important;
     border-radius: 4px !important;
     background: #ffffff !important;
     box-shadow: none !important;
@@ -963,8 +963,8 @@
 }
 
 .wwi.modo-oscuro .app-shell input[type="checkbox"] {
-    border-color: #6b7a8b !important;
-    background: #eef2f6 !important;
+    border-color: #3e4247 !important;
+    background: transparent !important;
 }
 
 .wwi .app-shell input[type="checkbox"]:hover {
