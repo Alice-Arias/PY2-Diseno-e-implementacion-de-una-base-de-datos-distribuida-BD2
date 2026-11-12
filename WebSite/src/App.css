@@ -1343,17 +1343,17 @@ input[type="number"]::-webkit-inner-spin-button {
 }
 
 .cd-ico.azul {
-    background: var(--primary-light);
+    background: transparent;
     color: var(--primary);
 }
 
 .cd-ico.verde {
-    background: var(--green-light);
+    background: transparent;
     color: var(--green);
 }
 
 .cd-ico.ambar {
-    background: var(--yellow-light);
+    background: transparent;
     color: var(--yellow-dark);
 }
 

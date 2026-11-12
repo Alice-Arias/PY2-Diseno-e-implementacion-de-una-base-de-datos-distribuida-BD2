@@ -14,7 +14,7 @@ import { useEffect, useState } from 'react';
 import RelojTema from '../components/RelojTema';   // PY2: hora en vivo y tema
 import BuscadorSugerencias from '../components/BuscadorSugerencias';
 import { sugerirClientes } from '../services/api';
-import { Users, CheckCircle2, Tag, Search, Plus, Sun, Eye } from 'lucide-react';
+import { Users, CheckCircle2, Tag, Eye } from 'lucide-react';
 
 import ClientesTabla from '../components/ClientesTabla';
 import ClienteDetalleModal from '../components/ClienteDetalleModal';
