@@ -48,7 +48,7 @@ function App() {
     }, []);
 
     return (
-        <div className={`wwi ${tema === 'oscuro' ? 'modo-oscuro' : 'modo-claro'}`}>
+        <div className={`wwi ${tema === 'oscuro' ? 'modo-claro' : 'modo-oscuro'}`}>
             <Routes>
                 {/* Login: siempre es la primera pantalla */}
                 <Route path="/" element={<LoginPage />} />
