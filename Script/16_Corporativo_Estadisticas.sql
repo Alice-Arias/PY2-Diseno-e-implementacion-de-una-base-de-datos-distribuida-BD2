@@ -138,6 +138,15 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'Estadisti
         ON Estadisticas.vw_VentasSucursalMes (SucursalID, Anio, Mes);
 GO
 
+/* Índice de apoyo: los reportes filtran las facturas por sucursal y fecha, y las unen
+   con el cliente. */
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_Invoices_Sucursal_Fecha'
+               AND object_id = OBJECT_ID(N'Sales.Invoices'))
+    CREATE INDEX IX_Invoices_Sucursal_Fecha
+        ON Sales.Invoices (SucursalID, InvoiceDate)
+        INCLUDE (CustomerID, DeliveryMethodID, OrderID);
+GO
+
 /*---------------------------------------------------------------------------------------*
 * Paso 3: vistas con filtro por sucursal (SESSION_CONTEXT 'Sucursal')
 *-----------------------------------------------------------------------------------------*/
@@ -564,18 +573,20 @@ BEGIN
 
     ;WITH VentasPorFactura AS
     (
+        /* PY2: el total de cada factura sale de la vista materializada
+           Estadisticas.vw_TotalesFactura (ya calculado), en lugar de sumar
+           las 228 000 líneas de factura en cada consulta. */
         SELECT
             f.InvoiceID,
             ca.CustomerName,
             tc.CustomerCategoryName,
-            SUM(df.ExtendedPrice) AS Monto_Factura
+            tf.Monto AS Monto_Factura
         FROM dbo.Facturas AS f
+        INNER JOIN Estadisticas.vw_TotalesFactura AS tf WITH (NOEXPAND) ON tf.InvoiceID = f.InvoiceID
         INNER JOIN dbo.ClientesActuales AS ca ON f.CustomerID = ca.CustomerID
         INNER JOIN dbo.TiposCliente     AS tc ON ca.CustomerCategoryID = tc.CustomerCategoryID
-        INNER JOIN dbo.DetalleFacturas  AS df ON f.InvoiceID = df.InvoiceID
         WHERE (@CustomerName IS NULL OR ca.CustomerName LIKE '%' + @CustomerName + '%')
           AND (@CustomerCategoryName IS NULL OR tc.CustomerCategoryName LIKE '%' + @CustomerCategoryName + '%')
-        GROUP BY f.InvoiceID, ca.CustomerName, tc.CustomerCategoryName
     ),
     Agrupado AS
     (
@@ -698,11 +709,11 @@ BEGIN
             YEAR(f.InvoiceDate) AS Anio,
             f.CustomerID,
             ca.CustomerName AS Nombre_Cliente,
-            COUNT(DISTINCT f.InvoiceID) AS Cantidad_Facturas,
-            SUM(df.ExtendedPrice) AS Monto_Total_Facturado
+            COUNT(*)     AS Cantidad_Facturas,          -- una fila por factura
+            SUM(tf.Monto) AS Monto_Total_Facturado      -- PY2: total ya calculado (vista materializada)
         FROM dbo.Facturas AS f
+        INNER JOIN Estadisticas.vw_TotalesFactura AS tf WITH (NOEXPAND) ON tf.InvoiceID = f.InvoiceID
         INNER JOIN dbo.ClientesActuales AS ca ON f.CustomerID = ca.CustomerID
-        INNER JOIN dbo.DetalleFacturas  AS df ON f.InvoiceID = df.InvoiceID
         WHERE @Anio IS NULL OR YEAR(f.InvoiceDate) = @Anio
         GROUP BY YEAR(f.InvoiceDate), f.CustomerID, ca.CustomerName
     ),
