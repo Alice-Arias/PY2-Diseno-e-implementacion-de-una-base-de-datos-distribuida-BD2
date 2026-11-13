@@ -117,7 +117,7 @@ function Sidebar({ current, onNavigate }) {
 
       <div className="logo">
 
-        {/* PY2: marca dibujada (la imagen tenía fondo negro y no combinaba con el menú) */}
+        {/* Marca dibujada */}
         <div className="marca" aria-label="Wide World Importers">
           <svg className="marca-simbolo" viewBox="0 0 48 48" aria-hidden="true">
             <path d="M6 9h36L24 41z" fill="currentColor" opacity="0.18" />

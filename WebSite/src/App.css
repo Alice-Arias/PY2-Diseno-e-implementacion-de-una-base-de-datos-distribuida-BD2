@@ -152,7 +152,7 @@ input[type="number"]::-webkit-inner-spin-button {
 }
 
 .sidebar .logo span {
-    color: var(--primary);
+    color: white;
 }
 
 .sidebar nav {
@@ -1311,9 +1311,9 @@ input[type="number"]::-webkit-inner-spin-button {
 }
 
 .modal-contenido .btn-claro {
-    background: var(--primary-light);
-    border: 1px solid #cbdcf5;
-    color: var(--primary);
+    background: rgb(153, 20, 20);
+    border: 1px solid transparent;
+    color: rgb(255, 255, 255);
 }
 
 .modal-contenido .btn-azul {
@@ -1343,17 +1343,21 @@ input[type="number"]::-webkit-inner-spin-button {
 }
 
 .cd-ico.azul {
-    background: var(--primary-light);
+    background: transparent;
     color: var(--primary);
 }
 
+.cd-ico .icono-rojo {
+    color: red;
+}
+
 .cd-ico.verde {
-    background: var(--green-light);
+    background: transparent;
     color: var(--green);
 }
 
 .cd-ico.ambar {
-    background: var(--yellow-light);
+    background: transparent;
     color: var(--yellow-dark);
 }
 
@@ -2658,7 +2662,7 @@ input[type="number"]::-webkit-inner-spin-button {
 }
 
 .modo-oscuro .sidebar .logo span {
-    color: #8fb2e5;
+    color: #ffffff;
 }
 
 .modo-oscuro .sidebar .nav-item {
@@ -3072,6 +3076,10 @@ input[type="number"]::-webkit-inner-spin-button {
     color: #d2d7dd;
 }
 
+.modo-oscuro .chip-verde {
+    background: #16440e46;
+    color: #e5f3e2;
+}
 
 /* =========================================================
    ACCESIBILIDAD
@@ -3515,7 +3523,7 @@ input[type="number"]::-webkit-inner-spin-button {
 }
 
 .modo-oscuro .sidebar .logo span {
-    color: #4d83d8;
+    color: #ffffff;
 }
 
 .modo-oscuro .sidebar .nav-item {
@@ -3685,6 +3693,10 @@ input[type="number"]::-webkit-inner-spin-button {
 .modo-oscuro .cd-panel {
     background: #0d0d0d;
     border-color: #303030;
+}
+
+.modo-oscuro .tabla-clientes input[type="checkbox"] {
+    background: transparent;
 }
 
 .modo-oscuro .cd-caja-ambar,

@@ -5,6 +5,9 @@
 import { useEffect, useState } from 'react';
 import './inventario.css';
 
+import { FaBoxOpen } from "react-icons/fa";
+import { FaClipboardList, FaMapPin, FaBalanceScale, FaBox, FaCoins   } from "react-icons/fa";
+
 
 const valorOGuion = (valor) =>
     valor != null && valor !== '' ? valor : '-';
@@ -171,7 +174,9 @@ function TarjetaInventario({
 
             <header className="inv-encabezado">
 
-                <div className="inv-avatar">📦</div>
+                <div className="inv-avatar">
+                    <FaBox />
+                </div>
 
                 <div className="inv-titulo">
                     <h2>{p.Producto || '-'}</h2>
@@ -211,15 +216,15 @@ function TarjetaInventario({
 
             <div className="inv-stats">
 
-                <Dato color="verde" icono="📦" etiqueta="Cantidad disponible">
+                <Dato color="verde" icono={<FaBoxOpen />} etiqueta="Cantidad disponible">
                     {valorOGuion(p.Cantidad_Disponible)}
                 </Dato>
 
-                <Dato color="azul" icono="📍" etiqueta="Ubicación">
+                <Dato color="azul" icono={<FaMapPin/>} etiqueta="Ubicación">
                     {valorOGuion(p.Ubicacion)}
                 </Dato>
 
-                <Dato color="morado" icono="⚖️" etiqueta="Peso por unidad">
+                <Dato color="morado" icono={<FaBalanceScale />} etiqueta="Peso por unidad">
                     {valorOGuion(p.Peso)}
                 </Dato>
 
@@ -231,7 +236,9 @@ function TarjetaInventario({
                 <div className="inv-panel">
 
                     <h3 className="inv-panel-titulo">
-                        <span className="inv-ico">📋</span>
+                        <span className="inv-ico">
+                            <FaClipboardList/>
+                        </span>
                         Información general
                     </h3>
 
@@ -277,7 +284,9 @@ function TarjetaInventario({
                 <div className="inv-panel">
 
                     <h3 className="inv-panel-titulo">
-                        <span className="inv-ico ambar">💰</span>
+                        <span className="inv-ico ambar">
+                            <FaCoins  />
+                        </span>
                         Precios e impuestos
                     </h3>
 

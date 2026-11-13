@@ -495,7 +495,7 @@
 }
 
 .inv-stat-verde  .inv-stat-icono { background: var(--green-light); }
-.inv-stat-azul   .inv-stat-icono { background: var(--primary-light); }
+.inv-stat-azul   .inv-stat-icono { background: var(--primary-light); color: red; }
 .inv-stat-morado .inv-stat-icono { background: var(--purple-light); }
 
 .inv-stat-texto {
@@ -845,7 +845,7 @@
 }
 
 .modo-oscuro .inv-modal {
-    background: #292f36;
+    background: #0d0d0d;
     border-color: #414b56;
     color: #e2e6eb;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.34);
@@ -895,7 +895,7 @@
 
 .modo-oscuro .inv-stat,
 .modo-oscuro .inv-panel {
-    background: #252b32;
+    background: #0d0d0d;
     border-color: #3b444e;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.10);
 }
@@ -915,12 +915,12 @@
 .modo-oscuro .inv-stat-azul .inv-stat-valor   { color: #a9c4e8; }
 .modo-oscuro .inv-stat-morado .inv-stat-valor { color: #b9aef0; }
 
-.modo-oscuro .inv-stat-verde .inv-stat-icono  { background: #2b3d34; }
-.modo-oscuro .inv-stat-azul .inv-stat-icono   { background: #303b49; }
-.modo-oscuro .inv-stat-morado .inv-stat-icono { background: #34324a; }
+.modo-oscuro .inv-stat-verde .inv-stat-icono  { background: transparent; color: #7fd3a3 }
+.modo-oscuro .inv-stat-azul .inv-stat-icono   { background: transparent; color: red;}
+.modo-oscuro .inv-stat-morado .inv-stat-icono { background: transparent; color: #b9aef0 }
 
-.modo-oscuro .inv-ico        { background: #303b49; }
-.modo-oscuro .inv-ico.ambar  { background: #3d382b; }
+.modo-oscuro .inv-ico        { background: transparent; }
+.modo-oscuro .inv-ico.ambar  { background: transparent; }
 
 .modo-oscuro .inv-panel-titulo {
     border-bottom-color: #3b444e;
