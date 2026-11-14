@@ -1,19 +1,10 @@
 /*---------------------------------------------------------------------------------------*
-*
 * NOMBRE: 04_Sucursal_LinkedServer.sql
-*
-* DESCRIPCION:
-* Crea en la sucursal el linked server CORPORATIVO, que apunta al SQL Server de
-* Windows. Dentro de los contenedores, el nombre "corporativo" lo resuelve Docker
-* con la IP que calcula levantar.sh, así que este script no depende de ninguna IP.
-*
-* La conexión entra con el login "enlace_sucursal" (ver 03_Corporativo_LoginEnlace.sql).
-*
-* El MISMO script sirve para San José y para Limón.
-*
-* RESTRICCIONES: Ejecutar SOLO en las sucursales, después de haber ejecutado
-* 03_Corporativo_LoginEnlace.sql en el Corporativo.
-*
+* ENTRADA: El nombre "corporativo" de docker-compose.yml.
+* DESCRIPCION: Crea el linked server CORPORATIVO con el login enlace_sucursal.
+* SALIDA: Linked server CORPORATIVO probado con una consulta.
+* OBJETIVO: Que la sucursal pueda consultar el Corporativo.
+* EJECUTAR: En cada sucursal, después del 03.
 *-----------------------------------------------------------------------------------------*/
 
 USE master;

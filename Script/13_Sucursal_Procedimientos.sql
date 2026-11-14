@@ -1,35 +1,11 @@
 /*---------------------------------------------------------------------------------------*
-*
 * NOMBRE: 13_Sucursal_Procedimientos.sql
-*
-* DESCRIPCION:
-* Instala en la sucursal los procedimientos del Proyecto 1 que usa el rol
-* Administrador, adaptados a la base distribuida.
-*
-*   Clientes      Listar, Resumen, Detalle (*), Opciones
-*   Proveedores   Listar, Resumen, Detalle (*), Opciones
-*   Ciudades      Buscar
-*   Inventario    Listar, Resumen, Detalle (*), Opciones
-*   Ventas        Listar, Detalle, Insertar (*), Actualizar, Opciones
-*
-*   (*) adaptado. Los demás son la versión actual del proyecto (SP_Clientes.sql,
-*       SP_Proveedores.sql, SP_Inventarios.sql, SP_Ventas.sql y
-*       SP_Formularios_Rapidos.sql) sin cambios: como usan sinónimos
-*       (12_Sucursal_Sinonimos.sql), funcionan igual sobre los fragmentos.
-*
-* No se instalan:
-*   - Insertar/Actualizar/Eliminar de clientes y proveedores: según el enunciado,
-*     el Administrador solo CONSULTA clientes y proveedores.
-*   - Insertar/Actualizar/Eliminar de productos: el catálogo se modifica en el
-*     Corporativo y se replica (14_Corporativo_Catalogo.sql y 15_Sucursal_Productos.sql).
-*
-* Al final se otorga EXECUTE sobre estos procedimientos al rol rol_admin_sucursal.
-*
-* El MISMO script sirve para San José y para Limón.
-*
-* RESTRICCIONES: Ejecutar SOLO en las sucursales, después de 12_Sucursal_Sinonimos.sql.
-* Se puede ejecutar más de una vez.
-*
+* ENTRADA: Los sinónimos del 12.
+* DESCRIPCION: Procedimientos del Administrador: consulta de clientes, proveedores e inventario,
+*   y ventas. Los datos sensibles salen como "xxxx".
+* SALIDA: Procedimientos SP_ de la sucursal con permiso para app_admin.
+* OBJETIVO: Usar los procedimientos del Proyecto 1 sobre los fragmentos.
+* EJECUTAR: En cada sucursal, después del 12. Se puede repetir.
 *-----------------------------------------------------------------------------------------*/
 
 USE WideWorldImporters;
@@ -44,16 +20,13 @@ BEGIN
 END
 GO
 
-/* Los procedimientos que leen o escriben en el Corporativo (detalle de clientes y
-   proveedores, y crear/modificar/eliminar productos) se ejecutan "como su dueño"
-   (WITH EXECUTE AS OWNER): app_admin no es administrador y SQL Server no le permite
-   usar el linked server CORPORATIVO por su cuenta. Para que SQL Server acepte esa
-   identidad al salir hacia otro servidor, la base debe ser TRUSTWORTHY. */
+/* TRUSTWORTHY: permite que los procedimientos WITH EXECUTE AS OWNER usen el
+   linked server CORPORATIVO (app_admin no puede usarlo por su cuenta). */
 ALTER DATABASE WideWorldImporters SET TRUSTWORTHY ON;
 GO
 
 /*---------------------------------------------------------------------------------------*
-* SP_Clientes_Listar  (versión actual del proyecto, sin cambios: datos locales)
+* SP_Clientes_Listar: lista filtrada y paginada de clientes
 *-----------------------------------------------------------------------------------------*/
 
 CREATE OR ALTER PROCEDURE dbo.SP_Clientes_Listar
@@ -105,7 +78,7 @@ GO
 
 
 /*---------------------------------------------------------------------------------------*
-* SP_Clientes_Resumen  (sin cambios)
+* SP_Clientes_Resumen: totales de las tarjetas y listas de filtros
 *-----------------------------------------------------------------------------------------*/
 
 CREATE OR ALTER PROCEDURE dbo.SP_Clientes_Resumen
@@ -131,7 +104,7 @@ GO
 
 
 /*---------------------------------------------------------------------------------------*
-* SP_Clientes_Opciones  (versión de SP_Formularios_Rapidos.sql, sin cambios)
+* SP_Clientes_Opciones: listas del formulario de clientes
 *-----------------------------------------------------------------------------------------*/
 
 CREATE OR ALTER PROCEDURE dbo.SP_Clientes_Opciones
@@ -158,7 +131,7 @@ GO
 
 
 /*---------------------------------------------------------------------------------------*
-* SP_Proveedores_Listar  (sin cambios: datos locales)
+* SP_Proveedores_Listar: lista filtrada y paginada de proveedores
 *-----------------------------------------------------------------------------------------*/
 
 CREATE OR ALTER PROCEDURE dbo.SP_Proveedores_Listar
@@ -210,7 +183,7 @@ GO
 
 
 /*---------------------------------------------------------------------------------------*
-* SP_Proveedores_Resumen  (sin cambios)
+* SP_Proveedores_Resumen: totales de las tarjetas y listas de filtros
 *-----------------------------------------------------------------------------------------*/
 
 CREATE OR ALTER PROCEDURE dbo.SP_Proveedores_Resumen
@@ -236,7 +209,7 @@ GO
 
 
 /*---------------------------------------------------------------------------------------*
-* SP_Proveedores_Opciones  (versión de SP_Formularios_Rapidos.sql, sin cambios)
+* SP_Proveedores_Opciones: listas del formulario de proveedores
 *-----------------------------------------------------------------------------------------*/
 
 CREATE OR ALTER PROCEDURE dbo.SP_Proveedores_Opciones
@@ -257,7 +230,7 @@ GO
 
 
 /*---------------------------------------------------------------------------------------*
-* SP_Ciudades_Buscar  (versión de SP_Formularios_Rapidos.sql, sin cambios)
+* SP_Ciudades_Buscar: busca ciudades por texto (máximo 20)
 *-----------------------------------------------------------------------------------------*/
 
 CREATE OR ALTER PROCEDURE dbo.SP_Ciudades_Buscar
@@ -301,7 +274,7 @@ GO
 
 
 /*---------------------------------------------------------------------------------------*
-* SP_Inventarios_Listar  (sin cambios)
+* SP_Inventarios_Listar: lista filtrada y paginada de productos
 *-----------------------------------------------------------------------------------------*/
 
 CREATE OR ALTER PROCEDURE dbo.SP_Inventarios_Listar
@@ -377,7 +350,7 @@ GO
 
 
 /*---------------------------------------------------------------------------------------*
-* SP_Inventarios_Resumen  (sin cambios)
+* SP_Inventarios_Resumen: totales de las tarjetas y grupos
 *-----------------------------------------------------------------------------------------*/
 
 CREATE OR ALTER PROCEDURE dbo.SP_Inventarios_Resumen
@@ -399,8 +372,8 @@ GO
 
 
 /*---------------------------------------------------------------------------------------*
-* SP_Inventarios_Detalle  (adaptado: devuelve "Version", que el formulario de Modificar
-* debe enviar de vuelta al guardar para detectar si otro usuario cambió el producto)
+* SP_Inventarios_Detalle: detalle de productos; "Version" sirve para saber
+* si otro usuario cambió el producto antes de guardar
 *-----------------------------------------------------------------------------------------*/
 
 CREATE OR ALTER PROCEDURE dbo.SP_Inventarios_Detalle
@@ -475,7 +448,7 @@ GO
 
 
 /*---------------------------------------------------------------------------------------*
-* SP_Inventario_Opciones  (sin cambios)
+* SP_Inventario_Opciones: listas del formulario de productos
 *-----------------------------------------------------------------------------------------*/
 
 CREATE OR ALTER PROCEDURE dbo.SP_Inventario_Opciones
@@ -491,7 +464,7 @@ GO
 
 
 /*---------------------------------------------------------------------------------------*
-* SP_Ventas_Listar  (sin cambios: lee solo las facturas de esta sucursal)
+* SP_Ventas_Listar: lista filtrada y paginada de las facturas de esta sucursal
 *-----------------------------------------------------------------------------------------*/
 
 CREATE OR ALTER PROCEDURE dbo.SP_Ventas_Listar
@@ -567,7 +540,7 @@ GO
 
 
 /*---------------------------------------------------------------------------------------*
-* SP_Ventas_Detalle  (sin cambios)
+* SP_Ventas_Detalle: encabezado y líneas de una factura
 *-----------------------------------------------------------------------------------------*/
 
 CREATE OR ALTER PROCEDURE dbo.SP_Ventas_Detalle
@@ -644,9 +617,8 @@ GO
 
 
 /*---------------------------------------------------------------------------------------*
-* SP_Ventas_Insertar  (corregido: InvoiceID sale de una secuencia, no de IDENTITY, por lo que
-* SCOPE_IDENTITY() devolvía NULL. Ahora se obtiene con OUTPUT. La secuencia de cada sucursal
-* está en su propio rango y la factura queda con su SucursalID por defecto.)
+* SP_Ventas_Insertar: crea la factura; el número sale de la secuencia de la
+* sucursal (se obtiene con OUTPUT)
 *-----------------------------------------------------------------------------------------*/
 
 CREATE OR ALTER PROCEDURE dbo.SP_Ventas_Insertar
@@ -1122,7 +1094,7 @@ GO
 
 
 /*---------------------------------------------------------------------------------------*
-* SP_Ventas_Actualizar  (sin cambios)
+* SP_Ventas_Actualizar: modifica la factura y sus líneas
 *-----------------------------------------------------------------------------------------*/
 
 CREATE OR ALTER PROCEDURE dbo.SP_Ventas_Actualizar
@@ -1555,7 +1527,7 @@ GO
 
 
 /*---------------------------------------------------------------------------------------*
-* SP_Ventas_Opciones  (sin cambios)
+* SP_Ventas_Opciones: listas del formulario de ventas
 *-----------------------------------------------------------------------------------------*/
 
 CREATE OR ALTER PROCEDURE dbo.SP_Ventas_Opciones
@@ -1615,12 +1587,7 @@ GO
 GO
 
 /*---------------------------------------------------------------------------------------*
-* SP_Clientes_Detalle  (adaptado a la fragmentación vertical + control de acceso)
-*
-* La sucursal NO lee los datos sensibles (contactos, teléfonos, web, direcciones y
-* ubicación): se devuelven como "xxxx". El Administrador puede pedir acceso al
-* Corporativo; si lo aprueba, la web los obtiene directamente del Corporativo con
-* Seguridad.SP_DatosSensibles_Obtener (17_Corporativo_SolicitudesAcceso.sql).
+* SP_Clientes_Detalle: detalle del cliente; los datos sensibles salen como "xxxx"
 *-----------------------------------------------------------------------------------------*/
 
 CREATE OR ALTER PROCEDURE dbo.SP_Clientes_Detalle
@@ -1674,10 +1641,7 @@ GO
 
 
 /*---------------------------------------------------------------------------------------*
-* SP_Proveedores_Detalle  (adaptado a la fragmentación vertical + control de acceso)
-*
-* Igual que SP_Clientes_Detalle: contactos, teléfonos, direcciones y datos bancarios
-* se devuelven como "xxxx" hasta que el Corporativo autorice el acceso.
+* SP_Proveedores_Detalle: detalle del proveedor; los datos sensibles salen como "xxxx"
 *-----------------------------------------------------------------------------------------*/
 
 CREATE OR ALTER PROCEDURE dbo.SP_Proveedores_Detalle

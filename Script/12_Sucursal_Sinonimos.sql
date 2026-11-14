@@ -1,28 +1,11 @@
 /*---------------------------------------------------------------------------------------*
-*
 * NOMBRE: 12_Sucursal_Sinonimos.sql
-*
-* DESCRIPCION:
-* Crea en la sucursal los sinónimos que usan los procedimientos almacenados.
-*
-*   1. Los mismos sinónimos del Proyecto 1 (ClientesActuales, Facturas, ...).
-*      Apuntan a las tablas LOCALES de la sucursal, que ya están fragmentadas.
-*
-*   2. Sinónimos nuevos hacia los datos sensibles, que viven SOLO en el
-*      Corporativo y se leen por el linked server CORPORATIVO:
-*
-*        dbo.ClientesSensibles    -> CORPORATIVO...Sensible.Clientes
-*        dbo.ProveedoresSensibles -> CORPORATIVO...Sensible.Proveedores
-*        dbo.ContactosSensibles   -> CORPORATIVO...Sensible.Personas
-*
-* Gracias a los sinónimos, los procedimientos no necesitan saber en qué servidor
-* está cada dato (transparencia de ubicación).
-*
-* El MISMO script sirve para San José y para Limón.
-*
-* RESTRICCIONES: Ejecutar SOLO en las sucursales, después de 04_Sucursal_LinkedServer.sql
-* y 11_Sucursal_SeguridadApp.sql. Se puede ejecutar más de una vez.
-*
+* ENTRADA: Las tablas de la sucursal y el linked server CORPORATIVO.
+* DESCRIPCION: Sinónimos del Proyecto 1 hacia las tablas locales y sinónimos nuevos
+*   hacia los datos sensibles del Corporativo.
+* SALIDA: Los sinónimos creados.
+* OBJETIVO: Que los procedimientos no dependan de dónde está cada dato.
+* EJECUTAR: En cada sucursal, después del 04 y 11. Se puede repetir.
 *-----------------------------------------------------------------------------------------*/
 
 USE WideWorldImporters;
@@ -94,9 +77,7 @@ CLOSE cur;
 DEALLOCATE cur;
 GO
 
-/* El rol Administrador NO tiene permiso sobre estos tres sinónimos: los datos
-   sensibles solo se entregan desde el Corporativo, con autorización
-   (17_Corporativo_SolicitudesAcceso.sql). */
+/* Sin permiso para el Administrador: los datos sensibles se piden con autorización (17). */
 REVOKE SELECT ON dbo.ClientesSensibles    FROM rol_admin_sucursal;
 REVOKE SELECT ON dbo.ProveedoresSensibles FROM rol_admin_sucursal;
 REVOKE SELECT ON dbo.ContactosSensibles   FROM rol_admin_sucursal;

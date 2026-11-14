@@ -1,153 +1,128 @@
 /*---------------------------------------------------------------------------------------*
+* NOMBRE: InventarioPage.jsx
 *
-* NOMBRE: InventariosPage (CORREGIDO PY2)
+* DESCRIPCION: Página de Inventario (rol Administrador): tarjetas de totales, buscador
+* por nombre, filtro por grupo, tabla paginada y las ventanas para ver, crear,
+* modificar y eliminar productos.
 *
-* CAMBIOS:
-*   - Paginación, orden y filtros en SQL (SP_Inventarios_Listar con @Pagina).
-*   - El producto nuevo ahora sí aparece: el SP crea también holdings y grupos.
-*   - Tarjetas y lista de grupos desde SP_Inventarios_Resumen (antes new Set()).
-*   - Al crear un producto se filtra por su nombre para que aparezca de inmediato.
-*   - Después de editar/eliminar se recarga la misma página con los mismos filtros.
+* ENTRADA: Ninguna.
 *
+* SALIDA: La página de Inventario.
+*
+* OBJETIVO: Consultar y administrar los productos.
 *-----------------------------------------------------------------------------------------*/
 
 import { useEffect, useState } from 'react';
-import RelojTema from '../components/RelojTema';   // PY2: hora en vivo y tema
-import BuscadorSugerencias from '../components/BuscadorSugerencias';
-import { sugerirProductos } from '../services/api';
-import { Package, Layers, CheckCircle2, Search, Plus, Sun, Eye } from 'lucide-react';
-
+import { Package, Layers, CheckCircle2, Plus } from 'lucide-react';
+import EncabezadoPagina from '../components/common/EncabezadoPagina';
+import StatCard from '../components/common/StatCard';
+import BuscadorSugerencias from '../components/common/BuscadorSugerencias';
+import BotonVerSeleccionados from '../components/common/BotonVerSeleccionados';
+import Paginacion from '../components/common/Paginacion';
+import VentanaMensaje from '../components/common/VentanaMensaje';
 import InventariosTabla from '../components/inventario/InventariosTabla';
 import InventarioDetalleModal from '../components/inventario/InventarioDetalleModal';
 import InventarioNuevoModal from '../components/inventario/InventarioNuevoModal';
 import InventarioEditarModal from '../components/inventario/InventarioEditarModal';
 import InventarioEliminarModal from '../components/inventario/InventarioEliminarModal';
-import StatCard from '../components/StatCard';
-import Paginacion from '../components/Paginacion';
 import useListadoServidor from '../hooks/useListadoServidor';
-
-import {
-    listarInventarios,
-    obtenerResumenInventario,
-    obtenerDetalleInventarios,
-    precargarOpciones,
-    limpiarCacheOpciones
-} from '../services/api';
+import useSeleccion from '../hooks/useSeleccion';
+import { inventarioApi } from '../services/inventarioApi';
+import { limpiarCacheOpciones } from '../services/cacheOpciones';
 
 const POR_PAGINA = 10;
 const FILTROS_VACIOS = { nombre: '', grupo: '' };
 
-function InventariosPage() {
+const mensajeExito = (titulo, mensaje) => ({ tipo: 'exito', titulo, mensaje });
+const mensajeError = (mensaje) => ({ tipo: 'error', titulo: 'Error', mensaje });
+
+/* Precarga las listas del formulario para que "Nuevo producto" abra rápido. */
+const precargarOpciones = () => inventarioApi.opciones().catch(() => {});
+
+function InventarioPage() {
     const [mensaje, setMensaje] = useState(null);
-
-    const listado = useListadoServidor(listarInventarios, {
-        porPagina: POR_PAGINA,
-        filtrosIniciales: FILTROS_VACIOS,
-        alFallar: () =>
-            setMensaje({ tipo: 'error', titulo: 'Error', mensaje: 'Ocurrió un error al buscar los productos.' })
-    });
-
     const [nombreEscrito, setNombreEscrito] = useState('');
     const [resumen, setResumen] = useState({ totales: {}, grupos: [] });
-
-    const [seleccionados, setSeleccionados] = useState([]);
-    const [inventariosModal, setInventariosModal] = useState(null);
+    const [contadorResumen, setContadorResumen] = useState(0);
+    const [productosDetalle, setProductosDetalle] = useState(null);
     const [mostrarNuevo, setMostrarNuevo] = useState(false);
-    const [inventarioEditar, setInventarioEditar] = useState(null);
-    const [inventarioEliminar, setInventarioEliminar] = useState(null);
-    const [recargaResumen, setRecargaResumen] = useState(0);
+    const [productoEditar, setProductoEditar] = useState(null);
+    const [productoEliminar, setProductoEliminar] = useState(null);
+    const seleccion = useSeleccion();
 
-    // PY2: al abrir la página se cargan (una sola vez) las listas del formulario,
-    // así Agregar / Modificar abren al instante.
-    useEffect(() => {
-        precargarOpciones('inventario');
-    }, []);
+    const listado = useListadoServidor(inventarioApi.listar, {
+        porPagina: POR_PAGINA,
+        filtrosIniciales: FILTROS_VACIOS,
+        alFallar: () => setMensaje(mensajeError('Ocurrió un error al buscar los productos.'))
+    });
 
-    // Estadísticas y listas de filtros (calculadas en SQL).
+    useEffect(() => { precargarOpciones(); }, []);
+
     useEffect(() => {
-        obtenerResumenInventario()
+        inventarioApi.resumen()
             .then(setResumen)
-            .catch((err) => console.error(err));
-    }, [recargaResumen]);
-
+            .catch((error) => console.error(error));
+    }, [contadorResumen]);
 
     const filtrar = (cambios) => {
-        setSeleccionados([]);
+        seleccion.limpiar();
         listado.aplicarFiltros(cambios);
     };
 
     const restaurarFiltros = () => {
         setNombreEscrito('');
-        setSeleccionados([]);
+        seleccion.limpiar();
         listado.reemplazarFiltros(FILTROS_VACIOS);
-    };
-
-    const toggleSeleccion = (id) => {
-        setSeleccionados((prev) =>
-            prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-        );
     };
 
     const abrirDetalle = async (ids) => {
         try {
-            setInventariosModal(await obtenerDetalleInventarios(ids));
-        } catch (err) {
-            console.error(err);
-            setMensaje({ tipo: 'error', titulo: 'Error', mensaje: 'No se pudo cargar el detalle del producto.' });
+            setProductosDetalle(await inventarioApi.detalle(ids));
+        } catch (error) {
+            console.error(error);
+            setMensaje(mensajeError('No se pudo cargar el detalle del producto.'));
         }
     };
 
+    /* Después de un cambio: tabla, tarjetas y listas de los formularios al día. */
     const recargarTodo = () => {
-        setSeleccionados([]);
-        // Los datos cambiaron: se refrescan las listas del formulario en segundo plano.
+        seleccion.limpiar();
         limpiarCacheOpciones();
-        precargarOpciones('inventario');
+        precargarOpciones();
         listado.recargar();
-        setRecargaResumen((r) => r + 1);
+        setContadorResumen((contador) => contador + 1);
     };
 
-    const inventarioCreado = async (data) => {
+    const productoCreado = (respuesta) => {
         setMostrarNuevo(false);
-        const nombreNuevo = data?.inventario?.Producto;
-
+        const nombreNuevo = respuesta?.inventario?.Producto;
         if (nombreNuevo) {
             setNombreEscrito(nombreNuevo);
             listado.reemplazarFiltros({ ...FILTROS_VACIOS, nombre: nombreNuevo });
         }
         recargarTodo();
-        setMensaje({ tipo: 'exito', titulo: 'Producto creado', mensaje: 'El producto se creó correctamente y se muestra en la tabla.' });
+        setMensaje(mensajeExito('Producto creado', 'El producto se creó correctamente y se muestra en la tabla.'));
     };
 
-    const inventarioActualizado = async () => {
-        setInventarioEditar(null);
+    const productoActualizado = () => {
+        setProductoEditar(null);
         recargarTodo();
-        setMensaje({ tipo: 'exito', titulo: 'Producto actualizado', mensaje: 'El producto se actualizó correctamente.' });
+        setMensaje(mensajeExito('Producto actualizado', 'El producto se actualizó correctamente.'));
     };
 
-    const inventarioEliminado = async () => {
-        setInventarioEliminar(null);
+    const productoEliminado = () => {
+        setProductoEliminar(null);
         recargarTodo();
-        setMensaje({ tipo: 'exito', titulo: 'Producto eliminado', mensaje: 'El producto se eliminó correctamente.' });
+        setMensaje(mensajeExito('Producto eliminado', 'El producto se eliminó correctamente.'));
     };
-
-    const ahora = new Date();
-    const fechaTexto = ahora.toLocaleDateString('es-CR', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
-    const horaTexto = ahora.toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit', hour12: false });
 
     return (
         <div>
-            <div className="page-header">
-                <div className="title-block">
-                    <div className="icon-box"><Package size={22} /></div>
-                    <div>
-                        <h1>Inventario</h1>
-                        <p>Consulta y administra los productos registrados en Wide World Importers.</p>
-                    </div>
-                </div>
-                <div className="header-right">
-                    <RelojTema />
-                </div>
-            </div>
+            <EncabezadoPagina
+                icono={Package}
+                titulo="Inventario"
+                descripcion="Consulta y administra los productos registrados en Wide World Importers."
+            />
 
             <div className="stats-row">
                 <StatCard icon={Package} color="blue" label="Total de productos" value={resumen.totales?.Total_Productos ?? 0} />
@@ -161,36 +136,21 @@ function InventariosPage() {
                         valor={nombreEscrito}
                         onCambiar={setNombreEscrito}
                         onBuscar={(texto) => filtrar({ nombre: texto })}
-                        cargarSugerencias={sugerirProductos}
+                        cargarSugerencias={inventarioApi.sugerir}
                         placeholder="Nombre del producto"
                         etiqueta="Buscar por nombre del producto"
                     />
-
-                    <select
-                        value={listado.filtros.grupo}
-                        onChange={(e) => filtrar({ grupo: e.target.value })}
-                    >
+                    <select value={listado.filtros.grupo} onChange={(evento) => filtrar({ grupo: evento.target.value })}>
                         <option value="">Grupos</option>
-                        {resumen.grupos.map((g) => (
-                            <option key={g.ID} value={g.Nombre}>{g.Nombre}</option>
+                        {resumen.grupos.map((grupo) => (
+                            <option key={grupo.ID} value={grupo.Nombre}>{grupo.Nombre}</option>
                         ))}
                     </select>
-
                     <button className="btn-restaurar" onClick={restaurarFiltros}>Restaurar filtros</button>
-
-                    <button
-                        className="btn-filtros"
-                        disabled={seleccionados.length === 0}
-                        onClick={() => abrirDetalle(seleccionados)}
-                        style={{
-                            opacity: seleccionados.length === 0 ? 0.5 : 1,
-                            cursor: seleccionados.length === 0 ? 'not-allowed' : 'pointer'
-                        }}
-                    >
-                        <Eye size={16} />
-                        Ver seleccionados ({seleccionados.length})
-                    </button>
-
+                    <BotonVerSeleccionados
+                        cantidad={seleccion.seleccionados.length}
+                        onClick={() => abrirDetalle(seleccion.seleccionados)}
+                    />
                     <button className="btn-nuevo" onClick={() => setMostrarNuevo(true)}>
                         <Plus size={16} />
                         Nuevo Producto
@@ -199,12 +159,12 @@ function InventariosPage() {
 
                 <div style={{ opacity: listado.cargando ? 0.5 : 1, transition: 'opacity .15s' }}>
                     <InventariosTabla
-                        inventarios={listado.filas}
-                        seleccionados={seleccionados}
-                        onToggleSeleccion={toggleSeleccion}
-                        onVerUno={abrirDetalle}
-                        onEditar={setInventarioEditar}
-                        onEliminar={setInventarioEliminar}
+                        productos={listado.filas}
+                        seleccionados={seleccion.seleccionados}
+                        onAlternar={seleccion.alternar}
+                        onVer={abrirDetalle}
+                        onEditar={setProductoEditar}
+                        onEliminar={setProductoEliminar}
                     />
                 </div>
 
@@ -218,45 +178,34 @@ function InventariosPage() {
                 />
             </div>
 
-            <InventarioDetalleModal inventarios={inventariosModal} onCerrar={() => setInventariosModal(null)} />
+            <InventarioDetalleModal registros={productosDetalle} onCerrar={() => setProductosDetalle(null)} />
 
             {mostrarNuevo && (
                 <InventarioNuevoModal
                     onCerrar={() => setMostrarNuevo(false)}
-                    onInventarioCreado={inventarioCreado}
+                    onInventarioCreado={productoCreado}
                     onMostrarMensaje={setMensaje}
                 />
             )}
-
-            {inventarioEditar && (
+            {productoEditar && (
                 <InventarioEditarModal
-                    inventario={inventarioEditar}
-                    onCerrar={() => setInventarioEditar(null)}
-                    onInventarioActualizado={inventarioActualizado}
+                    inventario={productoEditar}
+                    onCerrar={() => setProductoEditar(null)}
+                    onInventarioActualizado={productoActualizado}
                     onMostrarMensaje={setMensaje}
                 />
             )}
-
-            {inventarioEliminar && (
+            {productoEliminar && (
                 <InventarioEliminarModal
-                    inventario={inventarioEliminar}
-                    onCerrar={() => setInventarioEliminar(null)}
-                    onEliminado={inventarioEliminado}
-                    onMostrarMensaje={setMensaje}
+                    inventario={productoEliminar}
+                    onCerrar={() => setProductoEliminar(null)}
+                    onEliminado={productoEliminado}
                 />
             )}
 
-            {mensaje && (
-                <div className="modal-overlay">
-                    <div className={`mensaje-modal ${mensaje.tipo}`}>
-                        <h2>{mensaje.titulo}</h2>
-                        <p>{mensaje.mensaje}</p>
-                        <button className="btn-aceptar" onClick={() => setMensaje(null)}>Aceptar</button>
-                    </div>
-                </div>
-            )}
+            <VentanaMensaje mensaje={mensaje} onCerrar={() => setMensaje(null)} />
         </div>
     );
 }
 
-export default InventariosPage;
+export default InventarioPage;

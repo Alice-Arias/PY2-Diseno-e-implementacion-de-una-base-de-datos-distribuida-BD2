@@ -1,120 +1,95 @@
 /*---------------------------------------------------------------------------------------*
+* NOMBRE: VentasPage.jsx
 *
-* NOMBRE: VentasPage (CORREGIDO PY2)
+* DESCRIPCION: Página de Ventas (rol Administrador): tarjetas (ventas encontradas,
+* monto total y clientes distintos), filtros, tabla paginada y las ventanas para ver,
+* crear y modificar ventas.
 *
-* POR QUÉ ESTABA LENTO: se descargaban ~70 000 facturas en cada carga y React las
-* ordenaba (sort), sumaba (reduce), contaba (new Set) y cortaba (slice).
+* ENTRADA: Ninguna.
 *
-* AHORA:
-*   - SP_Ventas_Listar filtra, ordena y devuelve solo 10 filas.
-*   - Las tarjetas (ventas encontradas, monto total, clientes distintos) vienen
-*     calculadas por SQL en el mismo llamado (resultado 2 del SP).
-*   - Al crear una venta se muestra filtrada por su número de factura.
+* SALIDA: La página de Ventas.
 *
+* OBJETIVO: Consultar y registrar las ventas de la sucursal.
 *-----------------------------------------------------------------------------------------*/
 
 import { useEffect, useState } from 'react';
-import RelojTema from '../components/RelojTema';   // PY2: hora en vivo y tema
-import { Receipt, DollarSign, FileText, Sun } from 'lucide-react';
-
+import { Receipt, DollarSign, FileText } from 'lucide-react';
+import EncabezadoPagina from '../components/common/EncabezadoPagina';
+import StatCard from '../components/common/StatCard';
+import Paginacion from '../components/common/Paginacion';
+import VentanaMensaje from '../components/common/VentanaMensaje';
 import VentasFiltro from '../components/ventas/VentasFiltro';
 import VentasTabla from '../components/ventas/VentasTabla';
 import VentaDetalleModal from '../components/ventas/VentaDetalleModal';
 import VentaNuevoModal from '../components/ventas/VentaNuevoModal';
 import VentaEditarModal from '../components/ventas/VentaEditarModal';
-import StatCard from '../components/StatCard';
-import Paginacion from '../components/Paginacion';
 import useListadoServidor from '../hooks/useListadoServidor';
-
-import { listarVentas, obtenerDetalleVenta, obtenerOpcionesVentas } from '../services/api';
+import { ventasApi } from '../services/ventasApi';
 
 const POR_PAGINA = 10;
 
+const mensajeExito = (titulo, mensaje) => ({ tipo: 'exito', titulo, mensaje });
+const mensajeError = (mensaje) => ({ tipo: 'error', titulo: 'Error', mensaje });
+
 function VentasPage() {
     const [mensaje, setMensaje] = useState(null);
-
-    const listado = useListadoServidor(listarVentas, {
-        porPagina: POR_PAGINA,
-        alFallar: () =>
-            setMensaje({ tipo: 'error', titulo: 'Error', mensaje: 'Ocurrió un error al buscar las ventas.' })
-    });
-
     const [metodosEntrega, setMetodosEntrega] = useState([]);
     const [ventaDetalle, setVentaDetalle] = useState(null);
     const [mostrarNuevo, setMostrarNuevo] = useState(false);
     const [ventaEditar, setVentaEditar] = useState(null);
 
+    const listado = useListadoServidor(ventasApi.listar, {
+        porPagina: POR_PAGINA,
+        alFallar: () => setMensaje(mensajeError('Ocurrió un error al buscar las ventas.'))
+    });
+
+    /* Métodos de entrega para el filtro (vienen en las opciones del formulario). */
     useEffect(() => {
-        obtenerOpcionesVentas()
-            .then((data) => setMetodosEntrega(data.metodosEntrega || []))
-            .catch((err) => console.error(err));
+        ventasApi.opciones()
+            .then((opciones) => setMetodosEntrega(opciones.metodosEntrega || []))
+            .catch((error) => console.error(error));
     }, []);
 
-
-    const verDetalle = async (invoiceId) => {
+    const verDetalle = async (numeroFactura) => {
         try {
-            setVentaDetalle(await obtenerDetalleVenta(invoiceId));
-        } catch (err) {
-            console.error(err);
-            setMensaje({ tipo: 'error', titulo: 'Error', mensaje: 'No se pudo cargar el detalle de la venta.' });
+            setVentaDetalle(await ventasApi.detalle(numeroFactura));
+        } catch (error) {
+            console.error(error);
+            setMensaje(mensajeError('No se pudo cargar el detalle de la venta.'));
         }
     };
 
-    const ventaCreada = async (data) => {
+    /* Venta nueva: se filtra por su número para que se vea de una vez. */
+    const ventaCreada = (respuesta) => {
         setMostrarNuevo(false);
-        const id = data?.venta?.InvoiceID;
-
-        if (id) {
-            listado.reemplazarFiltros({ numeroFactura: id });
+        const numeroFactura = respuesta?.venta?.InvoiceID;
+        if (numeroFactura) {
+            listado.reemplazarFiltros({ numeroFactura });
         } else {
             listado.recargar();
         }
-
-        setMensaje({
-            tipo: 'exito',
-            titulo: 'Venta creada',
-            mensaje: id
-                ? `La factura #${id} se creó correctamente. Se muestra filtrada; use "Restaurar" para ver todas.`
-                : 'La venta se creó correctamente.'
-        });
+        setMensaje(mensajeExito('Venta creada', numeroFactura
+            ? `La factura #${numeroFactura} se creó correctamente. Se muestra filtrada; use "Restaurar" para ver todas.`
+            : 'La venta se creó correctamente.'));
     };
 
-    const ventaActualizada = async () => {
+    const ventaActualizada = () => {
         setVentaEditar(null);
-        listado.recargar(); // misma página, mismos filtros
-        setMensaje({ tipo: 'exito', titulo: 'Venta actualizada', mensaje: 'La venta se actualizó correctamente.' });
+        listado.recargar();   // Misma página y mismos filtros.
+        setMensaje(mensajeExito('Venta actualizada', 'La venta se actualizó correctamente.'));
     };
 
-
-    const info = listado.paginacion;
-    const montoTotal = Number(info.Monto_Total || 0).toLocaleString('es-CR', {
-        style: 'currency',
-        currency: 'USD'
-    });
-
-    const ahora = new Date();
-    const fechaTexto = ahora.toLocaleDateString('es-CR', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
-    const horaTexto = ahora.toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit', hour12: false });
+    const totales = listado.paginacion;
+    const montoTotal = Number(totales.Monto_Total || 0).toLocaleString('es-CR', { style: 'currency', currency: 'USD' });
 
     return (
         <div>
-            <div className="page-header">
-                <div className="title-block">
-                    <div className="icon-box"><Receipt size={22} /></div>
-                    <div>
-                        <h1>Ventas</h1>
-                        <p>Gestiona las ventas registradas en Wide World Importers.</p>
-                    </div>
-                </div>
-                <div className="header-right">
-                    <RelojTema />
-                </div>
-            </div>
+            <EncabezadoPagina icono={Receipt} titulo="Ventas" descripcion="Gestiona las ventas registradas en Wide World Importers." />
 
             <div className="stats-row">
-                <StatCard icon={Receipt} color="blue" label="Ventas encontradas" value={info.Total_Registros ?? 0} />
+                <StatCard icon={Receipt} color="blue" label="Ventas encontradas" value={totales.Total_Registros ?? 0} />
                 <StatCard icon={DollarSign} color="green" label="Monto total" value={montoTotal} />
-                <StatCard icon={FileText} color="yellow" label="Clientes distintos" value={info.Clientes_Unicos ?? 0} />
+                <StatCard icon={FileText} color="yellow" label="Clientes distintos" value={totales.Clientes_Unicos ?? 0} />
             </div>
 
             <div className="table-card">
@@ -126,17 +101,13 @@ function VentasPage() {
                 />
 
                 <div style={{ opacity: listado.cargando ? 0.5 : 1, transition: 'opacity .15s' }}>
-                    <VentasTabla
-                        ventas={listado.filas}
-                        onVerUna={verDetalle}
-                        onEditar={setVentaEditar}
-                    />
+                    <VentasTabla ventas={listado.filas} onVer={verDetalle} onEditar={setVentaEditar} />
                 </div>
 
                 <Paginacion
                     pagina={listado.pagina}
-                    totalPaginas={info.Total_Paginas}
-                    totalRegistros={info.Total_Registros}
+                    totalPaginas={totales.Total_Paginas}
+                    totalRegistros={totales.Total_Registros}
                     porPagina={POR_PAGINA}
                     cargando={listado.cargando}
                     onCambiar={listado.cambiarPagina}
@@ -152,7 +123,6 @@ function VentasPage() {
                     onMostrarMensaje={setMensaje}
                 />
             )}
-
             {ventaEditar && (
                 <VentaEditarModal
                     venta={ventaEditar}
@@ -162,15 +132,7 @@ function VentasPage() {
                 />
             )}
 
-            {mensaje && (
-                <div className="modal-overlay">
-                    <div className={`mensaje-modal ${mensaje.tipo}`}>
-                        <h2>{mensaje.titulo}</h2>
-                        <p>{mensaje.mensaje}</p>
-                        <button className="btn-aceptar" onClick={() => setMensaje(null)}>Aceptar</button>
-                    </div>
-                </div>
-            )}
+            <VentanaMensaje mensaje={mensaje} onCerrar={() => setMensaje(null)} />
         </div>
     );
 }

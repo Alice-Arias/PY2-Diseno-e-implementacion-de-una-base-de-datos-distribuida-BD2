@@ -1,63 +1,32 @@
 /*---------------------------------------------------------------------------------------*
+* NOMBRE: InventarioNuevoModal.jsx
 *
-* NOMBRE: InventarioNuevoModal (CORREGIDO PY2)
+* DESCRIPCION: Ventana para crear un producto. Valida los datos y los envía a la API.
 *
-* CAMBIOS:
-*   - Usa el mismo InventarioFormulario que el modal de edición (antes tenía su
-*     propio formulario duplicado de más de 1000 líneas).
-*   - Incluye grupos e inventario (holdings): sin esto el producto nuevo no
-*     aparecía en la tabla.
-*   - Usa validarInventario y armarDatos de utilsInventario.
+* ENTRADA: onCerrar, onInventarioCreado(respuesta) y onMostrarMensaje(mensaje).
 *
+* SALIDA: La ventana con el formulario.
+*
+* OBJETIVO: Registrar productos nuevos.
 *-----------------------------------------------------------------------------------------*/
 
-import { X, PackagePlus, Save, Loader2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import useUltimo from '../../hooks/useUltimo';
-
-import { insertarInventario, obtenerOpcionesInventario } from '../../services/api';
+import { useState } from 'react';
+import { PackagePlus } from 'lucide-react';
+import ModalFormulario from '../common/ModalFormulario';
 import InventarioFormulario from './InventarioFormulario';
-import { FORMULARIO_VACIO, validarInventario, armarDatos } from './utilsInventario';
+import useFormulario from '../../hooks/useFormulario';
+import useOpcionesFormulario from '../../hooks/useOpcionesFormulario';
+import { inventarioApi } from '../../services/inventarioApi';
+import { FORMULARIO_VACIO, validarInventario, datosParaApi } from './formularioInventario';
+import { OPCIONES_VACIAS } from './opcionesInventario';
 
 function InventarioNuevoModal({ onCerrar, onInventarioCreado, onMostrarMensaje }) {
-    // Versión actual de onMostrarMensaje (ver hooks/useUltimo.js).
-    const avisarRef = useUltimo(onMostrarMensaje);
-    const [formulario, setFormulario] = useState(FORMULARIO_VACIO);
-    const [opciones, setOpciones] = useState({ proveedores: [], colores: [], tiposPaquete: [], grupos: [] });
-    const [cargandoOpciones, setCargandoOpciones] = useState(true);
+    const { formulario, cambiarCampo } = useFormulario(FORMULARIO_VACIO);
+    const { opciones, cargandoOpciones } = useOpcionesFormulario(inventarioApi.opciones, OPCIONES_VACIAS, onMostrarMensaje);
     const [guardando, setGuardando] = useState(false);
 
-    useEffect(() => {
-        obtenerOpcionesInventario()
-            .then((data) =>
-                setOpciones({
-                    proveedores: data.proveedores || [],
-                    colores: data.colores || [],
-                    tiposPaquete: data.tiposPaquete || [],
-                    grupos: data.grupos || []
-                })
-            )
-            .catch((error) => {
-                console.error(error);
-                avisarRef.current?.({
-                    tipo: 'error',
-                    titulo: 'No se pudieron cargar las opciones',
-                    mensaje: error.message
-                });
-            })
-            .finally(() => setCargandoOpciones(false));
-    }, [avisarRef]);
-
-    const cambiarCampo = (e) => {
-        const { name, value, type, checked } = e.target;
-        setFormulario((anterior) => ({
-            ...anterior,
-            [name]: type === 'checkbox' ? checked : value
-        }));
-    };
-
-    const guardarInventario = async (e) => {
-        e.preventDefault();
+    const guardar = async (evento) => {
+        evento.preventDefault();
 
         const error = validarInventario(formulario);
         if (error) {
@@ -67,14 +36,13 @@ function InventarioNuevoModal({ onCerrar, onInventarioCreado, onMostrarMensaje }
 
         setGuardando(true);
         try {
-            const data = await insertarInventario(armarDatos(formulario));
-            await onInventarioCreado(data);
-        } catch (err) {
-            console.error(err);
+            await onInventarioCreado(await inventarioApi.crear(datosParaApi(formulario)));
+        } catch (errorRecibido) {
+            console.error(errorRecibido);
             onMostrarMensaje?.({
                 tipo: 'error',
                 titulo: 'No se puede crear el producto',
-                mensaje: err.message || 'Ocurrió un error al crear el producto.'
+                mensaje: errorRecibido.message || 'Ocurrió un error al crear el producto.'
             });
         } finally {
             setGuardando(false);
@@ -82,59 +50,23 @@ function InventarioNuevoModal({ onCerrar, onInventarioCreado, onMostrarMensaje }
     };
 
     return (
-        <div className="modal-fondo" onClick={onCerrar}>
-            <div className="modal-contenido modal-cliente-form" onClick={(e) => e.stopPropagation()}>
-                <header className="cd-encabezado">
-                    <div className="cd-avatar">
-                        <PackagePlus size={25} />
-                    </div>
-                    <div className="cd-titulo">
-                        <h2>Nuevo producto</h2>
-                        <p className="cd-subtitulo">
-                            Complete la información del producto, sus grupos y su inventario.
-                        </p>
-                    </div>
-                    <button
-                        type="button"
-                        className="modal-cerrar"
-                        onClick={onCerrar}
-                        aria-label="Cerrar"
-                        disabled={guardando}
-                    >
-                        <X size={22} />
-                    </button>
-                </header>
-
-                <form onSubmit={guardarInventario}>
-                    <InventarioFormulario
-                        formulario={formulario}
-                        onCambiar={cambiarCampo}
-                        opciones={opciones}
-                        cargandoOpciones={cargandoOpciones}
-                        resaltar
-                    />
-
-                    <div className="modal-footer">
-                        <button type="button" className="btn btn-claro" onClick={onCerrar} disabled={guardando}>
-                            Cancelar
-                        </button>
-                        <button type="submit" className="btn btn-azul" disabled={guardando || cargandoOpciones}>
-                            {guardando ? (
-                                <>
-                                    <Loader2 size={17} className="girando" />
-                                    Guardando...
-                                </>
-                            ) : (
-                                <>
-                                    <Save size={17} />
-                                    Guardar producto
-                                </>
-                            )}
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
+        <ModalFormulario
+            icono={PackagePlus}
+            titulo="Nuevo producto"
+            subtitulo="Complete la información del producto, sus grupos y su inventario."
+            textoGuardar="Guardar producto"
+            guardando={guardando}
+            deshabilitarGuardar={cargandoOpciones}
+            onGuardar={guardar}
+            onCerrar={onCerrar}
+        >
+            <InventarioFormulario
+                formulario={formulario}
+                onCambiar={cambiarCampo}
+                opciones={opciones}
+                cargandoOpciones={cargandoOpciones}
+            />
+        </ModalFormulario>
     );
 }
 

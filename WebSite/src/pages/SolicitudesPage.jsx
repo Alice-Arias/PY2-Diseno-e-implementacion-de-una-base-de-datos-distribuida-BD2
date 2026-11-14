@@ -1,162 +1,165 @@
 /*---------------------------------------------------------------------------------------*
+* NOMBRE: SolicitudesPage.jsx
 *
-* NOMBRE: SolicitudesPage (PY2, rol Corporativo)
+* DESCRIPCION: Página de Solicitudes (rol Corporativo). Lista las solicitudes de los
+* Administradores para ver datos sensibles de un cliente o proveedor. El Corporativo
+* las aprueba (acceso por 1, 4, 8 o 24 horas) o las rechaza. Se actualiza sola cada
+* 15 segundos.
 *
-* DESCRIPCION: Solicitudes de los Administradores para ver datos sensibles de un
-* cliente o proveedor. El Corporativo las aprueba (acceso por unas horas) o las
-* rechaza. Se actualiza sola cada 15 segundos.
+* ENTRADA: Ninguna.
 *
+* SALIDA: La página de Solicitudes.
+*
+* OBJETIVO: Autorizar el acceso a los datos sensibles.
 *-----------------------------------------------------------------------------------------*/
 
 import { useCallback, useEffect, useState } from 'react';
 import { ShieldCheck, Check, X, RefreshCw } from 'lucide-react';
-import StatCard from '../components/StatCard';
-import RelojTema from '../components/RelojTema';
-import { listarSolicitudes, responderSolicitud } from '../services/api';
-import './pagesStyles/Solicitudes.css';
+import EncabezadoPagina from '../components/common/EncabezadoPagina';
+import StatCard from '../components/common/StatCard';
+import { solicitudesApi } from '../services/solicitudesApi';
+import { formatoFechaHora } from '../utils/formato';
 
 const FILTROS = [
-  { valor: 'Pendiente', texto: 'Pendientes' },
-  { valor: '', texto: 'Todas' }
+    { valor: 'Pendiente', texto: 'Pendientes' },
+    { valor: '', texto: 'Todas' }
 ];
+const HORAS_ACCESO = [1, 4, 8, 24];
+const ACTUALIZAR_CADA_MS = 15000;
 
-const fecha = (v) =>
-  v ? new Date(v).toLocaleString('es-CR', { dateStyle: 'short', timeStyle: 'short' }) : '-';
+const fecha = (valor) => formatoFechaHora(valor, '-');
+
+/* Botones Aprobar / Rechazar, o quién respondió. */
+function AccionSolicitud({ solicitud, procesando, onResponder }) {
+    if (solicitud.Estado !== 'Pendiente') {
+        return <small>{solicitud.RespondidoPor ? `por ${solicitud.RespondidoPor}` : '-'}</small>;
+    }
+    return (
+        <div className="solicitudes-acciones">
+            <button type="button" className="aprobar" disabled={procesando} onClick={() => onResponder(solicitud.IdSolicitud, true)}>
+                <Check size={15} /> Aprobar
+            </button>
+            <button type="button" className="rechazar" disabled={procesando} onClick={() => onResponder(solicitud.IdSolicitud, false)}>
+                <X size={15} /> Rechazar
+            </button>
+        </div>
+    );
+}
 
 function SolicitudesPage() {
-  const [filtro, setFiltro] = useState('Pendiente');
-  const [solicitudes, setSolicitudes] = useState([]);
-  const [horas, setHoras] = useState(8);
-  const [error, setError] = useState('');
-  const [procesando, setProcesando] = useState(null);
+    const [filtro, setFiltro] = useState('Pendiente');
+    const [solicitudes, setSolicitudes] = useState([]);
+    const [horas, setHoras] = useState(8);
+    const [error, setError] = useState('');
+    const [procesando, setProcesando] = useState(null);
 
-  const cargar = useCallback(() => {
-    listarSolicitudes(filtro)
-      .then((datos) => { setSolicitudes(datos); setError(''); })
-      .catch((err) => setError(err.message));
-  }, [filtro]);
+    const cargar = useCallback(() => {
+        solicitudesApi.listar(filtro)
+            .then((lista) => { setSolicitudes(lista); setError(''); })
+            .catch((errorRecibido) => setError(errorRecibido.message));
+    }, [filtro]);
 
-  useEffect(() => {
-    cargar();
-    const intervalo = setInterval(cargar, 15000);
-    return () => clearInterval(intervalo);
-  }, [cargar]);
+    useEffect(() => {
+        cargar();
+        const intervalo = setInterval(cargar, ACTUALIZAR_CADA_MS);
+        return () => clearInterval(intervalo);
+    }, [cargar]);
 
-  const responder = async (id, aprobar) => {
-    setProcesando(id);
-    try {
-      await responderSolicitud(id, aprobar, horas);
-      cargar();
-      window.dispatchEvent(new Event('wwi-solicitudes'));   // actualiza el contador del menú
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setProcesando(null);
-    }
-  };
+    const responder = async (idSolicitud, aprobar) => {
+        setProcesando(idSolicitud);
+        try {
+            await solicitudesApi.responder(idSolicitud, aprobar, horas);
+            cargar();
+            window.dispatchEvent(new Event('wwi-solicitudes'));   // Actualiza el contador del menú.
+        } catch (errorRecibido) {
+            setError(errorRecibido.message);
+        } finally {
+            setProcesando(null);
+        }
+    };
 
-  const pendientes = solicitudes.filter((s) => s.Estado === 'Pendiente').length;
+    const pendientes = solicitudes.filter((solicitud) => solicitud.Estado === 'Pendiente').length;
 
-  return (
-    <div>
-      <div className="page-header">
-        <div className="title-block">
-          <div className="icon-box"><ShieldCheck size={22} /></div>
-          <div>
-            <h1>Solicitudes de acceso</h1>
-            <p>Autorice o rechace el acceso de las sucursales a datos sensibles de clientes y proveedores.</p>
-          </div>
+    return (
+        <div>
+            <EncabezadoPagina
+                icono={ShieldCheck}
+                titulo="Solicitudes de acceso"
+                descripcion="Autorice o rechace el acceso de las sucursales a datos sensibles de clientes y proveedores."
+            />
+
+            <div className="stats-row">
+                <StatCard icon={ShieldCheck} color="yellow" label="Pendientes" value={pendientes} sub="Esperando respuesta" />
+            </div>
+
+            <div className="table-card">
+                <div className="toolbar">
+                    <div className="selector-sucursal" role="radiogroup">
+                        {FILTROS.map((opcion) => (
+                            <button key={opcion.valor} type="button" className={filtro === opcion.valor ? 'activo' : ''}
+                                    onClick={() => setFiltro(opcion.valor)}>
+                                {opcion.texto}
+                            </button>
+                        ))}
+                    </div>
+
+                    <label className="solicitudes-horas">
+                        Acceso por
+                        <select value={horas} onChange={(evento) => setHoras(Number(evento.target.value))}>
+                            {HORAS_ACCESO.map((cantidad) => <option key={cantidad} value={cantidad}>{cantidad} h</option>)}
+                        </select>
+                    </label>
+
+                    <button type="button" className="btn-restaurar" onClick={cargar}>
+                        <RefreshCw size={15} /> Actualizar
+                    </button>
+                </div>
+
+                {error && <p className="resumen-error" style={{ padding: '0 1rem' }}>{error}</p>}
+
+                <div className="table-responsive">
+                    <table className="tabla-clientes solicitudes-tabla">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Usuario</th>
+                                <th>Sucursal</th>
+                                <th>Quiere ver</th>
+                                <th>Motivo</th>
+                                <th>Estado</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {solicitudes.length === 0 && (
+                                <tr><td colSpan={7} style={{ textAlign: 'center' }}>No hay solicitudes.</td></tr>
+                            )}
+                            {solicitudes.map((solicitud) => (
+                                <tr key={solicitud.IdSolicitud}>
+                                    <td>{fecha(solicitud.FechaSolicitud)}</td>
+                                    <td>{solicitud.NombreUsuario}<br /><small>{solicitud.Usuario}</small></td>
+                                    <td>{solicitud.Sucursal}</td>
+                                    <td>{solicitud.TipoEntidad}: <strong>{solicitud.NombreEntidad}</strong></td>
+                                    <td>{solicitud.Motivo || '-'}</td>
+                                    <td>
+                                        <span className={`estado-solicitud ${solicitud.Estado.toLowerCase()}`}>{solicitud.Estado}</span>
+                                        {solicitud.Estado === 'Aprobada' && <><br /><small>hasta {fecha(solicitud.VigenteHasta)}</small></>}
+                                    </td>
+                                    <td>
+                                        <AccionSolicitud
+                                            solicitud={solicitud}
+                                            procesando={procesando === solicitud.IdSolicitud}
+                                            onResponder={responder}
+                                        />
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
-        <div className="header-right">
-          <RelojTema />
-        </div>
-      </div>
-
-      <div className="stats-row">
-        <StatCard icon={ShieldCheck} color="yellow" label="Pendientes" value={pendientes} sub="Esperando respuesta" />
-      </div>
-
-      <div className="table-card">
-        <div className="toolbar">
-          <div className="selector-sucursal" role="radiogroup">
-            {FILTROS.map((f) => (
-              <button
-                key={f.valor}
-                type="button"
-                className={filtro === f.valor ? 'activo' : ''}
-                onClick={() => setFiltro(f.valor)}
-              >
-                {f.texto}
-              </button>
-            ))}
-          </div>
-
-          <label className="solicitudes-horas">
-            Acceso por
-            <select value={horas} onChange={(e) => setHoras(Number(e.target.value))}>
-              {[1, 4, 8, 24].map((h) => <option key={h} value={h}>{h} h</option>)}
-            </select>
-          </label>
-
-          <button type="button" className="btn-restaurar" onClick={cargar}>
-            <RefreshCw size={15} /> Actualizar
-          </button>
-        </div>
-
-        {error && <p className="resumen-error" style={{ padding: '0 1rem' }}>{error}</p>}
-
-        <div className="table-responsive">
-          <table className="tabla-clientes solicitudes-tabla">
-            <thead>
-              <tr>
-                <th>Fecha</th>
-                <th>Usuario</th>
-                <th>Sucursal</th>
-                <th>Quiere ver</th>
-                <th>Motivo</th>
-                <th>Estado</th>
-                <th>Acción</th>
-              </tr>
-            </thead>
-            <tbody>
-              {solicitudes.length === 0 && (
-                <tr><td colSpan={7} style={{ textAlign: 'center' }}>No hay solicitudes.</td></tr>
-              )}
-              {solicitudes.map((s) => (
-                <tr key={s.IdSolicitud}>
-                  <td>{fecha(s.FechaSolicitud)}</td>
-                  <td>{s.NombreUsuario}<br /><small>{s.Usuario}</small></td>
-                  <td>{s.Sucursal}</td>
-                  <td>{s.TipoEntidad}: <strong>{s.NombreEntidad}</strong></td>
-                  <td>{s.Motivo || '-'}</td>
-                  <td>
-                    <span className={`estado-solicitud ${s.Estado.toLowerCase()}`}>{s.Estado}</span>
-                    {s.Estado === 'Aprobada' && <><br /><small>hasta {fecha(s.VigenteHasta)}</small></>}
-                  </td>
-                  <td>
-                    {s.Estado === 'Pendiente' ? (
-                      <div className="solicitudes-acciones">
-                        <button type="button" className="aprobar" disabled={procesando === s.IdSolicitud}
-                                onClick={() => responder(s.IdSolicitud, true)}>
-                          <Check size={15} /> Aprobar
-                        </button>
-                        <button type="button" className="rechazar" disabled={procesando === s.IdSolicitud}
-                                onClick={() => responder(s.IdSolicitud, false)}>
-                          <X size={15} /> Rechazar
-                        </button>
-                      </div>
-                    ) : (
-                      <small>{s.RespondidoPor ? `por ${s.RespondidoPor}` : '-'}</small>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
+    );
 }
 
 export default SolicitudesPage;

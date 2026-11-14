@@ -1,33 +1,26 @@
 /*---------------------------------------------------------------------------------------*
+* NOMBRE: main.jsx
 *
-* NOMBRE: Punto de entrada de la aplicacion React
+* DESCRIPCION: Punto de entrada de la web. Carga los estilos (styles/index.css) y
+* monta la aplicación dentro del elemento "root" de index.html, con el enrutador.
 *
-* DESCRIPCION: Inicializa la aplicacion React, importa los estilos globales y el
-* componente principal App, y lo monta dentro del elemento con id "root" del HTML
-* envuelto en StrictMode para detectar problemas potenciales durante el desarrollo.
+* ENTRADA: El elemento <div id="root"> de index.html.
 *
-* ENTRADA: Elemento del DOM con id "root", archivo de estilos index.css y el
-* componente App definido en App.jsx.
+* SALIDA: La aplicación dibujada en el navegador.
 *
-* SALIDA: Interfaz de usuario renderizada en el navegador.
-*
-* RESTRICCIONES: Requiere que exista un elemento con id "root" en el HTML y que los
-* archivos index.css y App.jsx se encuentren disponibles en la ruta indicada.
-*
-* OBJETIVO: Arrancar la aplicacion y renderizar el componente principal en la pagina.
-*
-*---------------------------------------------------------------------------------------*/
+* OBJETIVO: Arrancar la aplicación React.
+*-----------------------------------------------------------------------------------------*/
 
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import { BrowserRouter } from 'react-router-dom'
-import './index.css'
-import App from './App.jsx'
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
+import './styles/index.css';
+import App from './App';
 
 createRoot(document.getElementById('root')).render(
-  <StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
-  </StrictMode>,
-)
+    <StrictMode>
+        <BrowserRouter>
+            <App />
+        </BrowserRouter>
+    </StrictMode>
+);

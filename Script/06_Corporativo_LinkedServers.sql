@@ -1,24 +1,10 @@
 /*---------------------------------------------------------------------------------------*
-*
 * NOMBRE: 06_Corporativo_LinkedServers.sql
-*
-* DESCRIPCION:
-* Crea en el Corporativo los linked servers hacia las sucursales:
-*
-*   LS_SANJOSE -> alias de Windows "sanjose" (127.0.0.1, puerto 1434)
-*   LS_LIMON   -> alias de Windows "limon"   (127.0.0.1, puerto 1435)
-*
-* Los alias se crearon en el registro de Windows, así que los linked servers no
-* dependen de la IP de WSL, que cambia al reiniciar.
-*
-* Se llaman LS_SANJOSE y LS_LIMON (y no SANJOSE y LIMON) para no chocar con los
-* nombres que usará la replicación, que exige el nombre real de cada servidor.
-*
-* La conexión entra con el login "enlace_corporativo" (ver 05_Sucursal_LoginEnlace.sql).
-*
-* RESTRICCIONES: Ejecutar SOLO en el Corporativo, después de 05_Sucursal_LoginEnlace.sql
-* en las dos sucursales.
-*
+* ENTRADA: Los alias "sanjose" y "limon" que crea levantar.sh.
+* DESCRIPCION: Crea los linked servers LS_SANJOSE (1436) y LS_LIMON (1437).
+* SALIDA: Los dos linked servers probados con una consulta.
+* OBJETIVO: Que el Corporativo pueda consultar las dos sucursales.
+* EJECUTAR: Solo en el Corporativo, después del 05.
 *-----------------------------------------------------------------------------------------*/
 
 USE master;

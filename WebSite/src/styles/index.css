@@ -1,0 +1,37 @@
+/*---------------------------------------------------------------------------------------*
+* NOMBRE: styles/index.css
+*
+* DESCRIPCION: Junta todas las hojas de estilo de la web en un solo lugar.
+*
+* ENTRADA: Los archivos .css de esta carpeta.
+*
+* SALIDA: Los estilos de toda la aplicación (se importan una vez en main.jsx).
+*
+* OBJETIVO: Que los estilos estén en una sola carpeta y en un orden fijo.
+*
+* IMPORTANTE: el ORDEN importa. Cada archivo puede ajustar lo que definió uno anterior:
+*   1. base.css      estilos del navegador (cuerpo, fuentes).
+*   2. login/ y modulos/   estilos propios de cada pantalla.
+*   3. app.css       diseño general (menú, tablas, botones, ventanas).
+*   4. tema.css      colores del modo claro y oscuro (debe ir después de app.css).
+*   5. mejoras.css   animaciones, alineación y accesibilidad (va al final).
+*-----------------------------------------------------------------------------------------*/
+
+@import './base.css';
+@import './modulos/solicitudes.css';
+
+@import './login/selector-rol.css';
+@import './login/campo-texto.css';
+@import './login/boton-ingresar.css';
+@import './login/tarjeta-login.css';
+@import './login/pagina-login.css';
+
+@import './modulos/datos-protegidos.css';
+@import './modulos/proveedores.css';
+@import './modulos/inventario.css';
+@import './modulos/ventas.css';
+@import './modulos/reportes.css';
+
+@import './app.css';
+@import './tema.css';
+@import './mejoras.css';

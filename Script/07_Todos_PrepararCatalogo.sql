@@ -1,26 +1,11 @@
 /*---------------------------------------------------------------------------------------*
-*
 * NOMBRE: 07_Todos_PrepararCatalogo.sql
-*
-* DESCRIPCION:
-* Prepara las tablas del catálogo de productos para la replicación transaccional.
-*
-* En WideWorldImporters estas tablas son "temporales" (guardan historial automático
-* con las columnas ValidFrom y ValidTo). La replicación transaccional no admite
-* tablas temporales en el publicador, y en el suscriptor no podría escribir en
-* columnas GENERATED ALWAYS. Por eso, en cada tabla del catálogo:
-*
-*   1. Se apaga el versionado y se elimina la tabla de historial (*_Archive).
-*   2. Se elimina el PERIOD, con lo que ValidFrom y ValidTo pasan a ser columnas normales.
-*   3. Se les agrega un valor por defecto, para que los INSERT existentes
-*      (procedimientos del Proyecto 1) sigan funcionando sin mencionarlas.
-*
-* Tablas: Warehouse.Colors, Warehouse.PackageTypes, Warehouse.StockGroups,
-*         Warehouse.StockItems, Warehouse.StockItemStockGroups
-*
-* RESTRICCIONES: Ejecutar en los TRES nodos (Corporativo, San José y Limón),
-* antes de 08_Corporativo_Replicacion.sql. Se puede ejecutar más de una vez.
-*
+* ENTRADA: Las tablas del catálogo de productos.
+* DESCRIPCION: Quita el versionado temporal (historial) de las tablas del catálogo,
+*   porque la replicación no las acepta.
+* SALIDA: Tablas del catálogo listas para replicarse.
+* OBJETIVO: Cumplir los requisitos de la replicación transaccional.
+* EJECUTAR: En los tres nodos, antes del 08. Se puede repetir.
 *-----------------------------------------------------------------------------------------*/
 
 USE WideWorldImporters;

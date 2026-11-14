@@ -1,33 +1,11 @@
 /*---------------------------------------------------------------------------------------*
-*
 * NOMBRE: 17_Corporativo_SolicitudesAcceso.sql
-*
-* DESCRIPCION:
-* Control de acceso a los datos sensibles de clientes y proveedores (teléfonos,
-* direcciones, contactos y datos bancarios), que viven SOLO en el Corporativo.
-*
-*   1. El Administrador de una sucursal ve esos datos como "xxxx".
-*   2. Puede pedir acceso a un cliente o proveedor: se registra una solicitud.
-*   3. El Corporativo la aprueba o la rechaza.
-*   4. Si la aprueba, el Administrador puede ver los datos durante unas horas
-*      (8 por defecto). El Corporativo solo entrega los datos si existe una
-*      aprobación vigente: la regla se cumple en la base de datos, no en la web.
-*
-*   Tabla:  Seguridad.SolicitudesAcceso
-*
-*   Procedimientos para el Administrador (rol_admin_catalogo, login app_admin):
-*     Seguridad.SP_Solicitud_Crear
-*     Seguridad.SP_Solicitud_Estado
-*     Seguridad.SP_DatosSensibles_Obtener
-*
-*   Procedimientos para el Corporativo (rol_corporativo, login app_corporativo):
-*     Seguridad.SP_Solicitudes_Listar
-*     Seguridad.SP_Solicitudes_Pendientes
-*     Seguridad.SP_Solicitud_Responder
-*
-* RESTRICCIONES: Ejecutar SOLO en el Corporativo, después de 03, 09 y 10.
-* Se puede ejecutar más de una vez.
-*
+* ENTRADA: Seguridad.Usuarios y las vistas Sensible.*.
+* DESCRIPCION: El Administrador pide ver los datos sensibles de un cliente o proveedor y
+*   el Corporativo aprueba o rechaza. Con aprobación los ve por unas horas.
+* SALIDA: Tabla Seguridad.SolicitudesAcceso y los procedimientos Seguridad.SP_Solicitud*.
+* OBJETIVO: Que la regla de acceso se cumpla en la base de datos.
+* EJECUTAR: Solo en el Corporativo, después del 03, 09 y 10. Se puede repetir.
 *-----------------------------------------------------------------------------------------*/
 
 USE WideWorldImporters;
@@ -71,9 +49,8 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = N'IX_SolicitudesAcceso_Bus
 GO
 
 /*---------------------------------------------------------------------------------------*
-* Seguridad.SP_Solicitud_Estado
-* Última solicitud de un usuario para un cliente o proveedor.
-* EstadoActual: SinSolicitud | Pendiente | Aprobada | Rechazada | Vencida
+* Seguridad.SP_Solicitud_Estado: última solicitud del usuario para un cliente o proveedor.
+* Estado: SinSolicitud, Pendiente, Aprobada, Rechazada o Vencida.
 *-----------------------------------------------------------------------------------------*/
 
 CREATE OR ALTER PROCEDURE Seguridad.SP_Solicitud_Estado
@@ -105,8 +82,7 @@ END
 GO
 
 /*---------------------------------------------------------------------------------------*
-* Seguridad.SP_Solicitud_Crear
-* Registra la solicitud. Si ya hay una pendiente o una aprobación vigente, no crea otra.
+* Seguridad.SP_Solicitud_Crear: registra la solicitud (no repite si ya hay una activa)
 *-----------------------------------------------------------------------------------------*/
 
 CREATE OR ALTER PROCEDURE Seguridad.SP_Solicitud_Crear
@@ -150,10 +126,7 @@ END
 GO
 
 /*---------------------------------------------------------------------------------------*
-* Seguridad.SP_DatosSensibles_Obtener
-* Entrega los datos sensibles SOLO si el usuario tiene una aprobación vigente.
-* Los nombres de las columnas coinciden con los de SP_Clientes_Detalle y
-* SP_Proveedores_Detalle, para que la web los muestre en el mismo lugar.
+* Seguridad.SP_DatosSensibles_Obtener: datos sensibles, solo con aprobación vigente
 *-----------------------------------------------------------------------------------------*/
 
 CREATE OR ALTER PROCEDURE Seguridad.SP_DatosSensibles_Obtener
@@ -255,6 +228,10 @@ BEGIN
 END
 GO
 
+/*---------------------------------------------------------------------------------------*
+* Seguridad.SP_Solicitudes_Pendientes: cantidad de pendientes (contador del menú)
+*-----------------------------------------------------------------------------------------*/
+
 CREATE OR ALTER PROCEDURE Seguridad.SP_Solicitudes_Pendientes
 AS
 BEGIN
@@ -262,6 +239,10 @@ BEGIN
     SELECT COUNT(*) AS Pendientes FROM Seguridad.SolicitudesAcceso WHERE Estado = N'Pendiente';
 END
 GO
+
+/*---------------------------------------------------------------------------------------*
+* Seguridad.SP_Solicitud_Responder: aprueba (1) o rechaza (0); @Horas de acceso (8)
+*-----------------------------------------------------------------------------------------*/
 
 CREATE OR ALTER PROCEDURE Seguridad.SP_Solicitud_Responder
     @IdSolicitud   INT,

@@ -1,27 +1,10 @@
 /*---------------------------------------------------------------------------------------*
-*
 * NOMBRE: 11_Sucursal_SeguridadApp.sql
-*
-* DESCRIPCION:
-* Relaciona el usuario Administrador de la aplicación con un usuario de base de
-* datos en la sucursal. Cuando un Administrador inicia sesión, la API se conecta a
-* SU sucursal con el login "app_admin", que solo puede EJECUTAR los procedimientos
-* de la aplicación (los SP_... del Proyecto 1: clientes, proveedores, inventario y
-* ventas). No tiene permiso para leer ni modificar tablas directamente.
-*
-*   Login (servidor)   Rol de base de datos    Puede ejecutar
-*   ----------------   ---------------------   ---------------------------------
-*   app_admin          rol_admin_sucursal      Procedimientos dbo.SP_...
-*
-* Los permisos se otorgan con el procedimiento dbo.usp_OtorgarPermisosApp, que da
-* EXECUTE sobre cada procedimiento cuyo nombre empiece con "SP_". Hay que volver a
-* ejecutarlo cada vez que se agreguen procedimientos nuevos a la sucursal.
-* (Los procedimientos internos, como usp_EliminarColumna, NO quedan disponibles.)
-*
-* El MISMO script sirve para San José y para Limón.
-*
-* RESTRICCIONES: Ejecutar SOLO en las sucursales. Se puede ejecutar más de una vez.
-*
+* ENTRADA: Ninguna.
+* DESCRIPCION: Login app_admin de la sucursal: solo puede ejecutar los procedimientos SP_.
+* SALIDA: Login app_admin, rol rol_admin_sucursal y dbo.usp_OtorgarPermisosApp.
+* OBJETIVO: Que la API entre a la sucursal solo con permiso de ejecutar.
+* EJECUTAR: En cada sucursal. Se puede repetir.
 *-----------------------------------------------------------------------------------------*/
 
 USE master;

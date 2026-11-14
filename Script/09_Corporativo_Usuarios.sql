@@ -1,26 +1,12 @@
-/*
------------------------------------------------------------------------------------------
-NOMBRE: 09_Corporativo_Usuarios.sql
-
-DESCRIPCION:
-Crea la tabla de usuarios del Corporativo y protege las contraseñas
-mediante el cifrado nativo de SQL Server.
-
-Jerarquía de cifrado:
-    Service Master Key
-        └── Database Master Key
-              └── Certificado CertUsuarios
-                    └── Llave simétrica LlaveUsuarios (AES_256)
-                          └── Columna password
-
-Procedimientos:
-    Seguridad.SP_Usuario_Insertar
-    Seguridad.SP_Usuario_Login
-
-RESTRICCIONES:
-    Ejecutar solamente en el Corporativo.
------------------------------------------------------------------------------------------
-*/
+/*---------------------------------------------------------------------------------------*
+* NOMBRE: 09_Corporativo_Usuarios.sql
+* ENTRADA: Ninguna. Crea los usuarios de prueba.
+* DESCRIPCION: Tabla de usuarios de la aplicación con la contraseña cifrada (AES_256),
+*   y los procedimientos para crear usuarios e iniciar sesión.
+* SALIDA: Seguridad.Usuarios, SP_Usuario_Insertar y SP_Usuario_Login.
+* OBJETIVO: Que las contraseñas nunca se guarden en texto plano.
+* EJECUTAR: Solo en el Corporativo.
+*-----------------------------------------------------------------------------------------*/
 
 USE WideWorldImporters;
 GO
@@ -484,29 +470,29 @@ SELECT
 FROM Seguridad.Usuarios;
 
 /*-----------------------------------------------------------------------------------------
-  PASO 6. VERIFICACIÓN DE INICIO DE SESIÓN
+  PASO 7. VERIFICACIÓN DE INICIO DE SESIÓN
 -----------------------------------------------------------------------------------------*/
 
--- 6.1 Inicio de sesión correcto: Administrador de San José.
+-- 7.1 Inicio de sesión correcto: Administrador de San José.
 EXEC Seguridad.SP_Usuario_Login
     @username = N'admin.sanjose',
     @password = N'Admin#2026';
 
 
--- 6.2 Inicio de sesión incorrecto: contraseña equivocada.
+-- 7.2 Inicio de sesión incorrecto: contraseña equivocada.
 -- No debe devolver ninguna fila.
 EXEC Seguridad.SP_Usuario_Login
     @username = N'admin.sanjose',
     @password = N'otra';
 
 
--- 6.3 Inicio de sesión correcto: Administrador de Limón.
+-- 7.3 Inicio de sesión correcto: Administrador de Limón.
 EXEC Seguridad.SP_Usuario_Login
     @username = N'admin.limon',
     @password = N'Admin#2026';
 
 
--- 6.4 Inicio de sesión correcto: Gerente Corporativo.
+-- 7.4 Inicio de sesión correcto: Gerente Corporativo.
 EXEC Seguridad.SP_Usuario_Login
     @username = N'gerente.corporativo',
     @password = N'Gerente#2026';
