@@ -1,17 +1,10 @@
 /*---------------------------------------------------------------------------------------*
-*
 * NOMBRE: 03_Corporativo_LoginEnlace.sql
-*
-* DESCRIPCION:
-* Crea en el Corporativo el login "enlace_sucursal", que usan las sucursales para
-* conectarse al Corporativo por medio del linked server CORPORATIVO.
-*
-* Se usa un login propio en lugar de "sa" para que las sucursales no tengan control
-* total del Corporativo: solo pueden leer y escribir datos de WideWorldImporters y
-* ejecutar procedimientos almacenados.
-*
-* RESTRICCIONES: Ejecutar SOLO en el Corporativo.
-*
+* ENTRADA: Ninguna.
+* DESCRIPCION: Crea el login enlace_sucursal y las vistas Sensible.* (datos sensibles).
+* SALIDA: Login enlace_sucursal y vistas Sensible.Clientes, Proveedores y Personas.
+* OBJETIVO: Que las sucursales entren al Corporativo con permisos limitados, no con "sa".
+* EJECUTAR: Solo en el Corporativo.
 *-----------------------------------------------------------------------------------------*/
 
 USE master;
@@ -51,17 +44,14 @@ PRINT N'Login enlace_sucursal listo en el Corporativo.';
 GO
 
 /*---------------------------------------------------------------------------------------*
-* Vistas de datos sensibles
-*
-* Las sucursales leen los datos sensibles a través de estas vistas. No exponen las
-* columnas de tipo geography (SQL Server no permite leerlas por linked server); la
-* ubicación se entrega como latitud y longitud.
+* Vistas de datos sensibles (la ubicación sale como latitud y longitud)
 *-----------------------------------------------------------------------------------------*/
 
 IF SCHEMA_ID(N'Sensible') IS NULL
     EXEC (N'CREATE SCHEMA Sensible');
 GO
 
+/* Sensible.Clientes: contactos, teléfonos, web, direcciones y ubicación de cada cliente. */
 CREATE OR ALTER VIEW Sensible.Clientes
 AS
 SELECT  c.CustomerID,
@@ -81,6 +71,7 @@ SELECT  c.CustomerID,
 FROM    Sales.Customers AS c;
 GO
 
+/* Sensible.Proveedores: contactos, teléfonos, direcciones y datos bancarios de cada proveedor. */
 CREATE OR ALTER VIEW Sensible.Proveedores
 AS
 SELECT  s.SupplierID,
@@ -105,6 +96,7 @@ SELECT  s.SupplierID,
 FROM    Purchasing.Suppliers AS s;
 GO
 
+/* Sensible.Personas: nombre, teléfono y correo de cada persona de contacto. */
 CREATE OR ALTER VIEW Sensible.Personas
 AS
 SELECT  p.PersonID,

@@ -1,29 +1,12 @@
 /*---------------------------------------------------------------------------------------*
-*
 * NOMBRE: 01_Corporativo_Fragmentacion.sql
-*
-* DESCRIPCION:
-* Prepara el nodo Corporativo (SQL Server en Windows) dentro del diseño distribuido.
-*
-*   - Registra la identidad del nodo en dbo.ConfigNodo (SucursalID = 0).
-*   - Elimina la política de seguridad de ejemplo de WideWorldImporters, que filtraría
-*     los clientes al usar usuarios de base de datos que no sean dueños de la base.
-*   - Agrega la columna SucursalID a Pedidos, Facturas y Órdenes de compra para
-*     identificar a qué fragmento horizontal pertenece cada fila. El Corporativo
-*     conserva la copia consolidada de todas las filas para las estadísticas.
-*
-*   El Corporativo NO pierde columnas: es el único nodo que guarda los datos
-*   sensibles de clientes, proveedores y contactos (fragmentación vertical).
-*
-* REGLA DE FRAGMENTACIÓN HORIZONTAL (igual en todos los nodos):
-*   Pedido par   -> San José (SucursalID = 1)
-*   Pedido impar -> Limón    (SucursalID = 2)
-*   Las facturas siguen a su pedido; si no tienen pedido, se usa el número de factura.
-*   Las órdenes de compra se reparten por la paridad de su número.
-*
-* RESTRICCIONES: Ejecutar SOLO en el Corporativo, sobre la base WideWorldImporters
-* recién restaurada. El script se detiene solo si detecta que está en una sucursal.
-*
+* ENTRADA: La base WideWorldImporters recién restaurada.
+* DESCRIPCION: Prepara el Corporativo: lo registra como nodo 0, quita la política de
+*   ejemplo de WWI y marca cada pedido, factura y orden de compra con su sucursal.
+*   Regla: pedido par -> San José (1), impar -> Limón (2). La factura sigue a su pedido.
+* SALIDA: Columna SucursalID en las tablas y cuántas filas tiene cada sucursal.
+* OBJETIVO: Que el Corporativo guarde todo: datos sensibles y copia de las dos sucursales.
+* EJECUTAR: Solo en el Corporativo.
 *-----------------------------------------------------------------------------------------*/
 
 USE WideWorldImporters;

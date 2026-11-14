@@ -1,40 +1,13 @@
 /*---------------------------------------------------------------------------------------*
-*
 * NOMBRE: 16_Corporativo_Estadisticas.sql
-*
-* DESCRIPCION:
-* Estadísticas del rol Corporativo, con filtro por sucursal o consolidado.
-*
-*   1. CONSOLIDACIÓN (Estadisticas.SP_Sincronizar)
-*      Cada sucursal guarda sus facturas (fragmentación horizontal). El Corporativo
-*      tiene una copia consolidada que se actualiza cada 5 minutos con un job de
-*      SQL Server Agent: trae por los linked servers las facturas nuevas o modificadas
-*      y las existencias de cada sucursal. Como cada sucursal genera sus IDs en un
-*      rango distinto (10 000 000+ y 20 000 000+), nunca chocan al consolidar.
-*
-*      Fallas: si una sucursal no responde, se salta, se registra "Sin conexión" en
-*      Estadisticas.ControlSincronizacion y las estadísticas siguen mostrando sus
-*      últimos datos, con la fecha de corte.
-*
-*   2. VISTAS MATERIALIZADAS (vistas indexadas)
-*      Estadisticas.vw_TotalesFactura      -> monto, ganancia y líneas por factura
-*      Estadisticas.vw_VentasSucursalMes   -> ventas por sucursal, año y mes
-*      SQL Server guarda su resultado ya calculado y lo mantiene al día solo cuando
-*      entran facturas nuevas.
-*
-*   3. FILTRO POR SUCURSAL EN LOS 11 REPORTES DEL PROYECTO
-*      Los reportes de SP_Reportes.sql se instalan aquí casi sin cambios: solo reciben
-*      @Sucursal (NULL = consolidado, 1 = San José, 2 = Limón) y lo guardan en
-*      SESSION_CONTEXT. Los sinónimos dbo.Facturas, dbo.OrdenesCompra,
-*      dbo.ProductosInventario y dbo.ProductosTransacciones apuntan a vistas que
-*      filtran según ese valor.
-*
-*   4. Estadisticas.SP_Resumen_Sucursales: tarjetas, ventas por mes, comparativo
-*      entre sucursales y estado de la sincronización (lee las vistas materializadas).
-*
-* RESTRICCIONES: Ejecutar SOLO en el Corporativo, después de 06, 10 y 14.
-* Se puede ejecutar más de una vez.
-*
+* ENTRADA: Los linked servers a las sucursales.
+* DESCRIPCION: Estadísticas del Corporativo, por sucursal o consolidadas:
+*   1. SP_Sincronizar trae las facturas nuevas de las sucursales (job cada 5 min).
+*   2. Vistas indexadas y tablas de resumen para que los reportes sean rápidos.
+*   3. Los 11 reportes del proyecto con el filtro @Sucursal.
+* SALIDA: Sincronización, vistas, resúmenes, job y reportes.
+* OBJETIVO: Reportes rápidos que siguen funcionando si una sucursal se cae.
+* EJECUTAR: Solo en el Corporativo, después del 06, 10 y 14. Se puede repetir.
 *-----------------------------------------------------------------------------------------*/
 
 /* Opciones obligatorias para crear y mantener vistas indexadas. */
@@ -93,10 +66,90 @@ IF OBJECT_ID(N'Estadisticas.InventarioSucursal', N'U') IS NULL
     );
 GO
 
+/* Resúmenes de los reportes pesados (los llena Estadisticas.SP_ActualizarResumenes). */
+
+/* Compras de cada cliente por sucursal, año y mes (Seguimiento de compras de clientes). */
+IF OBJECT_ID(N'Estadisticas.ResumenClienteMes', N'U') IS NULL
+    CREATE TABLE Estadisticas.ResumenClienteMes
+    (
+        SucursalID      TINYINT        NULL,
+        CustomerID      INT            NOT NULL,
+        Anio            INT            NOT NULL,
+        Mes             INT            NOT NULL,
+        Monto           DECIMAL(38,2)  NOT NULL,
+        PrimeraFactura  DATE           NOT NULL,
+        UltimaFactura   DATE           NOT NULL,
+        Cantidad        BIGINT         NOT NULL,
+        CantidadMinima  INT            NOT NULL,
+        CantidadMaxima  INT            NOT NULL
+    );
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'Estadisticas.ResumenClienteMes') AND index_id = 1)
+    CREATE CLUSTERED INDEX IX_ResumenClienteMes
+        ON Estadisticas.ResumenClienteMes (SucursalID, Anio, Mes, CustomerID);
+GO
+
+/* Lo mismo, separado por grupo de producto (se usa cuando se filtra por categoría). */
+IF OBJECT_ID(N'Estadisticas.ResumenClienteMesGrupo', N'U') IS NULL
+    CREATE TABLE Estadisticas.ResumenClienteMesGrupo
+    (
+        SucursalID      TINYINT        NULL,
+        CustomerID      INT            NOT NULL,
+        Anio            INT            NOT NULL,
+        Mes             INT            NOT NULL,
+        StockGroupID    INT            NOT NULL,
+        Monto           DECIMAL(38,2)  NOT NULL,
+        PrimeraFactura  DATE           NOT NULL,
+        UltimaFactura   DATE           NOT NULL,
+        Cantidad        BIGINT         NOT NULL,
+        CantidadMinima  INT            NOT NULL,
+        CantidadMaxima  INT            NOT NULL
+    );
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'Estadisticas.ResumenClienteMesGrupo') AND index_id = 1)
+    CREATE CLUSTERED INDEX IX_ResumenClienteMesGrupo
+        ON Estadisticas.ResumenClienteMesGrupo (StockGroupID, SucursalID, Anio, Mes, CustomerID);
+GO
+
+/* Unidades que salieron de cada producto por sucursal y año (Rotación de inventario). */
+IF OBJECT_ID(N'Estadisticas.ConsumoProductoAnio', N'U') IS NULL
+    CREATE TABLE Estadisticas.ConsumoProductoAnio
+    (
+        SucursalID   TINYINT        NOT NULL,
+        StockItemID  INT            NOT NULL,
+        Anio         INT            NOT NULL,
+        Cantidad     DECIMAL(38,3)  NOT NULL,
+        CONSTRAINT PK_ConsumoProductoAnio PRIMARY KEY (SucursalID, StockItemID, Anio)
+    );
+GO
+
+/* Primer y último movimiento de inventario de cada sucursal (periodo de la rotación). */
+IF OBJECT_ID(N'Estadisticas.RangoMovimientos', N'U') IS NULL
+    CREATE TABLE Estadisticas.RangoMovimientos
+    (
+        SucursalID       TINYINT       NOT NULL CONSTRAINT PK_RangoMovimientos PRIMARY KEY,
+        PrimerMovimiento DATETIME2(7)  NOT NULL,
+        UltimoMovimiento DATETIME2(7)  NOT NULL
+    );
+GO
+
+/* Con qué datos se calculó cada resumen: si no cambiaron, no se vuelve a calcular. */
+IF OBJECT_ID(N'Estadisticas.ControlResumenes', N'U') IS NULL
+    CREATE TABLE Estadisticas.ControlResumenes
+    (
+        Resumen      NVARCHAR(50)   NOT NULL CONSTRAINT PK_ControlResumenes PRIMARY KEY,
+        Firma        NVARCHAR(200)  NOT NULL,
+        Actualizado  DATETIME2(0)   NOT NULL
+    );
+GO
+
 /*---------------------------------------------------------------------------------------*
 * Paso 2: vistas materializadas (vistas indexadas)
 *-----------------------------------------------------------------------------------------*/
 
+/* vw_TotalesFactura: monto, ganancia, unidades y líneas de cada factura (ya calculados). */
 IF OBJECT_ID(N'Estadisticas.vw_TotalesFactura', N'V') IS NULL
     EXEC (N'
     CREATE VIEW Estadisticas.vw_TotalesFactura
@@ -116,6 +169,7 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'Estadisti
         ON Estadisticas.vw_TotalesFactura (InvoiceID);
 GO
 
+/* vw_VentasSucursalMes: ventas por sucursal, año y mes (tarjetas y gráfico de Reportes). */
 IF OBJECT_ID(N'Estadisticas.vw_VentasSucursalMes', N'V') IS NULL
     EXEC (N'
     CREATE VIEW Estadisticas.vw_VentasSucursalMes
@@ -136,6 +190,27 @@ GO
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'Estadisticas.vw_VentasSucursalMes') AND index_id = 1)
     CREATE UNIQUE CLUSTERED INDEX IX_vw_VentasSucursalMes
         ON Estadisticas.vw_VentasSucursalMes (SucursalID, Anio, Mes);
+GO
+
+/* vw_GananciaProductoAnio: ganancia por sucursal, año y producto (Productos con más ganancia). */
+IF OBJECT_ID(N'Estadisticas.vw_GananciaProductoAnio', N'V') IS NULL
+    EXEC (N'
+    CREATE VIEW Estadisticas.vw_GananciaProductoAnio
+    WITH SCHEMABINDING
+    AS
+    SELECT  i.SucursalID,
+            YEAR(i.InvoiceDate)  AS Anio,
+            il.StockItemID,
+            SUM(il.LineProfit)   AS Ganancia,
+            COUNT_BIG(*)         AS Lineas
+    FROM    Sales.Invoices     AS i
+    JOIN    Sales.InvoiceLines AS il ON il.InvoiceID = i.InvoiceID
+    GROUP BY i.SucursalID, YEAR(i.InvoiceDate), il.StockItemID;');
+GO
+
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE object_id = OBJECT_ID(N'Estadisticas.vw_GananciaProductoAnio') AND index_id = 1)
+    CREATE UNIQUE CLUSTERED INDEX IX_vw_GananciaProductoAnio
+        ON Estadisticas.vw_GananciaProductoAnio (SucursalID, Anio, StockItemID);
 GO
 
 /* Índice de apoyo: los reportes filtran las facturas por sucursal y fecha, y las unen
@@ -253,10 +328,8 @@ DEALLOCATE cur;
 GO
 
 /*---------------------------------------------------------------------------------------*
-* Paso 5: sincronización (consolidación de las sucursales en el Corporativo)
-*
-* WITH EXECUTE AS OWNER: los linked servers solo los puede usar el dueño de la base
-* (ver 14_Corporativo_Catalogo.sql). Así también lo puede ejecutar app_corporativo.
+* Paso 5: sincronización (trae lo nuevo de las sucursales).
+* EXECUTE AS OWNER: así app_corporativo puede usar los linked servers.
 *-----------------------------------------------------------------------------------------*/
 
 CREATE OR ALTER PROCEDURE Estadisticas.SP_Sincronizar
@@ -429,6 +502,156 @@ END
 GO
 
 /*---------------------------------------------------------------------------------------*
+* Paso 5b: Estadisticas.SP_ActualizarResumenes
+* ENTRADA: @Forzar = 1 recalcula aunque nada haya cambiado.
+* DESCRIPCION: Recalcula las tablas de resumen solo si cambiaron las facturas o
+*   los movimientos. Si ya se está ejecutando, no hace nada.
+* SALIDA: Qué resúmenes se recalcularon.
+* OBJETIVO: Que los reportes pesados respondan al instante.
+*-----------------------------------------------------------------------------------------*/
+
+CREATE OR ALTER PROCEDURE Estadisticas.SP_ActualizarResumenes
+    @Forzar BIT = 0
+WITH EXECUTE AS OWNER
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+    SET ANSI_WARNINGS ON;
+    SET ARITHABORT ON;
+
+    /* Una sola ejecución a la vez. */
+    DECLARE @Bloqueo INT;
+    EXEC @Bloqueo = sys.sp_getapplock @Resource = N'WWI_ActualizarResumenes', @LockMode = N'Exclusive',
+                                      @LockOwner = N'Session', @LockTimeout = 0;
+    IF @Bloqueo < 0
+    BEGIN
+        SELECT N'Ya se estaban actualizando los resúmenes.' AS Resultado;
+        RETURN;
+    END
+
+    BEGIN TRY
+
+    /* Las vistas Estadisticas.v* deben devolver las dos sucursales. */
+    EXEC sys.sp_set_session_context @key = N'Sucursal', @value = NULL;
+
+    DECLARE @Resultado TABLE (Resumen NVARCHAR(50), Accion NVARCHAR(30));
+
+    DECLARE @FirmaFacturas NVARCHAR(200) = CONCAT(
+        (SELECT CONCAT(COUNT_BIG(*), N'|', CONVERT(NVARCHAR(30), MAX(LastEditedWhen), 126)) FROM Sales.Invoices), N'|',
+        (SELECT CONCAT(COUNT_BIG(*), N'|', CONVERT(NVARCHAR(30), MAX(LastEditedWhen), 126)) FROM Sales.InvoiceLines));
+
+    DECLARE @FirmaMovimientos NVARCHAR(200) =
+        (SELECT CONCAT(COUNT_BIG(*), N'|', MAX(StockItemTransactionID), N'|', CONVERT(NVARCHAR(30), MAX(LastEditedWhen), 126))
+         FROM Warehouse.StockItemTransactions);
+
+    /* ---------------- 1. Compras de clientes por mes ---------------- */
+    IF @Forzar = 1 OR NOT EXISTS (SELECT 1 FROM Estadisticas.ControlResumenes
+                                  WHERE Resumen = N'Facturas' AND Firma = @FirmaFacturas)
+    BEGIN
+        /* Una fila por línea y grupo del producto, igual que el reporte original. */
+        SELECT  i.SucursalID,
+                i.CustomerID,
+                YEAR(i.InvoiceDate)              AS Anio,
+                MONTH(i.InvoiceDate)             AS Mes,
+                ig.StockGroupID,
+                SUM(il.ExtendedPrice)            AS Monto,
+                MIN(i.InvoiceDate)               AS PrimeraFactura,
+                MAX(i.InvoiceDate)               AS UltimaFactura,
+                SUM(CAST(il.Quantity AS BIGINT)) AS Cantidad,
+                MIN(il.Quantity)                 AS CantidadMinima,
+                MAX(il.Quantity)                 AS CantidadMaxima
+        INTO    #PorGrupo
+        FROM    Sales.Invoices                 AS i
+        JOIN    Sales.InvoiceLines             AS il ON il.InvoiceID = i.InvoiceID
+        JOIN    Warehouse.StockItemStockGroups AS ig ON ig.StockItemID = il.StockItemID
+        GROUP BY i.SucursalID, i.CustomerID, YEAR(i.InvoiceDate), MONTH(i.InvoiceDate), ig.StockGroupID;
+
+        BEGIN TRANSACTION;
+            DELETE FROM Estadisticas.ResumenClienteMesGrupo;
+            INSERT INTO Estadisticas.ResumenClienteMesGrupo
+                (SucursalID, CustomerID, Anio, Mes, StockGroupID, Monto, PrimeraFactura, UltimaFactura,
+                 Cantidad, CantidadMinima, CantidadMaxima)
+            SELECT SucursalID, CustomerID, Anio, Mes, StockGroupID, Monto, PrimeraFactura, UltimaFactura,
+                   Cantidad, CantidadMinima, CantidadMaxima
+            FROM   #PorGrupo;
+
+            DELETE FROM Estadisticas.ResumenClienteMes;
+            INSERT INTO Estadisticas.ResumenClienteMes
+                (SucursalID, CustomerID, Anio, Mes, Monto, PrimeraFactura, UltimaFactura,
+                 Cantidad, CantidadMinima, CantidadMaxima)
+            SELECT SucursalID, CustomerID, Anio, Mes, SUM(Monto), MIN(PrimeraFactura), MAX(UltimaFactura),
+                   SUM(Cantidad), MIN(CantidadMinima), MAX(CantidadMaxima)
+            FROM   #PorGrupo
+            GROUP BY SucursalID, CustomerID, Anio, Mes;
+
+            MERGE Estadisticas.ControlResumenes AS destino
+            USING (SELECT N'Facturas' AS Resumen) AS origen ON destino.Resumen = origen.Resumen
+            WHEN MATCHED THEN UPDATE SET Firma = @FirmaFacturas, Actualizado = SYSDATETIME()
+            WHEN NOT MATCHED THEN INSERT (Resumen, Firma, Actualizado) VALUES (N'Facturas', @FirmaFacturas, SYSDATETIME());
+        COMMIT TRANSACTION;
+
+        INSERT INTO @Resultado VALUES (N'Compras de clientes', N'Recalculado');
+    END
+    ELSE
+        INSERT INTO @Resultado VALUES (N'Compras de clientes', N'Sin cambios');
+
+    /* ---------------- 2. Movimientos de inventario ---------------- */
+    IF @Forzar = 1 OR NOT EXISTS (SELECT 1 FROM Estadisticas.ControlResumenes
+                                  WHERE Resumen = N'Movimientos' AND Firma = @FirmaMovimientos)
+    BEGIN
+        /* La sucursal de cada movimiento sale de la vista (misma regla de fragmentación). */
+        SELECT  mov.SucursalID,
+                mov.StockItemID,
+                YEAR(mov.TransactionOccurredWhen) AS Anio,
+                SUM(ABS(mov.Quantity))            AS Cantidad
+        INTO    #Consumo
+        FROM    Estadisticas.vProductosTransacciones AS mov
+        WHERE   mov.Quantity < 0
+        GROUP BY mov.SucursalID, mov.StockItemID, YEAR(mov.TransactionOccurredWhen);
+
+        SELECT  mov.SucursalID,
+                MIN(mov.TransactionOccurredWhen) AS PrimerMovimiento,
+                MAX(mov.TransactionOccurredWhen) AS UltimoMovimiento
+        INTO    #Rango
+        FROM    Estadisticas.vProductosTransacciones AS mov
+        GROUP BY mov.SucursalID;
+
+        BEGIN TRANSACTION;
+            DELETE FROM Estadisticas.ConsumoProductoAnio;
+            INSERT INTO Estadisticas.ConsumoProductoAnio (SucursalID, StockItemID, Anio, Cantidad)
+            SELECT SucursalID, StockItemID, Anio, Cantidad FROM #Consumo;
+
+            DELETE FROM Estadisticas.RangoMovimientos;
+            INSERT INTO Estadisticas.RangoMovimientos (SucursalID, PrimerMovimiento, UltimoMovimiento)
+            SELECT SucursalID, PrimerMovimiento, UltimoMovimiento FROM #Rango;
+
+            MERGE Estadisticas.ControlResumenes AS destino
+            USING (SELECT N'Movimientos' AS Resumen) AS origen ON destino.Resumen = origen.Resumen
+            WHEN MATCHED THEN UPDATE SET Firma = @FirmaMovimientos, Actualizado = SYSDATETIME()
+            WHEN NOT MATCHED THEN INSERT (Resumen, Firma, Actualizado) VALUES (N'Movimientos', @FirmaMovimientos, SYSDATETIME());
+        COMMIT TRANSACTION;
+
+        INSERT INTO @Resultado VALUES (N'Movimientos de inventario', N'Recalculado');
+    END
+    ELSE
+        INSERT INTO @Resultado VALUES (N'Movimientos de inventario', N'Sin cambios');
+
+    EXEC sys.sp_releaseapplock @Resource = N'WWI_ActualizarResumenes', @LockOwner = N'Session';
+
+    SELECT Resumen, Accion FROM @Resultado;
+
+    END TRY
+    BEGIN CATCH
+        /* Si algo falla, se deshace y se libera el bloqueo para la próxima vez. */
+        IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION;
+        EXEC sys.sp_releaseapplock @Resource = N'WWI_ActualizarResumenes', @LockOwner = N'Session';
+        THROW;
+    END CATCH
+END
+GO
+
+/*---------------------------------------------------------------------------------------*
 * Paso 6: resumen por sucursal (lee las vistas materializadas)
 *-----------------------------------------------------------------------------------------*/
 
@@ -478,8 +701,7 @@ END
 GO
 
 /*---------------------------------------------------------------------------------------*
-* Paso 7: los 11 reportes del proyecto, con @Sucursal
-*         (SP_Reportes.sql actual; único cambio: parámetro @Sucursal + SESSION_CONTEXT)
+* Paso 7: los 11 reportes del proyecto, con el filtro @Sucursal
 *-----------------------------------------------------------------------------------------*/
 
 CREATE OR ALTER PROCEDURE dbo.SP_Reporte_ComprasProveedores
@@ -635,29 +857,27 @@ GO
 CREATE OR ALTER PROCEDURE dbo.SP_Top_GananciaProductos
     @Sucursal TINYINT = NULL,     -- NULL = consolidado, 1 = San José, 2 = Limón
     @Anio INT = NULL,
-    @Pagina       INT = 1,      -- NULL = todas las filas (CSV)
+    @Pagina       INT = 1,      -- NULL = todas las filas (Excel)
     @TamanoPagina INT = 10
 AS
 BEGIN
     SET NOCOUNT ON;
-
-    /* Filtro por sucursal: lo leen las vistas Estadisticas.v* que están detrás de los sinónimos. */
-    EXEC sys.sp_set_session_context @key = N'Sucursal', @value = @Sucursal;
     IF @Pagina IS NOT NULL AND @Pagina < 1 SET @Pagina = 1;
     IF @TamanoPagina IS NULL OR @TamanoPagina NOT BETWEEN 1 AND 100 SET @TamanoPagina = 10;
 
+    /* La ganancia por sucursal, año y producto ya está calculada (vista indexada). */
     ;WITH GananciaPorProducto AS
     (
         SELECT
-            YEAR(f.InvoiceDate) AS Anio,
+            v.Anio,
             pa.StockItemID,
             pa.StockItemName AS Producto,
-            SUM(df.LineProfit) AS Ganancia_Total
-        FROM dbo.DetalleFacturas AS df
-        INNER JOIN dbo.ProductosActuales AS pa ON df.StockItemID = pa.StockItemID
-        INNER JOIN dbo.Facturas          AS f  ON df.InvoiceID = f.InvoiceID
-        WHERE @Anio IS NULL OR YEAR(f.InvoiceDate) = @Anio
-        GROUP BY YEAR(f.InvoiceDate), pa.StockItemID, pa.StockItemName
+            SUM(v.Ganancia)  AS Ganancia_Total
+        FROM Estadisticas.vw_GananciaProductoAnio AS v WITH (NOEXPAND)
+        INNER JOIN dbo.ProductosActuales AS pa ON v.StockItemID = pa.StockItemID
+        WHERE (@Sucursal IS NULL OR v.SucursalID = @Sucursal)
+          AND (@Anio IS NULL OR v.Anio = @Anio)
+        GROUP BY v.Anio, pa.StockItemID, pa.StockItemName
     ),
     RankingProductos AS
     (
@@ -677,7 +897,7 @@ BEGIN
         CASE WHEN @Total = 0 THEN 1 ELSE CEILING(@Total * 1.0 / @TamanoPagina) END;
     IF @Pagina IS NOT NULL AND @Pagina > @TotalPaginas SET @Pagina = @TotalPaginas;
 
-    /* @Pagina NULL = todas las filas (exportar CSV). Si no, solo la página. */
+    /* @Pagina NULL = todas las filas (Excel). Si no, solo la página. */
     SELECT Anio, Producto, Ganancia_Total, Posicion
     FROM #R
     WHERE @Pagina IS NULL
@@ -864,55 +1084,74 @@ BEGIN
 END
 GO
 
+/*---------------------------------------------------------------------------------------*
+* SP_Seguimiento_Compras_Clientes: compras de cada cliente por mes (lee los resúmenes)
+*-----------------------------------------------------------------------------------------*/
+
 CREATE OR ALTER PROCEDURE dbo.SP_Seguimiento_Compras_Clientes
     @Sucursal TINYINT = NULL,     -- NULL = consolidado, 1 = San José, 2 = Limón
     @Anio              INT          = NULL,
     @Mes               INT          = NULL,
     @CategoriaProducto NVARCHAR(50) = NULL,
-    @Pagina       INT = 1,      -- NULL = todas las filas (CSV)
+    @Pagina       INT = 1,      -- NULL = todas las filas (Excel)
     @TamanoPagina INT = 10
 AS
 BEGIN
     SET NOCOUNT ON;
-
-    /* Filtro por sucursal: lo leen las vistas Estadisticas.v* que están detrás de los sinónimos. */
-    EXEC sys.sp_set_session_context @key = N'Sucursal', @value = @Sucursal;
     IF @Pagina IS NOT NULL AND @Pagina < 1 SET @Pagina = 1;
     IF @TamanoPagina IS NULL OR @TamanoPagina NOT BETWEEN 1 AND 100 SET @TamanoPagina = 10;
 
+    /* Lee el resumen ya calculado (SP_ActualizarResumenes):
+         sin categoría -> ResumenClienteMes
+         con categoría -> ResumenClienteMesGrupo, solo los grupos que coinciden.
+       Los totales se combinan igual que en el cálculo original (suma, mínimo y máximo). */
+    ;WITH Resumen AS
+    (
+        SELECT r.SucursalID, r.CustomerID, r.Anio, r.Mes, r.Monto, r.PrimeraFactura, r.UltimaFactura,
+               r.Cantidad, r.CantidadMinima, r.CantidadMaxima
+        FROM   Estadisticas.ResumenClienteMes AS r
+        WHERE  @CategoriaProducto IS NULL
+
+        UNION ALL
+
+        SELECT r.SucursalID, r.CustomerID, r.Anio, r.Mes, r.Monto, r.PrimeraFactura, r.UltimaFactura,
+               r.Cantidad, r.CantidadMinima, r.CantidadMaxima
+        FROM   Estadisticas.ResumenClienteMesGrupo AS r
+        INNER JOIN dbo.GruposInventario AS g ON r.StockGroupID = g.StockGroupID
+        WHERE  @CategoriaProducto IS NOT NULL
+          AND  g.StockGroupName LIKE '%' + @CategoriaProducto + '%'
+    )
     SELECT
-        ROW_NUMBER() OVER (ORDER BY ca.CustomerName, YEAR(f.InvoiceDate), MONTH(f.InvoiceDate)) AS Fila,
+        ROW_NUMBER() OVER (ORDER BY ca.CustomerName, r.Anio, r.Mes) AS Fila,
         ca.CustomerName AS Cliente,
-        YEAR(f.InvoiceDate) AS Anio,
-        CASE MONTH(f.InvoiceDate)
+        r.Anio,
+        CASE r.Mes
             WHEN 1 THEN 'Enero' WHEN 2 THEN 'Febrero' WHEN 3 THEN 'Marzo'
             WHEN 4 THEN 'Abril' WHEN 5 THEN 'Mayo' WHEN 6 THEN 'Junio'
             WHEN 7 THEN 'Julio' WHEN 8 THEN 'Agosto' WHEN 9 THEN 'Septiembre'
             WHEN 10 THEN 'Octubre' WHEN 11 THEN 'Noviembre' WHEN 12 THEN 'Diciembre'
         END AS Mes,
-        SUM(df.ExtendedPrice) AS Monto_Total,
-        MIN(f.InvoiceDate)    AS Primera_Factura,
-        MAX(f.InvoiceDate)    AS Ultima_Factura,
-        SUM(df.Quantity)      AS Cantidad_Total,
-        MIN(df.Quantity)      AS Cantidad_Minima,
-        MAX(df.Quantity)      AS Cantidad_Maxima
+        SUM(r.Monto)          AS Monto_Total,
+        MIN(r.PrimeraFactura) AS Primera_Factura,
+        MAX(r.UltimaFactura)  AS Ultima_Factura,
+        SUM(r.Cantidad)       AS Cantidad_Total,
+        MIN(r.CantidadMinima) AS Cantidad_Minima,
+        MAX(r.CantidadMaxima) AS Cantidad_Maxima
     INTO #R
-    FROM dbo.ClientesActuales AS ca
-    INNER JOIN dbo.Facturas         AS f  ON ca.CustomerID = f.CustomerID
-    INNER JOIN dbo.DetalleFacturas  AS df ON f.InvoiceID = df.InvoiceID
-    INNER JOIN dbo.ItemGrupos       AS ig ON df.StockItemID = ig.StockItemID
-    INNER JOIN dbo.GruposInventario AS g  ON ig.StockGroupID = g.StockGroupID
-    WHERE (@Anio IS NULL OR YEAR(f.InvoiceDate) = @Anio)
-      AND (@Mes IS NULL OR MONTH(f.InvoiceDate) = @Mes)
-      AND (@CategoriaProducto IS NULL OR g.StockGroupName LIKE '%' + @CategoriaProducto + '%')
-    GROUP BY ca.CustomerID, ca.CustomerName, YEAR(f.InvoiceDate), MONTH(f.InvoiceDate);
+    FROM Resumen AS r
+    INNER JOIN dbo.ClientesActuales AS ca ON ca.CustomerID = r.CustomerID
+    WHERE (@Sucursal IS NULL OR r.SucursalID = @Sucursal)
+      AND (@Anio IS NULL OR r.Anio = @Anio)
+      AND (@Mes IS NULL OR r.Mes = @Mes)
+    GROUP BY r.CustomerID, ca.CustomerName, r.Anio, r.Mes
+    OPTION (RECOMPILE);
 
     DECLARE @Total INT = (SELECT COUNT(*) FROM #R);
     DECLARE @TotalPaginas INT =
         CASE WHEN @Total = 0 THEN 1 ELSE CEILING(@Total * 1.0 / @TamanoPagina) END;
     IF @Pagina IS NOT NULL AND @Pagina > @TotalPaginas SET @Pagina = @TotalPaginas;
 
-    /* @Pagina NULL = todas las filas (exportar CSV). Si no, solo la página. */
+    /* @Pagina NULL = todas las filas (Excel). Si no, solo la página. */
     SELECT Cliente, Anio, Mes, Monto_Total, Primera_Factura, Ultima_Factura, Cantidad_Total, Cantidad_Minima, Cantidad_Maxima
     FROM #R
     WHERE @Pagina IS NULL
@@ -989,13 +1228,13 @@ CREATE OR ALTER PROCEDURE dbo.SP_Rotacion_Inventario
     @CategoriaProducto NVARCHAR(50)  = NULL,
     @Anio              INT           = NULL,
     @Proveedor         NVARCHAR(100) = NULL,
-    @Pagina       INT = 1,      -- NULL = todas las filas (CSV)
+    @Pagina       INT = 1,      -- NULL = todas las filas (Excel)
     @TamanoPagina INT = 10
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    /* Filtro por sucursal: lo leen las vistas Estadisticas.v* que están detrás de los sinónimos. */
+    /* Filtro por sucursal de las existencias (vista detrás de dbo.ProductosInventario). */
     EXEC sys.sp_set_session_context @key = N'Sucursal', @value = @Sucursal;
     IF @Pagina IS NOT NULL AND @Pagina < 1 SET @Pagina = 1;
     IF @TamanoPagina IS NULL OR @TamanoPagina NOT BETWEEN 1 AND 100 SET @TamanoPagina = 10;
@@ -1004,6 +1243,7 @@ BEGIN
     DECLARE @FechaFin    DATETIME2;
     DECLARE @DiasPeriodo INT;
 
+    /* Periodo: el año elegido, o del primer al último movimiento de la(s) sucursal(es). */
     IF @Anio IS NOT NULL
     BEGIN
         SET @FechaInicio = DATEFROMPARTS(@Anio, 1, 1);
@@ -1011,21 +1251,22 @@ BEGIN
     END
     ELSE
     BEGIN
-        SELECT @FechaInicio = MIN(TransactionOccurredWhen),
-               @FechaFin    = DATEADD(DAY, 1, MAX(TransactionOccurredWhen))
-        FROM dbo.ProductosTransacciones;
+        SELECT @FechaInicio = MIN(PrimerMovimiento),
+               @FechaFin    = DATEADD(DAY, 1, MAX(UltimoMovimiento))
+        FROM Estadisticas.RangoMovimientos
+        WHERE @Sucursal IS NULL OR SucursalID = @Sucursal;
     END;
 
     SET @DiasPeriodo = DATEDIFF(DAY, @FechaInicio, @FechaFin);
 
+    /* Unidades consumidas en el periodo, ya calculadas por año (SP_ActualizarResumenes). */
     ;WITH Consumo AS
     (
-        SELECT pt.StockItemID, SUM(ABS(pt.Quantity)) AS Cantidad_Consumida
-        FROM dbo.ProductosTransacciones AS pt
-        WHERE pt.Quantity < 0
-          AND pt.TransactionOccurredWhen >= @FechaInicio
-          AND pt.TransactionOccurredWhen <  @FechaFin
-        GROUP BY pt.StockItemID
+        SELECT c.StockItemID, SUM(c.Cantidad) AS Cantidad_Consumida
+        FROM Estadisticas.ConsumoProductoAnio AS c
+        WHERE (@Sucursal IS NULL OR c.SucursalID = @Sucursal)
+          AND (@Anio IS NULL OR c.Anio = @Anio)
+        GROUP BY c.StockItemID
     )
     SELECT
         ROW_NUMBER() OVER (ORDER BY pa.StockItemName, g.StockGroupName) AS Fila,
@@ -1052,7 +1293,7 @@ BEGIN
         CASE WHEN @Total = 0 THEN 1 ELSE CEILING(@Total * 1.0 / @TamanoPagina) END;
     IF @Pagina IS NOT NULL AND @Pagina > @TotalPaginas SET @Pagina = @TotalPaginas;
 
-    /* @Pagina NULL = todas las filas (exportar CSV). Si no, solo la página. */
+    /* @Pagina NULL = todas las filas (Excel). Si no, solo la página. */
     SELECT Nombre_Producto, Categoria_Producto, Proveedor, Stock_Actual, Cantidad_Consumida, Dias_Rotacion
     FROM #R
     WHERE @Pagina IS NULL
@@ -1240,7 +1481,7 @@ EXEC msdb.dbo.sp_add_jobstep
      @step_name     = N'Sincronizar',
      @subsystem     = N'TSQL',
      @database_name = N'WideWorldImporters',
-     @command       = N'SET QUOTED_IDENTIFIER ON; SET ARITHABORT ON; EXEC Estadisticas.SP_Sincronizar;';
+     @command       = N'SET QUOTED_IDENTIFIER ON; SET ARITHABORT ON; EXEC Estadisticas.SP_Sincronizar; EXEC Estadisticas.SP_ActualizarResumenes;';
 
 EXEC msdb.dbo.sp_add_jobschedule
      @job_name             = N'WWI - Sincronizar estadisticas',
@@ -1264,12 +1505,20 @@ GO
 
 EXEC Estadisticas.SP_Sincronizar;
 
+/* Primer cálculo de los resúmenes (puede tardar un minuto; después solo cuando cambian los datos). */
+EXEC Estadisticas.SP_ActualizarResumenes @Forzar = 1;
+
 /* Resumen consolidado y por sucursal (vistas materializadas). */
 EXEC Estadisticas.SP_Resumen_Sucursales;
 
 /* Un reporte del proyecto, consolidado y luego solo Limón: los montos deben cambiar. */
 EXEC dbo.SP_Top_ClientesFacturas @Pagina = 1, @TamanoPagina = 5;
 EXEC dbo.SP_Top_ClientesFacturas @Sucursal = 2, @Pagina = 1, @TamanoPagina = 5;
+
+/* Los tres reportes que antes tardaban: ahora deben responder al instante. */
+EXEC dbo.SP_Top_GananciaProductos        @Sucursal = 2, @Pagina = 1, @TamanoPagina = 5;
+EXEC dbo.SP_Seguimiento_Compras_Clientes @Sucursal = 2, @Pagina = 1, @TamanoPagina = 5;
+EXEC dbo.SP_Rotacion_Inventario          @Sucursal = 2, @Pagina = 1, @TamanoPagina = 5;
 GO
 
 SET NOEXEC OFF;

@@ -1,35 +1,12 @@
 /*---------------------------------------------------------------------------------------*
-*
 * NOMBRE: 15_Sucursal_Productos.sql
-*
-* DESCRIPCION:
-* Procedimientos que usa el Administrador para crear, modificar y eliminar productos.
-* Tienen los MISMOS nombres y parámetros que en SP_Inventarios.sql, así que la API y
-* la web no cambian (solo Actualizar recibe un parámetro nuevo opcional, @Version).
-*
-* Pero ahora el producto se divide en dos partes:
-*
-*   Catálogo (nombre, proveedor, precios, grupos...) -> se guarda en el CORPORATIVO,
-*       llamando a Catalogo.SP_Producto_* por el linked server, y la replicación lo
-*       copia a las dos sucursales.
-*
-*   Existencias de ESTA sucursal (cantidad, ubicación, costo, reorden) -> se guardan
-*       aquí, en Warehouse.StockItemHoldings (fragmento horizontal de la sucursal).
-*
-* Flujo de SP_Inventario_Insertar:
-*   1. Envía el producto al Corporativo y recibe el StockItemID nuevo.
-*   2. Espera (máximo 20 s) a que la replicación traiga el producto a esta sucursal.
-*   3. Registra las existencias de esta sucursal.
-*
-* FALLAS: si el Corporativo no responde, el procedimiento no se cae con un error
-* técnico: responde "El Corporativo no está disponible..." y no hace ningún cambio.
-* Las consultas y las ventas de la sucursal siguen funcionando con normalidad.
-*
-* El MISMO script sirve para San José y para Limón.
-*
-* RESTRICCIONES: Ejecutar SOLO en las sucursales, después de 13_Sucursal_Procedimientos.sql
-* y de 14_Corporativo_Catalogo.sql en el Corporativo. Se puede ejecutar más de una vez.
-*
+* ENTRADA: El linked server CORPORATIVO y los procedimientos del 14.
+* DESCRIPCION: Crear, modificar y eliminar productos desde la sucursal: el catálogo se guarda
+*   en el Corporativo y las existencias de la sucursal se guardan aquí.
+*   Si el Corporativo no responde, avisa y no cambia nada.
+* SALIDA: SP_Inventario_Insertar, _Actualizar y _Eliminar de la sucursal.
+* OBJETIVO: Que el Administrador administre productos desde su sucursal.
+* EJECUTAR: En cada sucursal, después del 13 (y del 14 en el Corporativo).
 *-----------------------------------------------------------------------------------------*/
 
 USE WideWorldImporters;
@@ -44,16 +21,14 @@ BEGIN
 END
 GO
 
-/* Los procedimientos que leen o escriben en el Corporativo (detalle de clientes y
-   proveedores, y crear/modificar/eliminar productos) se ejecutan "como su dueño"
-   (WITH EXECUTE AS OWNER): app_admin no es administrador y SQL Server no le permite
-   usar el linked server CORPORATIVO por su cuenta. Para que SQL Server acepte esa
-   identidad al salir hacia otro servidor, la base debe ser TRUSTWORTHY. */
+/* TRUSTWORTHY: permite que los procedimientos WITH EXECUTE AS OWNER usen el
+   linked server CORPORATIVO (app_admin no puede usarlo por su cuenta). */
 ALTER DATABASE WideWorldImporters SET TRUSTWORTHY ON;
 GO
 
 /*---------------------------------------------------------------------------------------*
-* SP_Inventario_Insertar
+* SP_Inventario_Insertar: crea el producto en el Corporativo, espera la
+* replicación (máx. 20 s) y guarda las existencias de esta sucursal
 *-----------------------------------------------------------------------------------------*/
 
 CREATE OR ALTER PROCEDURE dbo.SP_Inventario_Insertar
@@ -158,11 +133,8 @@ END
 GO
 
 /*---------------------------------------------------------------------------------------*
-* SP_Inventario_Actualizar
-*
-* @Version: el valor "Version" que devolvió SP_Inventarios_Detalle al abrir el
-* formulario. Si otro usuario modificó el producto mientras tanto, el Corporativo
-* rechaza el cambio (estado 7) y no se modifica nada.
+* SP_Inventario_Actualizar: modifica el producto; si otro usuario lo cambió
+* antes (@Version distinta) no se guarda nada
 *-----------------------------------------------------------------------------------------*/
 
 CREATE OR ALTER PROCEDURE dbo.SP_Inventario_Actualizar
@@ -282,10 +254,7 @@ END
 GO
 
 /*---------------------------------------------------------------------------------------*
-* SP_Inventario_Eliminar
-*
-* El Corporativo verifica que el producto no tenga movimientos en NINGUNA sucursal,
-* borra las existencias de ambas y elimina el producto; la replicación lo quita aquí.
+* SP_Inventario_Eliminar: lo elimina en el Corporativo si no tiene movimientos
 *-----------------------------------------------------------------------------------------*/
 
 CREATE OR ALTER PROCEDURE dbo.SP_Inventario_Eliminar

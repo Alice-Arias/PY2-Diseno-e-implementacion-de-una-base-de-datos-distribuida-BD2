@@ -1,37 +1,13 @@
 /*---------------------------------------------------------------------------------------*
-*
 * NOMBRE: 02_Sucursal_Fragmentacion.sql
-*
-* DESCRIPCION:
-* Convierte una copia completa de WideWorldImporters en un nodo sucursal.
-* El MISMO script sirve para San José y para Limón: detecta solo en qué nodo
-* está usando @@SERVERNAME ('sanjose' o 'limon').
-*
-*   Fragmentación vertical:
-*     Quita de la sucursal los datos sensibles y de contacto de clientes,
-*     proveedores y personas. Esos datos solo quedan en el Corporativo.
-*     También elimina el historial de esas tablas (tablas *_Archive), porque
-*     guarda versiones anteriores de los mismos datos sensibles.
-*
-*   Fragmentación horizontal:
-*     Deja en la sucursal solo sus pedidos, facturas, órdenes de compra y
-*     transacciones. Regla:
-*       Pedido par   -> San José (SucursalID = 1)
-*       Pedido impar -> Limón    (SucursalID = 2)
-*     Las facturas siguen a su pedido (fragmentación horizontal derivada) y las
-*     líneas siguen a su encabezado.
-*
-*   Inventario:
-*     Cada sucursal maneja su propio inventario. Las existencias originales se
-*     reparten entre las dos sucursales (mitad y mitad).
-*
-*   Secuencias:
-*     Cada sucursal genera números en un rango distinto (San José desde 10 000 000,
-*     Limón desde 20 000 000) para que no se repitan IDs al consolidar en el Corporativo.
-*
-* RESTRICCIONES: Ejecutar SOLO en una sucursal, sobre la base WideWorldImporters
-* recién restaurada. Si se ejecuta en otro servidor, se detiene sin hacer cambios.
-*
+* ENTRADA: La base WideWorldImporters recién restaurada en sanjose o limon.
+* DESCRIPCION: Convierte la base en una sucursal (detecta sola cuál es):
+*   vertical: quita los datos sensibles de clientes, proveedores y personas.
+*   horizontal: deja solo sus pedidos, facturas y órdenes (par San José, impar Limón).
+*   inventario a la mitad y secuencias propias (10 000 000+ / 20 000 000+).
+* SALIDA: Una sucursal con solo sus datos.
+* OBJETIVO: Aplicar la fragmentación vertical y horizontal.
+* EJECUTAR: En cada sucursal (San José y Limón).
 *-----------------------------------------------------------------------------------------*/
 
 USE WideWorldImporters;

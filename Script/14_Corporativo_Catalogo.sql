@@ -1,40 +1,13 @@
 /*---------------------------------------------------------------------------------------*
-*
 * NOMBRE: 14_Corporativo_Catalogo.sql
-*
-* DESCRIPCION:
-* Procedimientos que modifican el catálogo de productos. Viven SOLO en el Corporativo,
-* que es el dueño del catálogo (publicador de la replicación). Las sucursales los
-* llaman por el linked server CORPORATIVO (ver 15_Sucursal_Productos.sql) y la
-* replicación lleva cada cambio a San José y Limón.
-*
-*   Catalogo.SP_Producto_Insertar    -> crea el producto y sus grupos
-*   Catalogo.SP_Producto_Actualizar  -> modifica el producto y sus grupos
-*   Catalogo.SP_Producto_Eliminar    -> elimina el producto si no tiene movimientos
-*                                       en NINGUNA sucursal
-*
-* CONCURRENCIA (enunciado, observación 1):
-*   - Un solo punto de escritura: los cambios de las dos sucursales llegan al mismo
-*     servidor, así que nunca chocan dos versiones del catálogo en distintos nodos.
-*   - Nombre único: se valida con UPDLOCK/HOLDLOCK dentro de la transacción, así que
-*     dos sucursales no pueden crear a la vez dos productos con el mismo nombre.
-*   - Control optimista al modificar: cada producto tiene una "versión" (la columna
-*     ValidFrom, que cambia en cada modificación). La sucursal envía la versión que
-*     leyó; si otro usuario modificó el producto mientras tanto, la versión ya no
-*     coincide y se rechaza el cambio con un mensaje, en lugar de pisar el cambio ajeno.
-*
-* FALLAS (enunciado, observación 6):
-*   - Eliminar verifica las dos sucursales por los linked servers LS_SANJOSE y
-*     LS_LIMON. Si una sucursal no responde, NO se elimina: no se puede asegurar que
-*     el producto no tenga ventas allá.
-*
-* Los errores de negocio usan RAISERROR con estado:
-*   1 = dato obligatorio, 2 = rango, 3 = relacionado no existe, 4 = nombre repetido,
-*   5 = no existe, 6 = tiene movimientos, 7 = conflicto de concurrencia,
-*   8 = sucursal no disponible.
-*
-* RESTRICCIONES: Ejecutar SOLO en el Corporativo, después de 10_Corporativo_SeguridadApp.sql.
-*
+* ENTRADA: Las tablas del catálogo y los linked servers a las sucursales.
+* DESCRIPCION: Crear, modificar y eliminar productos en el Corporativo (dueño del catálogo).
+*   Controla nombres repetidos, cambios a la vez (versión) y sucursales caídas.
+*   Errores (estado): 1 obligatorio, 2 rango, 3 no existe relacionado, 4 repetido,
+*   5 no existe, 6 tiene movimientos, 7 otro usuario lo cambió, 8 sucursal caída.
+* SALIDA: Catalogo.SP_Producto_Insertar, _Actualizar y _Eliminar.
+* OBJETIVO: Modificar el catálogo en un solo nodo sin conflictos.
+* EJECUTAR: Solo en el Corporativo, después del 10.
 *-----------------------------------------------------------------------------------------*/
 
 USE WideWorldImporters;
@@ -52,17 +25,13 @@ GO
 IF SCHEMA_ID(N'Catalogo') IS NULL EXEC (N'CREATE SCHEMA Catalogo');
 GO
 
-/* SP_Producto_Eliminar consulta las sucursales por los linked servers. Lo llaman las
-   sucursales con el login enlace_sucursal, que NO es administrador y SQL Server no le
-   permite usar linked servers. Por eso ese procedimiento se ejecuta "como su dueño"
-   (WITH EXECUTE AS OWNER). Para que SQL Server acepte esa identidad al salir hacia otro
-   servidor, la base debe estar marcada como TRUSTWORTHY. enlace_sucursal sigue sin
-   poder usar los linked servers por su cuenta: solo a través de ese procedimiento. */
+/* TRUSTWORTHY: permite que SP_Producto_Eliminar (WITH EXECUTE AS OWNER) consulte las
+   sucursales; enlace_sucursal no puede usar los linked servers por su cuenta. */
 ALTER DATABASE WideWorldImporters SET TRUSTWORTHY ON;
 GO
 
 /*---------------------------------------------------------------------------------------*
-* Catalogo.SP_Producto_Insertar
+* Catalogo.SP_Producto_Insertar: crea el producto y sus grupos
 *-----------------------------------------------------------------------------------------*/
 
 CREATE OR ALTER PROCEDURE Catalogo.SP_Producto_Insertar
@@ -182,10 +151,8 @@ END
 GO
 
 /*---------------------------------------------------------------------------------------*
-* Catalogo.SP_Producto_Actualizar
-*
-* @Version: valor de "Version" que devolvió SP_Inventarios_Detalle cuando el usuario
-* abrió el formulario. Si es NULL no se valida (compatibilidad).
+* Catalogo.SP_Producto_Actualizar: modifica el producto y sus grupos.
+* @Version: la que se leyó al abrir el formulario (NULL = no se revisa).
 *-----------------------------------------------------------------------------------------*/
 
 CREATE OR ALTER PROCEDURE Catalogo.SP_Producto_Actualizar
@@ -323,7 +290,7 @@ END
 GO
 
 /*---------------------------------------------------------------------------------------*
-* Catalogo.SP_Producto_Eliminar
+* Catalogo.SP_Producto_Eliminar: lo elimina si no tiene movimientos en ninguna sucursal
 *-----------------------------------------------------------------------------------------*/
 
 CREATE OR ALTER PROCEDURE Catalogo.SP_Producto_Eliminar

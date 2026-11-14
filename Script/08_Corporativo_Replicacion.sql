@@ -1,34 +1,11 @@
 /*---------------------------------------------------------------------------------------*
-*
 * NOMBRE: 08_Corporativo_Replicacion.sql
-*
-* DESCRIPCION:
-* Configura la replicación transaccional del catálogo de productos.
-*
-*   Publicador y distribuidor: Corporativo (SQL Server en Windows).
-*   Suscriptores (push):        sanjose y limon (SQL Server en Linux).
-*   Publicación:                CatalogoProductos
-*
-*   Artículos (tablas replicadas):
-*     Warehouse.Colors, Warehouse.PackageTypes, Warehouse.StockGroups,
-*     Warehouse.StockItems, Warehouse.StockItemStockGroups
-*
-* Todo cambio del catálogo (INSERT, UPDATE o DELETE) se hace en el Corporativo, y el
-* Distribution Agent lo aplica en las dos sucursales. Al haber un solo punto de
-* escritura no hay conflictos de concurrencia entre sucursales.
-*
-* Las suscripciones usan "replication support only": las sucursales ya tienen
-* exactamente los mismos datos del catálogo (las tres bases se restauraron del mismo
-* backup), así que no se envía una instantánea inicial; solo se crean los
-* procedimientos que aplican los cambios.
-*
-* RESTRICCIONES:
-*   - Ejecutar SOLO en el Corporativo, conectado con Windows Authentication.
-*   - Antes: 07_Todos_PrepararCatalogo.sql en los tres nodos.
-*   - SQL Server Agent del Corporativo debe estar en ejecución.
-*   - Los nodos deben estar levantados (./levantar.sh) para que existan los alias
-*     "sanjose" y "limon".
-*
+* ENTRADA: Los tres nodos levantados y SQL Server Agent corriendo.
+* DESCRIPCION: Replicación transaccional del catálogo de productos.
+*   Publica en el Corporativo y envía los cambios a sanjose y limon.
+* SALIDA: Distribuidor, publicación CatalogoProductos y dos suscripciones.
+* OBJETIVO: Cambiar el catálogo en un solo lugar y que llegue a las sucursales.
+* EJECUTAR: Solo en el Corporativo, con autenticación de Windows, después del 07.
 *-----------------------------------------------------------------------------------------*/
 
 USE master;

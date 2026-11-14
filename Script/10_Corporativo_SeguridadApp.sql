@@ -1,29 +1,11 @@
 /*---------------------------------------------------------------------------------------*
-*
 * NOMBRE: 10_Corporativo_SeguridadApp.sql
-*
-* DESCRIPCION:
-* Relaciona los usuarios de la aplicación con usuarios de base de datos en el
-* Corporativo. La API nunca usa "sa": según quién inició sesión, se conecta con
-* uno de estos logins, y cada uno solo puede EJECUTAR sus procedimientos
-* (no tiene permiso para leer ni modificar tablas directamente).
-*
-*   Login (servidor)   Rol de base de datos   Puede ejecutar
-*   ----------------   --------------------   -------------------------------------------
-*   app_login          rol_login              Seguridad.SP_Usuario_Login (solo el login)
-*   app_corporativo    rol_corporativo        Procedimientos del esquema Estadisticas
-*   app_admin          rol_admin_catalogo     Procedimientos del esquema Catalogo
-*                                              (crear, modificar y eliminar productos)
-*
-* Los permisos se dan a ROLES y no directamente a los logins: si mañana se agrega
-* otro login de administrador, basta con meterlo en el rol.
-*
-* Los esquemas Estadisticas y Catalogo se crean vacíos; sus procedimientos se agregan
-* en los siguientes scripts y heredan el permiso automáticamente.
-*
-* RESTRICCIONES: Ejecutar SOLO en el Corporativo, después de 09_Corporativo_Usuarios.sql.
-* Se puede ejecutar más de una vez.
-*
+* ENTRADA: Ninguna.
+* DESCRIPCION: Logins que usa la API en el Corporativo; solo pueden ejecutar procedimientos:
+*   app_login -> iniciar sesión, app_corporativo -> reportes, app_admin -> catálogo.
+* SALIDA: Logins, roles y permisos.
+* OBJETIVO: Que la API nunca use "sa".
+* EJECUTAR: Solo en el Corporativo, después del 09. Se puede repetir.
 *-----------------------------------------------------------------------------------------*/
 
 USE master;

@@ -1,18 +1,10 @@
 /*---------------------------------------------------------------------------------------*
-*
 * NOMBRE: 05_Sucursal_LoginEnlace.sql
-*
-* DESCRIPCION:
-* Crea en la sucursal el login "enlace_corporativo", que usa el Corporativo para
-* conectarse a la sucursal por medio de los linked servers LS_SANJOSE y LS_LIMON.
-*
-* Se usa un login propio en lugar de "sa": el Corporativo solo puede leer y escribir
-* datos de WideWorldImporters y ejecutar procedimientos almacenados.
-*
-* El MISMO script sirve para San José y para Limón.
-*
-* RESTRICCIONES: Ejecutar SOLO en las sucursales.
-*
+* ENTRADA: Ninguna.
+* DESCRIPCION: Crea el login enlace_corporativo, que usa el Corporativo para entrar a la sucursal.
+* SALIDA: Login enlace_corporativo con permiso de leer, escribir y ejecutar.
+* OBJETIVO: Que el Corporativo entre a las sucursales sin usar "sa".
+* EJECUTAR: En cada sucursal.
 *-----------------------------------------------------------------------------------------*/
 
 USE master;
