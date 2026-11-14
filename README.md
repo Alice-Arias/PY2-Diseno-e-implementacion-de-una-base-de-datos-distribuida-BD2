@@ -20,6 +20,23 @@ Prof. Cristian Paz Campos Agüero
 
 ---
 
+## Índice
+
+- [1. Tecnologías usadas](#1-tecnologías-usadas)
+- [2. Los tres nodos](#2-los-tres-nodos)
+- [3. Conceptos principales](#3-conceptos-principales)
+  - [Fragmentación: repartir los datos](#fragmentación-repartir-los-datos)
+  - [Replicación: el mismo catálogo en todas partes](#replicación-el-mismo-catálogo-en-todas-partes)
+  - [Linked servers: que los nodos se hablen](#linked-servers-que-los-nodos-se-hablen)
+  - [Sinónimos: no importa dónde esté el dato](#sinónimos-no-importa-dónde-esté-el-dato)
+- [4. Usuarios y seguridad](#4-usuarios-y-seguridad)
+- [5. Reportes](#5-reportes)
+- [6. Si un nodo se cae](#6-si-un-nodo-se-cae)
+- [7. Dos personas a la vez (concurrencia)](#7-dos-personas-a-la-vez-concurrencia)
+- [8. Cómo ejecutarlo](#8-cómo-ejecutarlo)
+- [9. Scripts (`Script/`)](#9-scripts-script)
+- [10. Limitaciones](#10-limitaciones)
+
 La empresa tiene **una oficina central (Corporativo) y dos sucursales (San José y Limón)**. En lugar de una sola base de datos, cada lugar tiene la suya, y las tres trabajan juntas. Se usa la aplicación web del Proyecto 1, adaptada a este modelo.
 
 ---
