@@ -295,3 +295,16 @@ Se ejecutan en orden. Los de sucursal son los mismos para San José y Limón.
 | 21 | Mantener la estructura del repositorio de GitHub, incluyendo los scripts SQL, el código fuente y la documentación en el README.md. |X| |
 | 22 | Disponer de la infraestructura necesaria para demostrar el funcionamiento del sistema distribuido. |X| |
 
+### Justificación de objetivos no alcanzados
+
+**Objetivo 9: Permitir al Administrador crear, modificar y eliminar productos.**
+
+No alcanzado.
+
+Durante el desarrollo del proyecto se presentó un inconveniente en el orden de implementación, tuvimos por una interpretación incompleta de los requerimientos. Esto provocó que se pasara por alto la necesidad de implementar las operaciones de creación, edición y eliminación de clientes y proveedores. Cuando se identificó esta omisión, la infraestructura y la estructura de la API ya se estaban considerablemente desarrolladas. Debido al tiempo restante, incorporar estas funcionalidades implicaba realizar modificaciones importantes en la estructura existente, además de ejecutar pruebas adicionales para garantizar la estabilidad de los componentes implementados. Por esta razón, se priorizó mantener la integridad y el correcto funcionamiento de las funcionalidades desarrolladas, dejando estas operaciones pendientes.
+
+**Objetivo 18: Mantener las funcionalidades desarrolladas en el Proyecto 1.**
+
+No alcanzado.
+
+Debido a la interpretación incompleta de los requerimientos durante las primeras etapas del desarrollo, no se contempló oportunamente la totalidad de las funcionalidades que debían mantenerse y extenderse con respecto al Proyecto 1. En particular, se pasaron por alto inicialmente las operaciones de creación, edición y eliminación de clientes y proveedores. Al detectar esta situación, el desarrollo de la infraestructura y de la API se encontraba en una etapa avanzada, por lo que incorporar dichas funcionalidades requería modificar componentes existentes y realizar pruebas adicionales para garantizar su estabilidad. Debido a las limitaciones de tiempo, no fue posible completar estos ajustes sin comprometer el funcionamiento de la implementación existente.
