@@ -6,7 +6,11 @@
 
 **Bases de Datos II** · Instituto Tecnológico de Costa Rica
 
+Integrantes:
+
 Alice Arias Salazar · Heldyis Agüero Espinoza
+
+Profesor:
 
 Prof. Cristian Paz Campos Agüero
 
