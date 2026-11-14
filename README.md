@@ -7,6 +7,7 @@
 **Bases de Datos II** · Instituto Tecnológico de Costa Rica
 
 Alice Arias Salazar · Heldyis Agüero Espinoza
+
 Prof. Cristian Paz Campos Agüero
 
 <br>
