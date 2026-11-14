@@ -265,3 +265,33 @@ Se ejecutan en orden. Los de sucursal son los mismos para San José y Limón.
 - Las ventas viejas se repartieron por número par o impar, porque los datos originales no decían la sucursal.
 - Los reportes pueden tener hasta 5 minutos de atraso (o se actualizan con el botón).
 - Los tres SQL Server corren en una misma laptop, así que la primera vez que se abre un reporte puede tardar un poco más.
+
+---
+
+## 11. Resultados
+
+| # | Objetivo | Alcanzado | No alcanzado |
+|---|---|:---:|:---:|
+| 1 | Diseñar e implementar una arquitectura de base de datos distribuida con tres nodos: Corporativo, sucursal San José y sucursal Limón. |X| |
+| 2 | Diseñar e implementar la fragmentación y asignación de los datos, justificando las decisiones tomadas. |X| |
+| 3 | Implementar la distribución de los catálogos de productos, clientes y proveedores en las sucursales. |X| |
+| 4 | Mantener el inventario y la facturación de manera independiente en cada sucursal. |X| |
+| 5 | Centralizar en el nodo Corporativo los datos sensibles y de contacto de clientes y proveedores. |X| |
+| 6 | Implementar la replicación de los datos relacionados con productos entre todas las bases de datos. |X| |
+| 7 | Implementar los roles de Administrador y Corporativo con sus respectivos permisos y funcionalidades. |X| |
+| 8 | Permitir al Administrador consultar clientes, proveedores, productos y facturas de su negocio. |X| |
+| 9 | Permitir al Administrador crear, modificar y eliminar productos. | |X|
+| 10 | Permitir al usuario Corporativo consultar estadísticas de cada sucursal. |X| |
+| 11 | Implementar filtros estadísticos por sucursal y consultas consolidadas. |X| |
+| 12 | Crear la tabla de usuarios del sistema con los campos requeridos: iduser, username, password, fullname, active, rol, email y hiredate. |X| |
+| 13 | Implementar el almacenamiento y la protección de contraseñas mediante las funcionalidades nativas de SQL Server y sus servicios de encriptación. |X| |
+| 14 | Implementar una gestión de seguridad que relacione los usuarios de la aplicación con los usuarios de la base de datos. |X| |
+| 15 | Implementar mecanismos para gestionar la concurrencia durante las modificaciones de datos replicados. |X| |
+| 16 | Implementar vistas materializadas o mecanismos similares para las consultas estadísticas del Corporativo. |X| |
+| 17 | Diseñar un mecanismo de respuesta ante fallos cuando alguno de los nodos no se encuentre disponible. |X| |
+| 18 | Mantener las funcionalidades desarrolladas en el Proyecto 1. | |X|
+| 19 | Implementar el sistema web y la API según los requerimientos del proyecto. |X| |
+| 20 | Documentar y entregar los scripts SQL correspondientes a las bases de datos del Corporativo y las sucursales. |X| |
+| 21 | Mantener la estructura del repositorio de GitHub, incluyendo los scripts SQL, el código fuente y la documentación en el README.md. |X| |
+| 22 | Disponer de la infraestructura necesaria para demostrar el funcionamiento del sistema distribuido. |X| |
+
