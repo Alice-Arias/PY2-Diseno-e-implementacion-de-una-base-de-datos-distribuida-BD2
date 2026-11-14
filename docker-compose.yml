@@ -1,17 +1,44 @@
+# ---------------------------------------------------------------------------
+# NOMBRE: docker-compose.yml
+#
+# DESCRIPCION: Define los dos nodos de sucursal como contenedores de Docker,
+# cada uno con su propio SQL Server 2022:
+#   sanjose - puerto 1436 de Ubuntu
+#   limon   - puerto 1437 de Ubuntu
+# El Corporativo NO está aquí: es el SQL Server instalado en Windows.
+#
+# ENTRADA: La variable WINIP (IP de Windows vista desde Ubuntu). La define
+# levantar.sh, por eso siempre se enciende con:  ./levantar.sh
+#
+# SALIDA: Los contenedores sanjose y limon encendidos, con sus datos
+# guardados en volúmenes (no se pierden al apagar o reiniciar).
+#
+# OBJETIVO: Tener las dos sucursales en la misma computadora, separadas
+# como si fueran servidores distintos.
+# ---------------------------------------------------------------------------
+
 services:
+
+  # -------------------------------------------------------------------------
+  # Sucursal San José
+  # -------------------------------------------------------------------------
   sanjose:
     image: mcr.microsoft.com/mssql/server:2022-latest
-    hostname: sanjose
+    hostname: sanjose                 # Nombre del servidor (@@SERVERNAME).
     container_name: sanjose
     environment:
-      ACCEPT_EULA: "Y"
+      ACCEPT_EULA: "Y"                # Acepta la licencia de SQL Server.
       MSSQL_SA_PASSWORD: "SanJose#2026Pass"
-      MSSQL_PID: "Developer"
-      MSSQL_AGENT_ENABLED: "true"
-      MSSQL_MEMORY_LIMIT_MB: "2048"
-    ports: ["1436:1433"]
-    extra_hosts: ["corporativo:${WINIP:?Use ./levantar.sh}"]
-    volumes: ["sanjose_data:/var/opt/mssql"]
+      MSSQL_PID: "Developer"          # Edición Developer (gratuita).
+      MSSQL_AGENT_ENABLED: "true"     # SQL Server Agent: lo usa la replicación.
+      MSSQL_MEMORY_LIMIT_MB: "2048"   # Máximo 2 GB de RAM para este nodo.
+    ports: ["1436:1433"]              # Puerto de Ubuntu : puerto del contenedor.
+    extra_hosts: ["corporativo:${WINIP:?Use ./levantar.sh}"]   # "corporativo" = IP de Windows.
+    volumes: ["sanjose_data:/var/opt/mssql"]                    # Datos permanentes.
+
+  # -------------------------------------------------------------------------
+  # Sucursal Limón (igual a San José, con su contraseña y puerto)
+  # -------------------------------------------------------------------------
   limon:
     image: mcr.microsoft.com/mssql/server:2022-latest
     hostname: limon
@@ -25,6 +52,10 @@ services:
     ports: ["1437:1433"]
     extra_hosts: ["corporativo:${WINIP:?Use ./levantar.sh}"]
     volumes: ["limon_data:/var/opt/mssql"]
+
+# ---------------------------------------------------------------------------
+# Volúmenes: carpetas de Docker donde queda la base de datos de cada sucursal.
+# ---------------------------------------------------------------------------
 volumes:
   sanjose_data:
   limon_data:

@@ -1,12 +1,30 @@
+/*---------------------------------------------------------------------------------------*
+*
+* NOMBRE: App.jsx
+*
+* DESCRIPCION: Componente principal de la web. Define las rutas (páginas) de la
+* aplicación y aplica el tema claro u oscuro.
+*
+* ENTRADA: Ninguna. La ruta actual la da el navegador y el tema lo elige el
+* usuario con el botón junto a la hora.
+*
+* SALIDA: La pantalla de inicio de sesión o la página del módulo, dentro del
+* menú lateral y la barra superior.
+*
+* OBJETIVO: Controlar la navegación y mostrar a cada rol solo sus módulos:
+*   Administrador -> Clientes, Proveedores, Inventario y Ventas de su sucursal.
+*   Corporativo   -> Reportes y Solicitudes.
+*
+*-----------------------------------------------------------------------------------------*/
+
 import { useEffect, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 
-import Sidebar from './components/Sidebar';
-import Topbar from './components/Topbar';
-
+// Estructura: menú lateral + barra superior, y protección de rutas por rol.
 import MainLayout from './components/MainLayout';
 import RutaProtegida from './components/RutaProtegida';
 
+// Páginas
 import LoginPage from './pages/LoginPage';
 import ClientesPage from './pages/ClientesPage';
 import ProveedoresPage from './pages/ProveedoresPage';
@@ -15,32 +33,27 @@ import VentasPage from './pages/VentasPage';
 import ReportesPage from './pages/ReportesPage';
 import SolicitudesPage from './pages/SolicitudesPage';
 
+// Estilos (el orden importa: cada archivo ajusta al anterior).
 import './App.css';
-import './tema.css';   // PY2: tema profesional claro / oscuro (va después de App.css)
-import './mejoras.css'; // PY2: animaciones, alineación y accesibilidad (va después de tema.css)
+import './tema.css';     // Colores del modo claro y oscuro.
+import './mejoras.css';  // Animaciones, alineación y accesibilidad.
 import { temaGuardado } from './components/RelojTema';
 
 
-/*--------------------------------------------------------------------------------------------------------------------------------
-NOMBRE: App
-DESCRIPCION: Componente principal. Muestra el menú lateral, la barra  superior y la página del módulo seleccionado.
-ENTRADA: Ninguna (la página activa se guarda en el estado "page").
-SALIDA: Interfaz principal de la aplicación (JSX).
-RESTRICCIONES: Solo se muestra una página a la vez; los valores válidos de "page" son clientes, proveedores,  inventario y ventas.
-OBJETIVO: Controlar la navegación entre los módulos del sistema.
--------------------------------------------------------------------------------------------------------------------------------------*/
-
+/*---------------------------------------------------------------------------------------*
+* NOMBRE: App
+* ENTRADA: Ninguna.
+* DESCRIPCION: Escucha el cambio de tema y dibuja las rutas.
+* SALIDA: La interfaz de la aplicación (JSX).
+* OBJETIVO: Ser el punto de entrada de todas las páginas.
+*-----------------------------------------------------------------------------------------*/
 function App() {
 
-    /*-------------------------------------------------------------
-    Estado: page
-    Página que se muestra al abrir la aplicación (Clientes).
-    -------------------------------------------------------------------*/
-    const [page, setPage] = useState('clientes');
-
-    /* PY2: modo claro / oscuro elegido por el usuario (botón junto a la hora). */
+    // Tema actual ('claro' u 'oscuro'). Empieza con el que se guardó en el navegador.
     const [tema, setTema] = useState(temaGuardado);
 
+    // Cuando el usuario presiona el botón de tema, RelojTema avisa con el evento
+    // 'wwi-tema' y aquí se actualiza.
     useEffect(() => {
         const cambiar = (e) => setTema(e.detail);
         window.addEventListener('wwi-tema', cambiar);
@@ -50,11 +63,11 @@ function App() {
     return (
         <div className={`wwi ${tema === 'oscuro' ? 'modo-claro' : 'modo-oscuro'}`}>
             <Routes>
-                {/* Login: siempre es la primera pantalla */}
+                {/* Inicio de sesión: siempre es la primera pantalla. */}
                 <Route path="/" element={<LoginPage />} />
 
-                {/* Resto de la app, dentro del layout con Sidebar y Topbar */}
-                {/* PY2: Administrador -> módulos de su sucursal. Corporativo -> Reportes. */}
+                {/* Resto de la aplicación: exige sesión y va dentro del menú y la barra superior.
+                    roles = quién puede entrar a cada página. */}
                 <Route element={<RutaProtegida><MainLayout /></RutaProtegida>}>
                     <Route path="/clientes" element={<RutaProtegida roles={['Administrador']}><ClientesPage /></RutaProtegida>} />
                     <Route path="/proveedores" element={<RutaProtegida roles={['Administrador']}><ProveedoresPage /></RutaProtegida>} />
@@ -64,7 +77,7 @@ function App() {
                     <Route path="/solicitudes" element={<RutaProtegida roles={['Corporativo']}><SolicitudesPage /></RutaProtegida>} />
                 </Route>
 
-                {/* Cualquier ruta desconocida vuelve al login */}
+                {/* Cualquier ruta desconocida vuelve al inicio de sesión. */}
                 <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
         </div>
