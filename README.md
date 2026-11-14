@@ -20,6 +20,10 @@ Prof. Cristian Paz Campos Agüero
 
 ---
 
+La empresa tiene **una oficina central (Corporativo) y dos sucursales (San José y Limón)**. En lugar de una sola base de datos, cada lugar tiene la suya, y las tres trabajan juntas. Se usa la aplicación web del Proyecto 1, adaptada a este modelo.
+
+---
+
 ## Índice
 
 - [1. Tecnologías usadas](#1-tecnologías-usadas)
@@ -36,8 +40,6 @@ Prof. Cristian Paz Campos Agüero
 - [8. Cómo ejecutarlo](#8-cómo-ejecutarlo)
 - [9. Scripts (`Script/`)](#9-scripts-script)
 - [10. Limitaciones](#10-limitaciones)
-
-La empresa tiene **una oficina central (Corporativo) y dos sucursales (San José y Limón)**. En lugar de una sola base de datos, cada lugar tiene la suya, y las tres trabajan juntas. Se usa la aplicación web del Proyecto 1, adaptada a este modelo.
 
 ---
 
