@@ -1,164 +1,175 @@
 /*---------------------------------------------------------------------------------------*
+* NOMBRE: ResumenSucursales.jsx
 *
-* NOMBRE: ResumenSucursales (PY2)
+* DESCRIPCION: Panel superior de Reportes:
+*   - selector Consolidado / San José / Limón (cambia también los reportes);
+*   - totales de ventas, ganancia y unidades;
+*   - barras que comparan las ventas de las dos sucursales;
+*   - estado de los datos de cada sucursal (última sincronización o sin conexión);
+*   - botón para traer en el momento los datos nuevos de las sucursales.
 *
-* DESCRIPCION: Panel del rol Corporativo con las estadísticas de cada negocio.
-*   - Selector San José / Limón / Consolidado (filtra también los 11 reportes).
-*   - Totales y comparativo entre sucursales: salen de las vistas materializadas
-*     del Corporativo (Estadisticas.vw_VentasSucursalMes).
-*   - Estado de los datos de cada sucursal (última sincronización). Si una sucursal
-*     no respondió, se avisa y se muestran sus últimos datos.
-*   - Botón para sincronizar en el momento (el job lo hace solo cada 5 minutos).
+* ENTRADA: sucursal ('', '1' o '2') y onCambiarSucursal(valor).
 *
-* ENTRADA: sucursal ('' = consolidado, '1' = San José, '2' = Limón) y onCambiarSucursal.
+* SALIDA: El panel.
 *
+* OBJETIVO: Comparar las sucursales y saber qué tan recientes son los datos.
 *-----------------------------------------------------------------------------------------*/
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { RefreshCw, Building2, CheckCircle2, AlertTriangle } from 'lucide-react';
-import { obtenerResumenSucursales, sincronizarEstadisticas } from '../../services/api';
-import NumeroAnimado from '../NumeroAnimado';
+import NumeroAnimado from '../common/NumeroAnimado';
+import { reportesApi } from '../../services/reportesApi';
+import { formatoFechaHora } from '../../utils/formato';
 
-const OPCIONES = [
-  { valor: '', texto: 'Consolidado' },
-  { valor: '1', texto: 'San José' },
-  { valor: '2', texto: 'Limón' }
+const SUCURSALES = [
+    { valor: '', texto: 'Consolidado' },
+    { valor: '1', texto: 'San José' },
+    { valor: '2', texto: 'Limón' }
 ];
 
-const dinero = (v) =>
-  `USD ${Number(v ?? 0).toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const dolares = (valor) =>
+    `USD ${Number(valor ?? 0).toLocaleString('es-CR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const unidades = (valor) => Math.round(Number(valor ?? 0)).toLocaleString('es-CR');
+const porcentaje = (valor) =>
+    `${Number(valor).toLocaleString('es-CR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`;
+const fecha = (valor) => formatoFechaHora(valor, 'Nunca');
 
-const unidades = (v) => Math.round(Number(v ?? 0)).toLocaleString('es-CR');
+/* Barra del comparativo de una sucursal. */
+function BarraSucursal({ sucursal, maximo, suma, atenuada, claveAnimacion }) {
+    const monto = Number(sucursal.Monto);
+    const participacion = (monto / suma) * 100;
 
-const porcentaje = (v) =>
-  `${Number(v).toLocaleString('es-CR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`;
+    return (
+        <div className={`resumen-barra ${atenuada ? 'atenuada' : ''}`}
+             title={`${sucursal.Sucursal}: ${porcentaje(participacion)} de las ventas`}>
+            <span className="resumen-barra-nombre">{sucursal.Sucursal}</span>
+            <div className="resumen-barra-fondo">
+                {/* La "key" cambia con la sucursal elegida para que la barra se vuelva a animar. */}
+                <div key={claveAnimacion} className="resumen-barra-relleno" style={{ width: `${(monto / maximo) * 100}%` }} />
+            </div>
+            <span className="resumen-barra-valor">
+                <NumeroAnimado valor={sucursal.Monto} formato={dolares} />
+                <small className="resumen-barra-porcentaje">{porcentaje(participacion)}</small>
+            </span>
+        </div>
+    );
+}
 
-const fecha = (v) =>
-  v ? new Date(v).toLocaleString('es-CR', { dateStyle: 'short', timeStyle: 'short' }) : 'Nunca';
+/* Estado de los datos de una sucursal. */
+function EstadoSucursal({ estado }) {
+    const actualizado = estado.Estado === 'OK';
+    return (
+        <div className={`resumen-estado-fila ${actualizado ? 'ok' : 'falla'}`}>
+            {actualizado ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
+            <span>
+                <strong>{estado.Sucursal}:</strong>{' '}
+                {actualizado
+                    ? `actualizado al ${fecha(estado.UltimaSincronizacion)}`
+                    : `sin conexión desde ${fecha(estado.UltimoIntento)}. Se muestran sus datos al ${fecha(estado.UltimaSincronizacion)}.`}
+            </span>
+        </div>
+    );
+}
 
 function ResumenSucursales({ sucursal, onCambiarSucursal }) {
-  const [resumen, setResumen] = useState(null);
-  const [error, setError] = useState('');
-  const [sincronizando, setSincronizando] = useState(false);
+    const [resumen, setResumen] = useState(null);
+    const [error, setError] = useState('');
+    const [sincronizando, setSincronizando] = useState(false);
 
-  const cargar = () => {
-    setError('');
-    obtenerResumenSucursales(sucursal)
-      .then(setResumen)
-      .catch((err) => setError(err.message));
-  };
+    const cargar = useCallback(() =>
+        reportesApi.resumenSucursales(sucursal)
+            .then((datos) => {
+                setResumen(datos);
+                setError('');
+            })
+            .catch((errorRecibido) => setError(errorRecibido.message)),
+    [sucursal]);
 
-  useEffect(cargar, [sucursal]);
+    useEffect(() => {
+        cargar();
+    }, [cargar]);
 
-  const sincronizar = async () => {
-    setSincronizando(true);
-    try {
-      await sincronizarEstadisticas();
-      cargar();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setSincronizando(false);
-    }
-  };
+    const sincronizar = async () => {
+        setSincronizando(true);
+        try {
+            await reportesApi.sincronizar();
+            cargar();
+        } catch (errorRecibido) {
+            setError(errorRecibido.message);
+        } finally {
+            setSincronizando(false);
+        }
+    };
 
-  const totales = resumen?.totales;
-  const maximo = Math.max(1, ...(resumen?.comparativo || []).map((c) => Number(c.Monto)));
-  const sumaSucursales = (resumen?.comparativo || []).reduce((s, c) => s + Number(c.Monto), 0) || 1;
+    const totales = resumen?.totales;
+    const comparativo = resumen?.comparativo || [];
+    const montoMaximo = Math.max(1, ...comparativo.map((fila) => Number(fila.Monto)));
+    const sumaSucursales = comparativo.reduce((suma, fila) => suma + Number(fila.Monto), 0) || 1;
 
-  return (
-    <div className="table-card resumen-sucursales">
-      <div className="resumen-encabezado">
-        <div className="selector-sucursal" role="radiogroup" aria-label="Sucursal">
-          {OPCIONES.map((o) => (
-            <button
-              key={o.valor}
-              type="button"
-              role="radio"
-              aria-checked={sucursal === o.valor}
-              className={sucursal === o.valor ? 'activo' : ''}
-              onClick={() => onCambiarSucursal(o.valor)}
-            >
-              {o.texto}
-            </button>
-          ))}
-        </div>
-
-        <button type="button" className="btn-restaurar" onClick={sincronizar} disabled={sincronizando}>
-          <RefreshCw size={15} className={sincronizando ? 'girando' : ''} />
-          {sincronizando ? 'Sincronizando...' : 'Actualizar datos de sucursales'}
-        </button>
-      </div>
-
-      {error && <p className="resumen-error">{error}</p>}
-
-      {totales && (
-        <div className="resumen-cuerpo">
-          <div className="resumen-totales">
-            <div>
-              <span>Ventas ({totales.Vista})</span>
-              <strong><NumeroAnimado valor={totales.Monto_Total} formato={dinero} /></strong>
-            </div>
-            <div>
-              <span>Ganancia</span>
-              <strong><NumeroAnimado valor={totales.Ganancia_Total} formato={dinero} /></strong>
-            </div>
-            <div>
-              <span>Unidades vendidas</span>
-              <strong><NumeroAnimado valor={totales.Unidades_Vendidas} formato={unidades} /></strong>
-            </div>
-          </div>
-
-          <div className="resumen-comparativo">
-            <h3><Building2 size={16} /> Comparativo entre sucursales</h3>
-            {resumen.comparativo.map((c) => {
-              const participacion = (Number(c.Monto) / sumaSucursales) * 100;
-              const elegida = !sucursal || String(c.SucursalID) === sucursal;
-              return (
-                <div
-                  key={c.SucursalID}
-                  className={`resumen-barra ${elegida ? '' : 'atenuada'}`}
-                  title={`${c.Sucursal}: ${porcentaje(participacion)} de las ventas`}
-                >
-                  <span className="resumen-barra-nombre">{c.Sucursal}</span>
-                  <div className="resumen-barra-fondo">
-                    {/* key: al cambiar los datos, la barra vuelve a crecer desde cero */}
-                    <div
-                      key={`${sucursal}-${c.Monto}`}
-                      className="resumen-barra-relleno"
-                      style={{ width: `${(Number(c.Monto) / maximo) * 100}%` }}
-                    />
-                  </div>
-                  <span className="resumen-barra-valor">
-                    <NumeroAnimado valor={c.Monto} formato={dinero} />
-                    <small className="resumen-barra-porcentaje">{porcentaje(participacion)}</small>
-                  </span>
+    return (
+        <div className="table-card resumen-sucursales">
+            <div className="resumen-encabezado">
+                <div className="selector-sucursal" role="radiogroup" aria-label="Sucursal">
+                    {SUCURSALES.map((opcion) => (
+                        <button
+                            key={opcion.valor}
+                            type="button"
+                            role="radio"
+                            aria-checked={sucursal === opcion.valor}
+                            className={sucursal === opcion.valor ? 'activo' : ''}
+                            onClick={() => onCambiarSucursal(opcion.valor)}
+                        >
+                            {opcion.texto}
+                        </button>
+                    ))}
                 </div>
-              );
-            })}
-          </div>
+                <button type="button" className="btn-restaurar" onClick={sincronizar} disabled={sincronizando}>
+                    <RefreshCw size={15} className={sincronizando ? 'girando' : ''} />
+                    {sincronizando ? 'Sincronizando...' : 'Actualizar datos de sucursales'}
+                </button>
+            </div>
 
-          <div className="resumen-estado">
-            <h3>Datos de cada sucursal</h3>
-            {resumen.sincronizacion.map((s) => {
-              const ok = s.Estado === 'OK';
-              return (
-                <div key={s.Sucursal} className={`resumen-estado-fila ${ok ? 'ok' : 'falla'}`}>
-                  {ok ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
-                  <span>
-                    <strong>{s.Sucursal}:</strong>{' '}
-                    {ok
-                      ? `actualizado al ${fecha(s.UltimaSincronizacion)}`
-                      : `sin conexión desde ${fecha(s.UltimoIntento)}. Se muestran sus datos al ${fecha(s.UltimaSincronizacion)}.`}
-                  </span>
+            {error && <p className="resumen-error">{error}</p>}
+
+            {totales && (
+                <div className="resumen-cuerpo">
+                    <div className="resumen-totales">
+                        <div>
+                            <span>Ventas ({totales.Vista})</span>
+                            <strong><NumeroAnimado valor={totales.Monto_Total} formato={dolares} /></strong>
+                        </div>
+                        <div>
+                            <span>Ganancia</span>
+                            <strong><NumeroAnimado valor={totales.Ganancia_Total} formato={dolares} /></strong>
+                        </div>
+                        <div>
+                            <span>Unidades vendidas</span>
+                            <strong><NumeroAnimado valor={totales.Unidades_Vendidas} formato={unidades} /></strong>
+                        </div>
+                    </div>
+
+                    <div className="resumen-comparativo">
+                        <h3><Building2 size={16} /> Comparativo entre sucursales</h3>
+                        {comparativo.map((fila) => (
+                            <BarraSucursal
+                                key={fila.SucursalID}
+                                sucursal={fila}
+                                maximo={montoMaximo}
+                                suma={sumaSucursales}
+                                atenuada={Boolean(sucursal) && String(fila.SucursalID) !== sucursal}
+                                claveAnimacion={`${sucursal}-${fila.Monto}`}
+                            />
+                        ))}
+                    </div>
+
+                    <div className="resumen-estado">
+                        <h3>Datos de cada sucursal</h3>
+                        {resumen.sincronizacion.map((estado) => <EstadoSucursal key={estado.Sucursal} estado={estado} />)}
+                    </div>
                 </div>
-              );
-            })}
-          </div>
+            )}
         </div>
-      )}
-    </div>
-  );
+    );
 }
 
 export default ResumenSucursales;

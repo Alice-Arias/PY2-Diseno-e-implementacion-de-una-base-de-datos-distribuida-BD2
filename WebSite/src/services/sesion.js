@@ -1,41 +1,39 @@
 /*---------------------------------------------------------------------------------------*
+* NOMBRE: sesion.js
 *
-* NOMBRE: sesion.js (PY2)
+* DESCRIPCION: Guarda en el navegador la sesión que devuelve el inicio de sesión: el
+* token y los datos del usuario (nombre, rol y sucursal). La API vuelve a validar el
+* token en cada petición; esto solo sirve para que la web sepa qué mostrar.
 *
-* DESCRIPCION: Guarda en el navegador la sesión que devuelve POST /api/auth/login:
-* el token y los datos del usuario (nombre, rol y sucursal). La API vuelve a validar
-* el token en cada petición; esto solo sirve para que la web sepa qué mostrar.
+* ENTRADA: La sesión { token, usuario }.
 *
+* SALIDA: Funciones para guardar, leer y cerrar la sesión.
+*
+* OBJETIVO: Recordar al usuario hasta que cierre sesión o venza el token.
 *-----------------------------------------------------------------------------------------*/
 
-const CLAVE = 'wwi_sesion';
+const CLAVE_SESION = 'wwi_sesion';
 
 export function guardarSesion(sesion) {
-  localStorage.setItem(CLAVE, JSON.stringify(sesion));
+    localStorage.setItem(CLAVE_SESION, JSON.stringify(sesion));
 }
 
 export function obtenerSesion() {
-  try {
-    const sesion = JSON.parse(localStorage.getItem(CLAVE));
-    return sesion?.token ? sesion : null;
-  } catch {
-    return null;
-  }
+    try {
+        const sesion = JSON.parse(localStorage.getItem(CLAVE_SESION));
+        return sesion?.token ? sesion : null;
+    } catch {
+        return null;
+    }
 }
 
-export function obtenerUsuario() {
-  return obtenerSesion()?.usuario ?? null;
-}
+export const obtenerUsuario = () => obtenerSesion()?.usuario ?? null;
 
-export function obtenerToken() {
-  return obtenerSesion()?.token ?? null;
-}
+export const obtenerToken = () => obtenerSesion()?.token ?? null;
 
 export function cerrarSesion() {
-  localStorage.removeItem(CLAVE);
+    localStorage.removeItem(CLAVE_SESION);
 }
 
-/* Página inicial según el rol: el Corporativo solo ve Reportes. */
-export function inicioSegunRol(usuario) {
-  return usuario?.rol === 'Corporativo' ? '/reportes' : '/clientes';
-}
+/* Página inicial según el rol: el Corporativo empieza en Reportes; el Administrador en Clientes. */
+export const inicioSegunRol = (usuario) => (usuario?.rol === 'Corporativo' ? '/reportes' : '/clientes');

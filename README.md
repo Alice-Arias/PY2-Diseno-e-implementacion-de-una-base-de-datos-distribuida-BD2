@@ -180,6 +180,8 @@ Se probó desde la web, con dos pestañas editando el mismo producto: la primera
 - **Vistas materializadas** (vistas indexadas de SQL Server), que se mantienen al día solas cuando entran datos:
   - `Estadisticas.vw_VentasSucursalMes`: ventas, ganancia y unidades por sucursal, año y mes.
   - `Estadisticas.vw_TotalesFactura`: totales por factura.
+  - `Estadisticas.vw_GananciaProductoAnio`: ganancia por sucursal, año y producto (*Productos con más ganancia*).
+- **Resúmenes de los reportes pesados:** *Seguimiento de compras de clientes* y *Rotación de inventario* necesitan mínimos, máximos y la sucursal de cada movimiento, que una vista indexada no permite. `Estadisticas.SP_ActualizarResumenes` los guarda ya calculados en tablas de resumen y los recalcula **solo si cambiaron las facturas o los movimientos** (lo ejecuta el mismo job después de sincronizar). Esos reportes pasaron de 16–60 segundos a responder al instante, con los mismos resultados (`Script/pruebas/comprobar_reportes_rapidos.sql` lo comprueba fila por fila).
 - **Filtro por sucursal o consolidado:** los 11 reportes del proyecto reciben `@Sucursal` (vacío = consolidado, 1 = San José, 2 = Limón). El valor se guarda en `SESSION_CONTEXT`, y las tablas de facturas, compras e inventario se leen a través de vistas que filtran según ese valor. Así, el código de los reportes del Proyecto 1 se mantuvo casi sin cambios.
 - `Estadisticas.SP_Resumen_Sucursales` alimenta el panel del Corporativo: totales, ventas por mes, **comparativo entre sucursales** y estado de los datos de cada una.
 
@@ -257,6 +259,37 @@ La web conserva la estructura del Proyecto 1 y agrega:
 | **Usabilidad** | Modo claro y oscuro, hora en vivo, barra de carga en cada consulta, buscadores con sugerencias y botón *Buscar*, campos con unidades (*USD*, *kg*, *unidades*) y marca de **obligatorio** u **opcional** en los formularios |
 
 La web se comunica con la API a través del **proxy de Vite** (`/api` → `localhost:4000`), así el navegador de Windows no depende del reenvío de puertos de WSL.
+
+### 10.1 Organización del código
+
+Cada archivo empieza con un comentario **NOMBRE / DESCRIPCION / ENTRADA / SALIDA / OBJETIVO**, y cada función importante tiene el suyo. Lo que se repetía en varios módulos está en un solo lugar.
+
+**API (`Api/`)**
+
+```
+server.js                   arranque (lee .env y escucha en el puerto 4000)
+src/app.js                  rutas y quién puede usar cada una
+src/config/baseDatos.js     conexiones a los tres nodos (un pool por nodo y perfil)
+src/security/token.js       crear y verificar el token de sesión
+src/middleware/             autenticación, rol, nodo del usuario y registro de peticiones
+src/routes/                 una ruta por módulo; Clientes y Proveedores comparten consultaCatalogo.js
+src/utils/                  parámetros de los procedimientos y respuestas / errores comunes
+```
+
+**Web (`WebSite/src/`)**
+
+```
+main.jsx, App.jsx           arranque y rutas por rol
+styles/                     TODAS las hojas de estilo (index.css las carga en orden)
+pages/                      una página por módulo
+components/common/          piezas compartidas: campos de formulario, ventanas, paginación, tarjetas...
+components/layout/          menú lateral, barra superior, reloj y tema, rutas protegidas
+components/catalogo/        página y tabla de consulta que comparten Clientes y Proveedores
+components/<modulo>/        piezas propias de clientes, proveedores, inventario, ventas, reportes y login
+hooks/                      lógica reutilizable (listado paginado, selección, carrusel, formularios)
+services/                   llamadas a la API por módulo (http.js es la única que usa fetch)
+utils/                      formatos de fecha y moneda, conversiones de formularios, Excel
+```
 
 ---
 

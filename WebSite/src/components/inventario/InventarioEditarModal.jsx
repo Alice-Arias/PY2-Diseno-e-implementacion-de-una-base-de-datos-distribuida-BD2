@@ -1,523 +1,117 @@
-
-import {
-    X,
-    Pencil,
-    Save,
-    Loader2
-} from 'lucide-react';
+/*---------------------------------------------------------------------------------------*
+* NOMBRE: InventarioEditarModal.jsx
+*
+* DESCRIPCION: Ventana para modificar un producto. Carga su detalle, lo muestra en el
+* formulario y envía los cambios. Si otro usuario lo modificó mientras tanto, la API
+* lo rechaza (control de concurrencia con "Version") y se muestra el aviso.
+*
+* ENTRADA: inventario (fila de la tabla), onCerrar, onInventarioActualizado(respuesta)
+*          y onMostrarMensaje(mensaje).
+*
+* SALIDA: La ventana con el formulario (o "Cargando..." mientras llega el detalle).
+*
+* OBJETIVO: Modificar productos existentes.
+*-----------------------------------------------------------------------------------------*/
 
 import { useEffect, useState } from 'react';
-import useUltimo from '../../hooks/useUltimo';
-
-import {
-    actualizarInventario,
-    obtenerOpcionesInventario,
-    obtenerDetalleInventarios
-} from '../../services/api';
-
+import { Pencil } from 'lucide-react';
+import ModalFormulario from '../common/ModalFormulario';
+import ModalCargando from '../common/ModalCargando';
 import InventarioFormulario from './InventarioFormulario';
+import useUltimo from '../../hooks/useUltimo';
+import useFormulario from '../../hooks/useFormulario';
+import useOpcionesFormulario from '../../hooks/useOpcionesFormulario';
+import { inventarioApi } from '../../services/inventarioApi';
+import { FORMULARIO_VACIO, formularioDesdeDetalle, validarInventario, datosParaApi } from './formularioInventario';
+import { OPCIONES_VACIAS } from './opcionesInventario';
 
-import {
-    FORMULARIO_VACIO,
-    formularioDesdeDetalle,
-    validarInventario,
-    armarDatos
-} from './utilsInventario';
-
-
-function InventarioEditarModal({
-
-    inventario,
-    onCerrar,
-    onInventarioActualizado,
-    onMostrarMensaje
-
-}) {
-
-    // Versiones actuales de las funciones del padre (ver hooks/useUltimo.js).
+function InventarioEditarModal({ inventario, onCerrar, onInventarioActualizado, onMostrarMensaje }) {
+    const idProducto = inventario?.StockItemID;
+    const { formulario, setFormulario, cambiarCampo } = useFormulario(FORMULARIO_VACIO);
+    const { opciones, cargandoOpciones } = useOpcionesFormulario(inventarioApi.opciones, OPCIONES_VACIAS, onMostrarMensaje);
+    const [cargandoProducto, setCargandoProducto] = useState(() => Boolean(idProducto));
+    const [guardando, setGuardando] = useState(false);
     const avisarRef = useUltimo(onMostrarMensaje);
     const cerrarRef = useUltimo(onCerrar);
 
-
-    const [formulario, setFormulario] = useState(
-        FORMULARIO_VACIO
-    );
-
-    const [opciones, setOpciones] = useState({
-        proveedores: [],
-        colores: [],
-        tiposPaquete: [],
-        grupos: []
-    });
-
-
-    const [cargandoOpciones, setCargandoOpciones] =
-        useState(true);
-
-
-    const [cargandoInventario, setCargandoInventario] =
-        useState(() => Boolean(inventario?.StockItemID));
-
-    const [guardando, setGuardando] = useState(false);
-
-
-
+    /* Carga el detalle del producto y llena el formulario. */
     useEffect(() => {
-
-        const cargarOpciones = async () => {
-
-            try {
-
-                const data =
-                    await obtenerOpcionesInventario();
-
-                setOpciones({
-
-                    proveedores:
-                        data.proveedores || [],
-
-                    colores:
-                        data.colores || [],
-
-                    tiposPaquete:
-                        data.tiposPaquete || [],
-                    grupos:
-                        data.grupos || []
-
-                });
-
-            } catch (error) {
-
-                console.error(error);
-
-                if (avisarRef.current) {
-
-                    avisarRef.current({
-
-                        tipo: 'error',
-
-                        titulo:
-                            'No se pudieron cargar las opciones',
-
-                        mensaje: error.message
-
-                    });
-
-                }
-
-            } finally {
-
-                setCargandoOpciones(false);
-
-            }
-
-        };
-
-        cargarOpciones();
-
-    }, [avisarRef]);
-
-
-
-    const stockItemID =
-        inventario?.StockItemID;
-
-
-    useEffect(() => {
-
-        if (!stockItemID) {
-            return;
-        }
-
-
- 
+        if (!idProducto) return undefined;
         let cancelado = false;
 
-
-        const cargarInventario = async () => {
-
-            try {
-
-                setCargandoInventario(true);
-
-
-                const data =
-                    await obtenerDetalleInventarios(
-                        stockItemID
-                    );
-
-
-                const detalle =
-                    Array.isArray(data)
-                        ? data[0]
-                        : data;
-
-
-                if (!detalle) {
-
-                    throw new Error(
-                        'No se encontró la información del producto.'
-                    );
-
-                }
-
-
-                if (!cancelado) {
-
-                    setFormulario(
-                        formularioDesdeDetalle(detalle)
-                    );
-
-                }
-
-            } catch (error) {
-
+        inventarioApi.detalle(idProducto)
+            .then((respuesta) => {
+                const detalle = Array.isArray(respuesta) ? respuesta[0] : respuesta;
+                if (!detalle) throw new Error('No se encontró la información del producto.');
+                if (!cancelado) setFormulario(formularioDesdeDetalle(detalle));
+            })
+            .catch((error) => {
                 console.error(error);
-
-
-                if (!cancelado) {
-
-                    if (avisarRef.current) {
-
-                        avisarRef.current({
-
-                            tipo: 'error',
-
-                            titulo:
-                                'No se pudo cargar el producto',
-
-                            mensaje:
-                                error.message ||
-                                'No fue posible obtener la información del producto.'
-
-                        });
-
-                    }
-
-
-  
-                    cerrarRef.current?.();
-
-                }
-
-            } finally {
-
-                if (!cancelado) {
-
-                    setCargandoInventario(false);
-
-                }
-
-            }
-
-        };
-
-
-        cargarInventario();
-
-
-        return () => {
-
-            cancelado = true;
-
-        };
-
-
-  
-
-    }, [stockItemID, avisarRef, cerrarRef]);
-
-    const cambiarCampo = (e) => {
-
-        const {
-            name,
-            value,
-            type,
-            checked
-        } = e.target;
-
-
-        setFormulario((anterior) => ({
-
-            ...anterior,
-
-            [name]:
-                type === 'checkbox'
-                    ? checked
-                    : value
-
-        }));
-
-    };
-
-
-
-    const guardarCambios = async (e) => {
-
-        e.preventDefault();
-
-
-        const error =
-            validarInventario(formulario);
-
-
-        if (error) {
-
-            if (onMostrarMensaje) {
-
-                onMostrarMensaje({
-
+                if (cancelado) return;
+                avisarRef.current?.({
                     tipo: 'error',
-
-                    titulo: 'Datos inválidos',
-
-                    mensaje: error
-
+                    titulo: 'No se pudo cargar el producto',
+                    mensaje: error.message || 'No fue posible obtener la información del producto.'
                 });
+                cerrarRef.current?.();
+            })
+            .finally(() => {
+                if (!cancelado) setCargandoProducto(false);
+            });
 
-            }
+        return () => { cancelado = true; };
+    }, [idProducto, setFormulario, avisarRef, cerrarRef]);
 
+    const guardar = async (evento) => {
+        evento.preventDefault();
+
+        const error = validarInventario(formulario);
+        if (error) {
+            onMostrarMensaje?.({ tipo: 'error', titulo: 'Datos inválidos', mensaje: error });
             return;
-
         }
-
 
         setGuardando(true);
-
-
         try {
-
-            const data =
-                await actualizarInventario(
-
-                    stockItemID,
-
-                    armarDatos(formulario)
-
-                );
-
-
-            await onInventarioActualizado(data);
-
-
-        } catch (error) {
-
-            console.error(error);
-
-
-            if (onMostrarMensaje) {
-
-                onMostrarMensaje({
-
-                    tipo: 'error',
-
-                    titulo:
-                        'No se puede actualizar el producto',
-
-                    mensaje:
-                        error.message ||
-                        'Ocurrió un error al actualizar el producto.'
-
-                });
-
-            }
-
+            await onInventarioActualizado(await inventarioApi.actualizar(idProducto, datosParaApi(formulario)));
+        } catch (errorRecibido) {
+            console.error(errorRecibido);
+            onMostrarMensaje?.({
+                tipo: 'error',
+                titulo: 'No se puede actualizar el producto',
+                mensaje: errorRecibido.message || 'Ocurrió un error al actualizar el producto.'
+            });
         } finally {
-
             setGuardando(false);
-
         }
-
     };
 
+    if (!inventario) return null;
 
-  
-    if (!inventario) {
-
-        return null;
-
+    if (cargandoProducto) {
+        return <ModalCargando texto="Cargando información del producto..." onCerrar={onCerrar} />;
     }
 
-
-    if (cargandoInventario) {
-
-        return (
-
-            <div
-                className="modal-fondo"
-                onClick={onCerrar}
-            >
-
-                <div
-                    className="modal-contenido modal-cliente-form"
-                    onClick={(e) =>
-                        e.stopPropagation()
-                    }
-                >
-
-                    <div className="modal-cargando">
-
-                        <Loader2
-                            size={30}
-                            className="girando"
-                        />
-
-                        <p>
-                            Cargando información del producto...
-                        </p>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        );
-
-    }
-
-
- 
     return (
-
-        <div
-            className="modal-fondo"
-            onClick={onCerrar}
+        <ModalFormulario
+            icono={Pencil}
+            titulo="Modificar producto"
+            subtitulo="Actualice la información del producto seleccionado."
+            textoGuardar="Guardar cambios"
+            guardando={guardando}
+            deshabilitarGuardar={cargandoOpciones}
+            onGuardar={guardar}
+            onCerrar={onCerrar}
         >
-
-            <div
-                className="modal-contenido modal-cliente-form"
-                onClick={(e) =>
-                    e.stopPropagation()
-                }
-            >
-
-        
-                <header className="cd-encabezado">
-
-                    <div className="cd-avatar">
-
-                        <Pencil size={25} />
-
-                    </div>
-
-
-                    <div className="cd-titulo">
-
-                        <h2>
-                            Modificar producto
-                        </h2>
-
-                        <p className="cd-subtitulo">
-
-                            Actualice la información del producto
-                            seleccionado.
-
-                        </p>
-
-                    </div>
-
-
-                    <button
-                        type="button"
-                        className="modal-cerrar"
-                        onClick={onCerrar}
-                        aria-label="Cerrar"
-                        disabled={guardando}
-                    >
-
-                        <X size={22} />
-
-                    </button>
-
-                </header>
-
-
-              
-                <form onSubmit={guardarCambios}>
-
-                    <InventarioFormulario
-
-                        formulario={formulario}
-
-                        onCambiar={cambiarCampo}
-
-                        opciones={opciones}
-
-                        cargandoOpciones={
-                            cargandoOpciones
-                        }
-
-                        idInventario={
-                            stockItemID
-                        }
-
-                        resaltar
-
-                    />
-
-
-                   
-                    <div className="modal-footer">
-
-                        <button
-                            type="button"
-                            className="btn btn-claro"
-                            onClick={onCerrar}
-                            disabled={guardando}
-                        >
-
-                            Cancelar
-
-                        </button>
-
-
-                        <button
-                            type="submit"
-                            className="btn btn-azul"
-                            disabled={
-                                guardando ||
-                                cargandoOpciones
-                            }
-                        >
-
-                            {guardando ? (
-
-                                <>
-
-                                    <Loader2
-                                        size={17}
-                                        className="girando"
-                                    />
-
-                                    Guardando...
-
-                                </>
-
-                            ) : (
-
-                                <>
-
-                                    <Save size={17} />
-
-                                    Guardar cambios
-
-                                </>
-
-                            )}
-
-                        </button>
-
-                    </div>
-
-                </form>
-
-            </div>
-
-        </div>
-
+            <InventarioFormulario
+                formulario={formulario}
+                onCambiar={cambiarCampo}
+                opciones={opciones}
+                cargandoOpciones={cargandoOpciones}
+                idInventario={idProducto}
+            />
+        </ModalFormulario>
     );
-
 }
 
 export default InventarioEditarModal;

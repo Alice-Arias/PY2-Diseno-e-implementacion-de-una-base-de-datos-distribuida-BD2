@@ -1,268 +1,40 @@
 /*---------------------------------------------------------------------------------------*
+* NOMBRE: ClientesPage.jsx
 *
-* NOMBRE: ClientesPage (CORREGIDO PY2)
+* DESCRIPCION: Página de Clientes (rol Administrador, solo consulta). Usa la página
+* compartida PaginaConsulta con la configuración de este módulo.
 *
-* CAMBIOS:
-*   - Paginación, orden y filtros en SQL (SP_Clientes_Listar con @Pagina).
-*   - Tarjetas y listas de filtros desde SP_Clientes_Resumen (antes new Set()).
-*   - Al crear un cliente se filtra por su nombre para que aparezca de inmediato.
-*   - Después de editar/eliminar se recarga la misma página con los mismos filtros.
+* ENTRADA: Ninguna.
 *
+* SALIDA: La página de Clientes.
+*
+* OBJETIVO: Consultar los clientes de la sucursal.
 *-----------------------------------------------------------------------------------------*/
 
-import { useEffect, useState } from 'react';
-import RelojTema from '../components/RelojTema';   // PY2: hora en vivo y tema
-import BuscadorSugerencias from '../components/BuscadorSugerencias';
-import { sugerirClientes } from '../services/api';
-import { Users, CheckCircle2, Tag, Eye } from 'lucide-react';
+import { Users } from 'lucide-react';
+import PaginaConsulta from '../components/catalogo/PaginaConsulta';
+import ClienteDetalleModal from '../components/clientes/ClienteDetalleModal';
+import { clientesApi } from '../services/catalogoApi';
 
-import ClientesTabla from '../components/ClientesTabla';
-import ClienteDetalleModal from '../components/ClienteDetalleModal';
-import ClienteNuevoModal from '../components/ClienteNuevoModal';
-import ClienteEditarModal from '../components/ClienteEditarModal';
-import ClienteEliminarModal from '../components/ClienteEliminarModal';
-import StatCard from '../components/StatCard';
-import Paginacion from '../components/Paginacion';
-import useListadoServidor from '../hooks/useListadoServidor';
-
-import {
-    listarClientes,
-    obtenerResumenClientes,
-    obtenerDetalleClientes,
-    precargarOpciones,
-    limpiarCacheOpciones
-} from '../services/api';
-
-const POR_PAGINA = 10;
-const FILTROS_VACIOS = { nombre: '', categoria: '', metodoEntrega: '' };
+const CONFIGURACION = {
+    icono: Users,
+    titulo: 'Clientes',
+    descripcion: 'Consulta y busca clientes registrados en Wide World Importers.',
+    api: clientesApi,
+    nombreSingular: 'cliente',
+    nombrePlural: 'clientes',
+    etiquetaTotal: 'Total de clientes',
+    campoTotal: 'Total_Clientes',
+    tabla: {
+        campos: { id: 'CustomerID', nombre: 'Nombre_Cliente', categoria: 'Categoria_Cliente' },
+        titulo: 'Nombre Cliente',
+        textoVacio: 'No se encontraron clientes.'
+    },
+    VentanaDetalle: ClienteDetalleModal
+};
 
 function ClientesPage() {
-    const [mensaje, setMensaje] = useState(null);
-
-    const listado = useListadoServidor(listarClientes, {
-        porPagina: POR_PAGINA,
-        filtrosIniciales: FILTROS_VACIOS,
-        alFallar: () =>
-            setMensaje({ tipo: 'error', titulo: 'Error', mensaje: 'Ocurrió un error al buscar los clientes.' })
-    });
-
-    const [nombreEscrito, setNombreEscrito] = useState('');
-    const [resumen, setResumen] = useState({ totales: {}, categorias: [], metodos: [] });
-
-    const [seleccionados, setSeleccionados] = useState([]);
-    const [clientesModal, setClientesModal] = useState(null);
-    const [mostrarNuevo, setMostrarNuevo] = useState(false);
-    const [clienteEditar, setClienteEditar] = useState(null);
-    const [clienteEliminar, setClienteEliminar] = useState(null);
-    const [recargaResumen, setRecargaResumen] = useState(0);
-
-    // PY2: al abrir la página se cargan (una sola vez) las listas del formulario,
-    // así Agregar / Modificar abren al instante.
-    useEffect(() => {
-        precargarOpciones('clientes');
-    }, []);
-
-    // Estadísticas y listas de filtros (calculadas en SQL).
-    useEffect(() => {
-        obtenerResumenClientes()
-            .then(setResumen)
-            .catch((err) => console.error(err));
-    }, [recargaResumen]);
-
-
-    const filtrar = (cambios) => {
-        setSeleccionados([]);
-        listado.aplicarFiltros(cambios);
-    };
-
-    const restaurarFiltros = () => {
-        setNombreEscrito('');
-        setSeleccionados([]);
-        listado.reemplazarFiltros(FILTROS_VACIOS);
-    };
-
-    const toggleSeleccion = (id) => {
-        setSeleccionados((prev) =>
-            prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-        );
-    };
-
-    const abrirDetalle = async (ids) => {
-        try {
-            setClientesModal(await obtenerDetalleClientes(ids));
-        } catch (err) {
-            console.error(err);
-            setMensaje({ tipo: 'error', titulo: 'Error', mensaje: 'No se pudo cargar el detalle del cliente.' });
-        }
-    };
-
-    const recargarTodo = () => {
-        setSeleccionados([]);
-        // Los datos cambiaron: se refrescan las listas del formulario en segundo plano.
-        limpiarCacheOpciones();
-        precargarOpciones('clientes');
-        listado.recargar();
-        setRecargaResumen((r) => r + 1);
-    };
-
-    const clienteCreado = async (data) => {
-        setMostrarNuevo(false);
-        const nombreNuevo = data?.cliente?.Nombre;
-
-        if (nombreNuevo) {
-            setNombreEscrito(nombreNuevo);
-            listado.reemplazarFiltros({ ...FILTROS_VACIOS, nombre: nombreNuevo });
-        }
-        recargarTodo();
-        setMensaje({ tipo: 'exito', titulo: 'Cliente creado', mensaje: 'El cliente se creó correctamente y se muestra en la tabla.' });
-    };
-
-    const clienteActualizado = async () => {
-        setClienteEditar(null);
-        recargarTodo();
-        setMensaje({ tipo: 'exito', titulo: 'Cliente actualizado', mensaje: 'El cliente se actualizó correctamente.' });
-    };
-
-    const clienteEliminado = async () => {
-        setClienteEliminar(null);
-        recargarTodo();
-        setMensaje({ tipo: 'exito', titulo: 'Cliente eliminado', mensaje: 'El cliente se eliminó correctamente.' });
-    };
-
-    const ahora = new Date();
-    const fechaTexto = ahora.toLocaleDateString('es-CR', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
-    const horaTexto = ahora.toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit', hour12: false });
-
-    return (
-        <div>
-            <div className="page-header">
-                <div className="title-block">
-                    <div className="icon-box"><Users size={22} /></div>
-                    <div>
-                        <h1>Clientes</h1>
-                        <p>Consulta y busca clientes registrados en Wide World Importers.</p>
-                    </div>
-                </div>
-                <div className="header-right">
-                    <RelojTema />
-                </div>
-            </div>
-
-            <div className="stats-row">
-                <StatCard icon={Users} color="blue" label="Total de clientes" value={resumen.totales?.Total_Clientes ?? 0} />
-                <StatCard icon={Tag} color="green" label="Categorías" value={resumen.totales?.Total_Categorias ?? 0} />
-                <StatCard icon={CheckCircle2} color="yellow" label="Resultados actuales" value={listado.paginacion.Total_Registros} />
-            </div>
-
-            <div className="table-card">
-                <div className="toolbar">
-                    <BuscadorSugerencias
-                        valor={nombreEscrito}
-                        onCambiar={setNombreEscrito}
-                        onBuscar={(texto) => filtrar({ nombre: texto })}
-                        cargarSugerencias={sugerirClientes}
-                        placeholder="Nombre del cliente"
-                        etiqueta="Buscar por nombre del cliente"
-                    />
-
-                    <select
-                        value={listado.filtros.categoria}
-                        onChange={(e) => filtrar({ categoria: e.target.value })}
-                    >
-                        <option value="">Categorías</option>
-                        {resumen.categorias.map((c) => (
-                            <option key={c.Nombre} value={c.Nombre}>{c.Nombre}</option>
-                        ))}
-                    </select>
-
-                    <select
-                        value={listado.filtros.metodoEntrega}
-                        onChange={(e) => filtrar({ metodoEntrega: e.target.value })}
-                    >
-                        <option value="">Métodos</option>
-                        {resumen.metodos.map((m) => (
-                            <option key={m.Nombre} value={m.Nombre}>{m.Nombre}</option>
-                        ))}
-                    </select>
-
-                    <button className="btn-restaurar" onClick={restaurarFiltros}>Restaurar filtros</button>
-
-                    <button
-                        className="btn-filtros"
-                        disabled={seleccionados.length === 0}
-                        onClick={() => abrirDetalle(seleccionados)}
-                        style={{
-                            opacity: seleccionados.length === 0 ? 0.5 : 1,
-                            cursor: seleccionados.length === 0 ? 'not-allowed' : 'pointer'
-                        }}
-                    >
-                        <Eye size={16} />
-                        Ver seleccionados ({seleccionados.length})
-                    </button>
-
-                    {/* PY2: el Administrador solo consulta (enunciado, sección 2). */}
-                </div>
-
-                <div style={{ opacity: listado.cargando ? 0.5 : 1, transition: 'opacity .15s' }}>
-                    <ClientesTabla
-                        clientes={listado.filas}
-                        seleccionados={seleccionados}
-                        onToggleSeleccion={toggleSeleccion}
-                        onVerUno={abrirDetalle}
-                        onEditar={null}
-                        onEliminar={null}
-                    />
-                </div>
-
-                <Paginacion
-                    pagina={listado.pagina}
-                    totalPaginas={listado.paginacion.Total_Paginas}
-                    totalRegistros={listado.paginacion.Total_Registros}
-                    porPagina={POR_PAGINA}
-                    cargando={listado.cargando}
-                    onCambiar={listado.cambiarPagina}
-                />
-            </div>
-
-            <ClienteDetalleModal clientes={clientesModal} onCerrar={() => setClientesModal(null)} />
-
-            {mostrarNuevo && (
-                <ClienteNuevoModal
-                    onCerrar={() => setMostrarNuevo(false)}
-                    onClienteCreado={clienteCreado}
-                    onMostrarMensaje={setMensaje}
-                />
-            )}
-
-            {clienteEditar && (
-                <ClienteEditarModal
-                    cliente={clienteEditar}
-                    onCerrar={() => setClienteEditar(null)}
-                    onClienteActualizado={clienteActualizado}
-                    onMostrarMensaje={setMensaje}
-                />
-            )}
-
-            {clienteEliminar && (
-                <ClienteEliminarModal
-                    cliente={clienteEliminar}
-                    onCerrar={() => setClienteEliminar(null)}
-                    onEliminado={clienteEliminado}
-                    onMostrarMensaje={setMensaje}
-                />
-            )}
-
-            {mensaje && (
-                <div className="modal-overlay">
-                    <div className={`mensaje-modal ${mensaje.tipo}`}>
-                        <h2>{mensaje.titulo}</h2>
-                        <p>{mensaje.mensaje}</p>
-                        <button className="btn-aceptar" onClick={() => setMensaje(null)}>Aceptar</button>
-                    </div>
-                </div>
-            )}
-        </div>
-    );
+    return <PaginaConsulta configuracion={CONFIGURACION} />;
 }
 
 export default ClientesPage;

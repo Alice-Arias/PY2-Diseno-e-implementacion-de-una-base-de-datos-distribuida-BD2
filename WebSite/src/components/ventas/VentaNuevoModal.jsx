@@ -1,230 +1,73 @@
-// ============================================================
-// MODAL PARA CREAR UNA NUEVA VENTA
-// ============================================================
+/*---------------------------------------------------------------------------------------*
+* NOMBRE: VentaNuevoModal.jsx
+*
+* DESCRIPCION: Ventana para registrar una venta con un producto. Valida los datos y
+* los envía a la API.
+*
+* ENTRADA: onCerrar, onVentaCreada(respuesta) y onMostrarMensaje(mensaje).
+*
+* SALIDA: La ventana con el formulario.
+*
+* OBJETIVO: Registrar ventas nuevas en la sucursal.
+*-----------------------------------------------------------------------------------------*/
 
-import { X, ShoppingCart, Save, Loader2 } from 'lucide-react';
-
-import { useEffect, useState } from 'react';
-import useUltimo from '../../hooks/useUltimo';
-
-import {
-    insertarVenta,
-    obtenerOpcionesVentas
-} from '../../services/api';
-
+import { useState } from 'react';
+import { ShoppingCart } from 'lucide-react';
+import ModalFormulario from '../common/ModalFormulario';
 import VentasFormulario from './VentasFormulario';
+import useFormulario from '../../hooks/useFormulario';
+import useOpcionesFormulario from '../../hooks/useOpcionesFormulario';
+import { ventasApi } from '../../services/ventasApi';
+import { FORMULARIO_VACIO, validarVenta, datosParaApi } from './formularioVenta';
+import { OPCIONES_VACIAS } from './opcionesVentas';
 
-import {
-    FORMULARIO_VACIO,
-    validarVenta,
-    armarDatos
-} from './utilsVentas';
-
-
-function VentaNuevoModal({
-    onCerrar,
-    onVentaCreada,
-    onMostrarMensaje
-}) {
-
-    // Versiones actuales de las funciones del padre (ver hooks/useUltimo.js).
-    const avisarRef = useUltimo(onMostrarMensaje);
-
-    const [formulario, setFormulario] = useState(FORMULARIO_VACIO);
-
-    const [opciones, setOpciones] = useState({
-        clientes: [],
-        metodosEntrega: [],
-        contactos: [],
-        vendedores: [],
-        pedidos: [],
-        productos: [],
-        tiposPaquete: []
-    });
-
-    const [cargandoOpciones, setCargandoOpciones] = useState(true);
+function VentaNuevoModal({ onCerrar, onVentaCreada, onMostrarMensaje }) {
+    const { formulario, cambiarCampo } = useFormulario(FORMULARIO_VACIO);
+    const { opciones, cargandoOpciones } = useOpcionesFormulario(ventasApi.opciones, OPCIONES_VACIAS, onMostrarMensaje);
     const [guardando, setGuardando] = useState(false);
 
-
-    useEffect(() => {
-
-        const cargarOpciones = async () => {
-
-            try {
-
-                const data = await obtenerOpcionesVentas();
-                setOpciones(data);
-
-            } catch (error) {
-
-                console.error(error);
-
-                if (avisarRef.current) {
-                    avisarRef.current({
-                        tipo: 'error',
-                        titulo: 'No se pudieron cargar las opciones',
-                        mensaje: error.message
-                    });
-                }
-
-            } finally {
-
-                setCargandoOpciones(false);
-
-            }
-        };
-
-        cargarOpciones();
-
-
-    }, [avisarRef]);
-
-
-    const cambiarCampo = (e) => {
-
-        const { name, value } = e.target;
-
-        setFormulario((anterior) => ({
-            ...anterior,
-            [name]: value
-        }));
-
-    };
-
-
-    const guardarVenta = async (e) => {
-
-        e.preventDefault();
+    const guardar = async (evento) => {
+        evento.preventDefault();
 
         const error = validarVenta(formulario);
-
         if (error) {
-
-            if (onMostrarMensaje) {
-                onMostrarMensaje({
-                    tipo: 'error',
-                    titulo: 'Datos inválidos',
-                    mensaje: error
-                });
-            }
-
+            onMostrarMensaje?.({ tipo: 'error', titulo: 'Datos inválidos', mensaje: error });
             return;
         }
 
         setGuardando(true);
-
         try {
-
-            const data = await insertarVenta(armarDatos(formulario));
-
-            await onVentaCreada(data);
-
-        } catch (error) {
-
-            console.error(error);
-
-            if (onMostrarMensaje) {
-                onMostrarMensaje({
-                    tipo: 'error',
-                    titulo: 'No se puede crear la venta',
-                    mensaje:
-                        error.message ||
-                        'Ocurrió un error al crear la venta.'
-                });
-            }
-
+            await onVentaCreada(await ventasApi.crear(datosParaApi(formulario)));
+        } catch (errorRecibido) {
+            console.error(errorRecibido);
+            onMostrarMensaje?.({
+                tipo: 'error',
+                titulo: 'No se puede crear la venta',
+                mensaje: errorRecibido.message || 'Ocurrió un error al crear la venta.'
+            });
         } finally {
-
             setGuardando(false);
-
         }
-
     };
 
-
     return (
-
-        <div className="modal-fondo" onClick={onCerrar}>
-
-            <div
-                className="modal-contenido modal-cliente-form"
-                onClick={(e) => e.stopPropagation()}
-            >
-
-                <header className="cd-encabezado">
-
-                    <div className="cd-avatar">
-                        <ShoppingCart size={25} />
-                    </div>
-
-                    <div className="cd-titulo">
-                        <h2>Nueva venta</h2>
-                        <p className="cd-subtitulo">
-                            Complete la información para registrar
-                            una nueva venta.
-                        </p>
-                    </div>
-
-                    <button
-                        type="button"
-                        className="modal-cerrar"
-                        onClick={onCerrar}
-                        aria-label="Cerrar"
-                        disabled={guardando}
-                    >
-                        <X size={22} />
-                    </button>
-
-                </header>
-
-                <form onSubmit={guardarVenta}>
-
-                    <VentasFormulario
-                        formulario={formulario}
-                        onCambiar={cambiarCampo}
-                        opciones={opciones}
-                        cargandoOpciones={cargandoOpciones}
-                    />
-
-                    <div className="modal-footer">
-
-                        <button
-                            type="button"
-                            className="btn btn-claro"
-                            onClick={onCerrar}
-                            disabled={guardando}
-                        >
-                            Cancelar
-                        </button>
-
-                        <button
-                            type="submit"
-                            className="btn btn-azul"
-                            disabled={guardando || cargandoOpciones}
-                        >
-
-                            {guardando ? (
-                                <>
-                                    <Loader2 size={17} className="girando" />
-                                    Guardando...
-                                </>
-                            ) : (
-                                <>
-                                    <Save size={17} />
-                                    Crear venta
-                                </>
-                            )}
-
-                        </button>
-
-                    </div>
-
-                </form>
-
-            </div>
-
-        </div>
-
+        <ModalFormulario
+            icono={ShoppingCart}
+            titulo="Nueva venta"
+            subtitulo="Complete la información para registrar una nueva venta."
+            textoGuardar="Crear venta"
+            guardando={guardando}
+            deshabilitarGuardar={cargandoOpciones}
+            onGuardar={guardar}
+            onCerrar={onCerrar}
+        >
+            <VentasFormulario
+                formulario={formulario}
+                onCambiar={cambiarCampo}
+                opciones={opciones}
+                cargandoOpciones={cargandoOpciones}
+            />
+        </ModalFormulario>
     );
 }
 

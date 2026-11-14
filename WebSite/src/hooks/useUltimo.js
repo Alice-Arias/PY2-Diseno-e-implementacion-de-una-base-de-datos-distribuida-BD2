@@ -1,30 +1,29 @@
 /*---------------------------------------------------------------------------------------*
+* NOMBRE: useUltimo
 *
-* NOMBRE: useUltimo (NUEVO PY2 - limpieza)
+* DESCRIPCION: Guarda en una referencia el valor más reciente de una prop (casi siempre
+* una función como onMostrarMensaje u onCerrar).
+* Los efectos que cargan datos al abrir una ventana usan esas funciones; si se ponen
+* como dependencia, el efecto se repite cada vez que el padre crea una función nueva
+* (y vuelve a pedir los datos). Con la referencia el efecto corre una sola vez y
+* siempre llama a la versión actual.
 *
-* DESCRIPCION: Guarda en una ref el valor más reciente de una prop (normalmente una
-* función como onMostrarMensaje u onCerrar).
+* ENTRADA: valor (cualquier cosa).
 *
-* POR QUÉ: los useEffect que cargan datos al abrir un modal usan esas funciones,
-* pero si se ponen en el arreglo de dependencias el efecto se vuelve a ejecutar
-* cada vez que el padre crea una función nueva (vuelve a pedir datos al servidor).
-* Si NO se ponen, el linter avisa (react-hooks/exhaustive-deps) y se podría usar una
-* versión vieja de la función. Con la ref el efecto se ejecuta una sola vez y siempre
-* llama a la versión actual.
+* SALIDA: Referencia: referencia.current tiene siempre el valor actual.
 *
-* USO: const avisarRef = useUltimo(onMostrarMensaje);
-*      ... dentro del efecto: avisarRef.current?.({ ... });
+* OBJETIVO: Evitar peticiones repetidas sin perder la versión actual de las funciones.
 *
+* USO:  const avisarRef = useUltimo(onMostrarMensaje);
+*       ... dentro del efecto: avisarRef.current?.({ ... });
 *-----------------------------------------------------------------------------------------*/
 
 import { useLayoutEffect, useRef } from 'react';
 
 export default function useUltimo(valor) {
-    const ref = useRef(valor);
-
+    const referencia = useRef(valor);
     useLayoutEffect(() => {
-        ref.current = valor;
+        referencia.current = valor;
     });
-
-    return ref;
+    return referencia;
 }

@@ -1,635 +1,147 @@
+/*---------------------------------------------------------------------------------------*
+* NOMBRE: VentaEditarModal.jsx
+*
+* DESCRIPCION: Ventana para modificar una venta. Carga la factura con todas sus líneas;
+* al guardar, valida el encabezado y cada línea, y envía una actualización por línea
+* (cada una con el encabezado de la factura).
+*
+* ENTRADA: venta (fila de la tabla), onCerrar, onVentaActualizada(respuesta) y
+*          onMostrarMensaje(mensaje).
+*
+* SALIDA: La ventana con el formulario (o "Cargando..." mientras llega la factura).
+*
+* OBJETIVO: Corregir los datos de una venta registrada.
+*-----------------------------------------------------------------------------------------*/
 
-import { X, Pencil, Save, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import useUltimo from '../../hooks/useUltimo';
-
-import {
-    actualizarVenta,
-    obtenerOpcionesVentas,
-    obtenerDetalleVenta
-} from '../../services/api';
-
+import { Pencil } from 'lucide-react';
+import ModalFormulario from '../common/ModalFormulario';
+import ModalCargando from '../common/ModalCargando';
 import VentasFormulario from './VentasFormulario';
+import useUltimo from '../../hooks/useUltimo';
+import useFormulario from '../../hooks/useFormulario';
+import useOpcionesFormulario from '../../hooks/useOpcionesFormulario';
+import { ventasApi } from '../../services/ventasApi';
+import { FORMULARIO_VACIO, lineasDesdeDetalle, soloEncabezado, validarVenta, datosParaApi } from './formularioVenta';
+import { OPCIONES_VACIAS } from './opcionesVentas';
 
-import {
-    FORMULARIO_VACIO,
-    formularioDesdeDetalle,
-    formulariosDesdeDetalle,
-    validarVenta,
-    armarDatos,
-    encabezadoDesde
-} from './utilsVentas';
-
-
-function VentaEditarModal({
-    venta,
-    onCerrar,
-    onVentaActualizada,
-    onMostrarMensaje
-}) {
-
-    // Versiones actuales de las funciones del padre (ver hooks/useUltimo.js).
+function VentaEditarModal({ venta, onCerrar, onVentaActualizada, onMostrarMensaje }) {
+    const numeroFactura = venta?.InvoiceID;
+    const { formulario, setFormulario, cambiarCampo } = useFormulario(FORMULARIO_VACIO);
+    const { opciones, cargandoOpciones } = useOpcionesFormulario(ventasApi.opciones, OPCIONES_VACIAS, onMostrarMensaje);
+    const [lineas, setLineas] = useState([]);
+    const [cargandoVenta, setCargandoVenta] = useState(() => Boolean(numeroFactura));
+    const [guardando, setGuardando] = useState(false);
     const avisarRef = useUltimo(onMostrarMensaje);
     const cerrarRef = useUltimo(onCerrar);
 
-    // ========================================================
-    // DATOS GENERALES DE LA FACTURA
-    // ========================================================
-
-    const [formulario, setFormulario] = useState(FORMULARIO_VACIO);
-
-
-    const [lineas, setLineas] = useState([]);
-
-    // ========================================================
-    // OPCIONES PARA LOS SELECT
-    // ========================================================
-
-    const [opciones, setOpciones] = useState({
-        clientes: [],
-        metodosEntrega: [],
-        contactos: [],
-        vendedores: [],
-        pedidos: [],
-        productos: [],
-        tiposPaquete: []
-    });
-
-    const [cargandoOpciones, setCargandoOpciones] = useState(true);
-    const [cargandoVenta, setCargandoVenta] = useState(() => Boolean(venta?.InvoiceID));
-    const [guardando, setGuardando] = useState(false);
-
-    const invoiceID = venta?.InvoiceID;
-
-
-    // ========================================================
-    // CARGAR LAS LISTAS DE LOS SELECT
-    // ========================================================
-
+    /* Carga la factura: el formulario toma el encabezado y la primera línea. */
     useEffect(() => {
-
-        const cargarOpciones = async () => {
-
-            try {
-
-                const data = await obtenerOpcionesVentas();
-
-                setOpciones(data);
-
-            } catch (error) {
-
-                console.error(error);
-
-                if (avisarRef.current) {
-
-                    avisarRef.current({
-                        tipo: 'error',
-                        titulo: 'No se pudieron cargar las opciones',
-                        mensaje: error.message
-                    });
-
-                }
-
-            } finally {
-
-                setCargandoOpciones(false);
-
-            }
-
-        };
-
-        cargarOpciones();
-
-    }, [avisarRef]);
-
-
-    // ========================================================
-    // CARGAR LOS DATOS COMPLETOS DE LA VENTA
-    // ========================================================
-
-    useEffect(() => {
-
-        if (!invoiceID) {
-            return;
-        }
-
+        if (!numeroFactura) return undefined;
         let cancelado = false;
 
-
-        const cargarVenta = async () => {
-
-            try {
-
-                setCargandoVenta(true);
-
-
-                const data = await obtenerDetalleVenta(invoiceID);
-
-
-                // ------------------------------------------------
-                // VALIDAR QUE EXISTA EL ENCABEZADO
-                // ------------------------------------------------
-
-                if (!data || !data.encabezado) {
-
-                    throw new Error(
-                        'No se encontró la información de la venta.'
-                    );
-
-                }
-
-
-                // ------------------------------------------------
-                // OBTENER TODAS LAS LÍNEAS
-                // ------------------------------------------------
-
-                const lineasFactura = data.lineas || [];
-
-
-                if (lineasFactura.length === 0) {
-
-                    throw new Error(
-                        'La factura no contiene líneas de productos.'
-                    );
-
-                }
-
-
-                if (!cancelado) {
-
- 
-                    setFormulario(
-                        formularioDesdeDetalle(
-                            data.encabezado,
-                            lineasFactura[0]
-                        )
-                    );
-
-
-                    // --------------------------------------------
-                    // CARGAR TODAS LAS LÍNEAS DE PRODUCTOS
-                    // --------------------------------------------
-
-                    setLineas(
-                        formulariosDesdeDetalle(
-                            data.encabezado,
-                            lineasFactura
-                        )
-                    );
-
-                }
-
-            } catch (error) {
-
-                console.error(error);
-
-                if (!cancelado) {
-
-                    if (avisarRef.current) {
-
-                        avisarRef.current({
-                            tipo: 'error',
-                            titulo: 'No se pudo cargar la venta',
-                            mensaje:
-                                error.message ||
-                                'No fue posible obtener la información de la venta.'
-                        });
-
-                    }
-
-                    cerrarRef.current?.();
-
-                }
-
-            } finally {
-
-                if (!cancelado) {
-
-                    setCargandoVenta(false);
-
-                }
-
-            }
-
-        };
-
-
-        cargarVenta();
-
-
-        return () => {
-
-            cancelado = true;
-
-        };
-
-       
-    }, [invoiceID, avisarRef, cerrarRef]);
-
-
-    // ========================================================
-    // CAMBIAR UN CAMPO DEL ENCABEZADO
-    // ========================================================
-
-    const cambiarCampo = (e) => {
-
-        const { name, value } = e.target;
-
-        setFormulario((anterior) => ({
-            ...anterior,
-            [name]: value
-        }));
-
-    };
-
-
-
-    const cambiarCampoLinea = (indice, e) => {
-
-        const { name, value } = e.target;
-
-        setLineas((anteriores) =>
-            anteriores.map((linea, i) => {
-
-                if (i === indice) {
-
-                    return {
-                        ...linea,
-                        [name]: value
-                    };
-
-                }
-
-                return linea;
-
+        ventasApi.detalle(numeroFactura)
+            .then((factura) => {
+                if (!factura?.encabezado) throw new Error('No se encontró la información de la venta.');
+                const lineasFactura = factura.lineas || [];
+                if (lineasFactura.length === 0) throw new Error('La factura no contiene líneas de productos.');
+                if (cancelado) return;
+                setFormulario(lineasDesdeDetalle(factura.encabezado, [lineasFactura[0]])[0]);
+                setLineas(lineasDesdeDetalle(factura.encabezado, lineasFactura));
             })
-        );
+            .catch((error) => {
+                console.error(error);
+                if (cancelado) return;
+                avisarRef.current?.({
+                    tipo: 'error',
+                    titulo: 'No se pudo cargar la venta',
+                    mensaje: error.message || 'No fue posible obtener la información de la venta.'
+                });
+                cerrarRef.current?.();
+            })
+            .finally(() => {
+                if (!cancelado) setCargandoVenta(false);
+            });
 
+        return () => { cancelado = true; };
+    }, [numeroFactura, setFormulario, avisarRef, cerrarRef]);
+
+    const cambiarCampoLinea = (posicionLinea, evento) => {
+        const { name, value } = evento.target;
+        setLineas((actuales) => actuales.map((linea, posicion) => (posicion === posicionLinea ? { ...linea, [name]: value } : linea)));
     };
 
+    const avisarError = (titulo, mensaje) => onMostrarMensaje?.({ tipo: 'error', titulo, mensaje });
 
-    // ========================================================
-    // GUARDAR CAMBIOS
-    // ========================================================
-
-    const guardarCambios = async (e) => {
-
-        e.preventDefault();
-
-
-        // ----------------------------------------------------
-        // VALIDAR QUE EXISTA AL MENOS UNA LÍNEA
-        // ----------------------------------------------------
-
+    /* Primer error del formulario o de alguna línea (cada línea con el encabezado actual). */
+    const buscarError = () => {
         if (lineas.length === 0) {
+            return ['No hay productos', 'La factura no contiene líneas de productos para actualizar.'];
+        }
+        const errorEncabezado = validarVenta(formulario);
+        if (errorEncabezado) return ['Datos inválidos', errorEncabezado];
 
-            if (onMostrarMensaje) {
+        const encabezado = soloEncabezado(formulario);
+        for (let posicion = 0; posicion < lineas.length; posicion++) {
+            const errorLinea = validarVenta({ ...lineas[posicion], ...encabezado });
+            if (errorLinea) return [`Datos inválidos en el producto ${posicion + 1}`, errorLinea];
+        }
+        return null;
+    };
 
-                onMostrarMensaje({
-                    tipo: 'error',
-                    titulo: 'No hay productos',
-                    mensaje:
-                        'La factura no contiene líneas de productos para actualizar.'
-                });
+    const guardar = async (evento) => {
+        evento.preventDefault();
 
-            }
-
+        const error = buscarError();
+        if (error) {
+            avisarError(...error);
             return;
-
         }
-
-
-        // ----------------------------------------------------
-        // VALIDAR LOS DATOS GENERALES
-        // ----------------------------------------------------
-
-        const errorFormulario = validarVenta(formulario);
-
-
-        if (errorFormulario) {
-
-            if (onMostrarMensaje) {
-
-                onMostrarMensaje({
-                    tipo: 'error',
-                    titulo: 'Datos inválidos',
-                    mensaje: errorFormulario
-                });
-
-            }
-
-            return;
-
-        }
-
-
-        // ----------------------------------------------------
-        // VALIDAR CADA LÍNEA DE PRODUCTO
-        // ----------------------------------------------------
-
-        for (let i = 0; i < lineas.length; i++) {
-
-            // PY2: se valida la línea con el encabezado ACTUAL del formulario.
-            const errorLinea = validarVenta({ ...lineas[i], ...encabezadoDesde(formulario) });
-
-
-            if (errorLinea) {
-
-                if (onMostrarMensaje) {
-
-                    onMostrarMensaje({
-                        tipo: 'error',
-                        titulo: `Datos inválidos en el producto ${i + 1}`,
-                        mensaje: errorLinea
-                    });
-
-                }
-
-                return;
-
-            }
-
-        }
-
-
-        // ----------------------------------------------------
-        // COMENZAR ACTUALIZACIÓN
-        // ----------------------------------------------------
 
         setGuardando(true);
-
-
         try {
-
+            const encabezado = soloEncabezado(formulario);
             let ultimaRespuesta = null;
-
-
-            // ------------------------------------------------
-            // ACTUALIZAR TODAS LAS LÍNEAS
-            // ------------------------------------------------
-            //
-            // SP_Ventas_Actualizar trabaja con una línea por
-            // llamada.
-            //
-            // Por eso recorremos todos los productos.
-            //
-            // NO se inventan productos.
-            //
-            // Cada línea conserva el StockItemID que devolvió
-            // SP_Ventas_Detalle.
-            //
-            // ------------------------------------------------
-
             for (const linea of lineas) {
-
-                // PY2 (corrección método de entrega): cada línea se envía con el
-                // encabezado actual del formulario, no con la copia vieja.
-                const datos = armarDatos({ ...linea, ...encabezadoDesde(formulario) });
-
-
-                ultimaRespuesta = await actualizarVenta(
-                    invoiceID,
-                    datos
-                );
-
+                ultimaRespuesta = await ventasApi.actualizar(numeroFactura, datosParaApi({ ...linea, ...encabezado }));
             }
-
-
-            // ------------------------------------------------
-            // AVISAR QUE LA VENTA FUE ACTUALIZADA
-            // ------------------------------------------------
-
             await onVentaActualizada(ultimaRespuesta);
-
-
-        } catch (error) {
-
-            console.error(error);
-
-            if (onMostrarMensaje) {
-
-                onMostrarMensaje({
-                    tipo: 'error',
-                    titulo: 'No se puede actualizar la venta',
-                    mensaje:
-                        error.message ||
-                        'Ocurrió un error al actualizar la venta.'
-                });
-
-            }
-
+        } catch (errorRecibido) {
+            console.error(errorRecibido);
+            avisarError('No se puede actualizar la venta', errorRecibido.message || 'Ocurrió un error al actualizar la venta.');
         } finally {
-
             setGuardando(false);
-
         }
-
     };
 
-
-    // ========================================================
-    // SI NO HAY VENTA SELECCIONADA
-    // ========================================================
-
-    if (!venta) {
-
-        return null;
-
-    }
-
-
-    // ========================================================
-    // PANTALLA DE CARGA
-    // ========================================================
+    if (!venta) return null;
 
     if (cargandoVenta) {
-
-        return (
-
-            <div
-                className="modal-fondo"
-                onClick={onCerrar}
-            >
-
-                <div
-                    className="modal-contenido modal-cliente-form"
-                    onClick={(e) => e.stopPropagation()}
-                >
-
-                    <div className="modal-cargando">
-
-                        <Loader2
-                            size={30}
-                            className="girando"
-                        />
-
-                        <p>
-                            Cargando información de la venta...
-                        </p>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        );
-
+        return <ModalCargando texto="Cargando información de la venta..." onCerrar={onCerrar} />;
     }
 
-
-    // ========================================================
-    // MODAL
-    // ========================================================
-
     return (
-
-        <div
-            className="modal-fondo"
-            onClick={onCerrar}
+        <ModalFormulario
+            icono={Pencil}
+            titulo="Modificar venta"
+            subtitulo="Actualice la información de la venta seleccionada."
+            textoGuardar="Guardar cambios"
+            guardando={guardando}
+            deshabilitarGuardar={cargandoOpciones || cargandoVenta || lineas.length === 0}
+            onGuardar={guardar}
+            onCerrar={onCerrar}
         >
-
-            <div
-                className="modal-contenido modal-cliente-form"
-                onClick={(e) => e.stopPropagation()}
-            >
-
-                {/* ==================================================
-                    ENCABEZADO
-                    ================================================== */}
-
-                <header className="cd-encabezado">
-
-                    <div className="cd-avatar">
-
-                        <Pencil size={25} />
-
-                    </div>
-
-
-                    <div className="cd-titulo">
-
-                        <h2>
-                            Modificar venta
-                        </h2>
-
-                        <p className="cd-subtitulo">
-
-                            Actualice la información de la venta
-                            seleccionada.
-
-                        </p>
-
-                    </div>
-
-
-                    <button
-                        type="button"
-                        className="modal-cerrar"
-                        onClick={onCerrar}
-                        aria-label="Cerrar"
-                        disabled={guardando}
-                    >
-
-                        <X size={22} />
-
-                    </button>
-
-                </header>
-
-
-                {/* ==================================================
-                    FORMULARIO
-                    ================================================== */}
-
-                <form onSubmit={guardarCambios}>
-
-                    <VentasFormulario
-
-                        formulario={formulario}
-
-                        onCambiar={cambiarCampo}
-
-                        opciones={opciones}
-
-                        cargandoOpciones={cargandoOpciones}
-
-                        idVenta={invoiceID}
-
-                        lineas={lineas}
-
-                        onCambiarLinea={cambiarCampoLinea}
-
-                    />
-
-
-                    {/* ==================================================
-                        BOTONES
-                        ================================================== */}
-
-                    <div className="modal-footer">
-
-                        <button
-                            type="button"
-                            className="btn btn-claro"
-                            onClick={onCerrar}
-                            disabled={guardando}
-                        >
-
-                            Cancelar
-
-                        </button>
-
-
-                        <button
-                            type="submit"
-                            className="btn btn-azul"
-                            disabled={
-                                guardando ||
-                                cargandoOpciones ||
-                                cargandoVenta ||
-                                lineas.length === 0
-                            }
-                        >
-
-                            {guardando ? (
-
-                                <>
-
-                                    <Loader2
-                                        size={17}
-                                        className="girando"
-                                    />
-
-                                    Guardando...
-
-                                </>
-
-                            ) : (
-
-                                <>
-
-                                    <Save size={17} />
-
-                                    Guardar cambios
-
-                                </>
-
-                            )}
-
-                        </button>
-
-                    </div>
-
-                </form>
-
-            </div>
-
-        </div>
-
+            <VentasFormulario
+                formulario={formulario}
+                onCambiar={cambiarCampo}
+                opciones={opciones}
+                cargandoOpciones={cargandoOpciones}
+                idVenta={numeroFactura}
+                lineas={lineas}
+                onCambiarLinea={cambiarCampoLinea}
+            />
+        </ModalFormulario>
     );
-
 }
-
 
 export default VentaEditarModal;

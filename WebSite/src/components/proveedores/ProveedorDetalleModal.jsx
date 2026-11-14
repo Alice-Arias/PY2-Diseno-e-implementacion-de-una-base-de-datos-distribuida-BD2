@@ -1,558 +1,193 @@
+/*---------------------------------------------------------------------------------------*
+* NOMBRE: ProveedorDetalleModal.jsx
+*
+* DESCRIPCION: Ventana con el detalle de uno o varios proveedores (se pasa de uno a
+* otro con las flechas). Los datos bancarios y de contacto llegan como "xxxx" hasta
+* que el Corporativo autorice verlos (DatosProtegidos).
+*
+* ENTRADA: registros (lista de proveedores de SP_Proveedores_Detalle) y onCerrar.
+*
+* SALIDA: La ventana, o nada si no hay registros.
+*
+* OBJETIVO: Consultar toda la información de un proveedor.
+*-----------------------------------------------------------------------------------------*/
 
 import { useState } from 'react';
-import DatosProtegidos from '../DatosProtegidos';   // PY2: control de acceso
+import { PiBankBold } from 'react-icons/pi';
+import { FiUser } from 'react-icons/fi';
+import { FaClipboardList, FaMapPin, FaTruck, FaRegAddressCard } from 'react-icons/fa';
+import DatosProtegidos from '../common/DatosProtegidos';
+import ControlesCarrusel from '../common/ControlesCarrusel';
+import useCarrusel from '../../hooks/useCarrusel';
+import { separarLista, unirPartes, urlMapa } from '../../utils/detalle';
 
-import { PiBankBold } from "react-icons/pi";
-import { FiUser } from "react-icons/fi";
-import { BsEnvelopePaperFill } from "react-icons/bs";
-import { FaClipboardList, FaMapPin, FaTruck, FaRegAddressCard } from "react-icons/fa";
+function ProveedorDetalleModal({ registros, onCerrar }) {
+    const carrusel = useCarrusel(registros);
 
-import './proveedores.css';
+    if (!registros || registros.length === 0) return null;
 
+    return (
+        <div className="prov-overlay" onClick={onCerrar}>
+            <div className="prov-modal" onClick={(evento) => evento.stopPropagation()}>
+                <button className="prov-cerrar" onClick={onCerrar} aria-label="Cerrar">✕</button>
+                <div className="prov-carrusel">
+                    <TarjetaProveedor
+                        key={carrusel.actual.SupplierID ?? carrusel.indice}
+                        proveedor={carrusel.actual}
+                        indice={carrusel.indice}
+                    />
+                </div>
+                <ControlesCarrusel carrusel={carrusel} nombre="Proveedor" prefijo="prov" />
+            </div>
+        </div>
+    );
+}
 
+/* Fila "etiqueta: valor" de la información general. */
 function Fila({ etiqueta, children }) {
     return (
         <div className="prov-fila">
             <span className="prov-etiqueta">{etiqueta}</span>
-
-            <span className="prov-valor">
-                {children}
-            </span>
+            <span className="prov-valor">{children}</span>
         </div>
     );
 }
 
-
-// ============================================================
-// MODAL PRINCIPAL
-// ============================================================
-
-function ProveedorDetalleModal({
-    proveedores,
-    onCerrar,
-    onEditar,
-    onVolver
-}) {
-
-    // Los hooks siempre van ANTES de cualquier "return" condicional.
-    const [indiceActual, setIndiceActual] = useState(0);
-
-    // Cuando llega una lista nueva, volvemos al primero.
-    // PY2: cuando llega una lista nueva se vuelve al primero. Se ajusta durante el
-    // render (patrón recomendado por React) en vez de usar un useEffect, que
-    // provocaba un render extra con el índice viejo.
-    const [listaPrevia, setListaPrevia] = useState(proveedores);
-    if (proveedores !== listaPrevia) {
-        setListaPrevia(proveedores);
-        setIndiceActual(0);
-    }
-
-    // Si no hay proveedores, no mostramos el modal.
-    if (!proveedores || proveedores.length === 0) {
-        return null;
-    }
-
-    const anterior = () => {
-        setIndiceActual((i) =>
-            i === 0 ? proveedores.length - 1 : i - 1
-        );
-    };
-
-    const siguiente = () => {
-        setIndiceActual((i) =>
-            i === proveedores.length - 1 ? 0 : i + 1
-        );
-    };
-
-    const proveedorActual = proveedores[indiceActual];
-
-    const varios = proveedores.length > 1;
-
+/* Par "etiqueta / valor" de los datos bancarios. */
+function Par({ etiqueta, valor }) {
     return (
-        <div
-            className="prov-overlay"
-            onClick={onCerrar}
-        >
-            <div
-                className="prov-modal"
-                onClick={(e) => e.stopPropagation()}
-            >
+        <div className="prov-par">
+            <span>{etiqueta}</span>
+            <strong>{valor || '-'}</strong>
+        </div>
+    );
+}
 
-                <button
-                    className="prov-cerrar"
-                    onClick={onCerrar}
-                    aria-label="Cerrar"
-                >
-                    ✕
-                </button>
+function CajaContacto({ titulo, nombre }) {
+    return (
+        <div className="prov-caja">
+            <div className="prov-caja-titulo">
+                <span className="prov-ico verde"><FiUser /></span>
+                {titulo}
+            </div>
+            <p className="prov-caja-nombre">{nombre || '-'}</p>
+        </div>
+    );
+}
 
-                <div className="prov-carrusel">
-
-                    
-                    <TarjetaProveedor
-                        key={
-                            proveedorActual.SupplierID ??
-                            indiceActual
-                        }
-                        proveedor={proveedorActual}
-                        indice={indiceActual}
-                        onEditar={onEditar}
-                        onVolver={onVolver}
-                    />
-
-                    
-
-                </div>
-
-                {varios && (
-                    <div className="prov-controles">
-
-                        <button
-                            type="button"
-                            className="prov-control"
-                            onClick={anterior}
-                            aria-label="Proveedor anterior"
-                        >
-                            ←
-                        </button>
-
-                        <span className="prov-contador">
-                            Proveedor {indiceActual + 1} de {proveedores.length}
-                        </span>
-
-                        <button
-                            type="button"
-                            className="prov-control"
-                            onClick={siguiente}
-                            aria-label="Proveedor siguiente"
-                        >
-                            →
-                        </button>
-
-                    </div>
-                )}
-
+function Direccion({ icono, titulo, texto }) {
+    return (
+        <div className="prov-direccion">
+            <span className="prov-ico">{icono}</span>
+            <div>
+                <strong>{titulo}</strong>
+                <p>{texto || '-'}</p>
             </div>
         </div>
     );
 }
 
+/*---------------------------------------------------------------------------------------*
+* NOMBRE: TarjetaProveedor
+* ENTRADA: proveedor (fila del detalle) e indice (para el título del mapa).
+* DESCRIPCION: Si el Corporativo autoriza, los datos sensibles reemplazan los "xxxx".
+*-----------------------------------------------------------------------------------------*/
+function TarjetaProveedor({ proveedor: proveedorBase, indice }) {
+    const [datosSensibles, setDatosSensibles] = useState(null);
+    const proveedor = datosSensibles ? { ...proveedorBase, ...datosSensibles } : proveedorBase;
 
-// ============================================================
-// TARJETA DE PROVEEDOR
-// ============================================================
-
-function TarjetaProveedor({
-    proveedor: pBase,
-    indice,
-    onEditar,
-    onVolver
-}) {
-
-    /* PY2: datos sensibles autorizados por el Corporativo (si los hay) */
-    const [sensibles, setSensibles] = useState(null);
-    const p = sensibles ? { ...pBase, ...sensibles } : pBase;
-
-    // ---------- MAPA (OpenStreetMap) ----------
-
-    const lat = Number(p.Latitud);
-    const lng = Number(p.Longitud);
-
-    const mapaUrl =
-        p.Latitud &&
-            p.Longitud &&
-            !isNaN(lat) &&
-            !isNaN(lng)
-            ? `https://www.openstreetmap.org/export/embed.html?bbox=${lng - 0.01}%2C${lat - 0.01}%2C${lng + 0.01}%2C${lat + 0.01}&marker=${lat}%2C${lng}`
-            : null;
-
-
-    // ---------- MÉTODOS DE ENTREGA ----------
-
-    const metodos = String(p.Metodo_Entrega || '')
-        .split(',')
-        .map((m) => m.trim())
-        .filter(Boolean);
-    // ---------- DIRECCIONES ----------
-
-    const dirEntrega = [
-        p.Direccion_Entrega1,
-        p.Direccion_Entrega2
-    ]
-        .filter(Boolean)
-        .join(' ');
-
-    const dirPostal = [
-        p.Direccion_Postal1,
-        p.Direccion_Postal2
-    ]
-        .filter(Boolean)
-        .join(' ');
-
+    const mapa = urlMapa(proveedor.Latitud, proveedor.Longitud);
+    const metodos = separarLista(proveedor.Metodo_Entrega);
 
     return (
         <section className="prov-tarjeta">
-
-            {/* ================= ENCABEZADO ================= */}
-
             <header className="prov-encabezado">
-
-                <div className="prov-avatar">
-                    <FaTruck />
-                </div>
-
+                <div className="prov-avatar"><FaTruck /></div>
                 <div className="prov-titulo">
-
-                    <h2>
-                        {p.Nombre_Proveedor}
-                    </h2>
-
-                    <p>
-                        Código: {p.Referencia_Proveedor || '-'}
-                    </p>
-
+                    <h2>{proveedor.Nombre_Proveedor}</h2>
+                    <p>Código: {proveedor.Referencia_Proveedor || '-'}</p>
                 </div>
-
-                {/* Espacio vacío para que el título quede centrado */}
                 <div></div>
-
             </header>
 
-            {/* PY2: datos sensibles protegidos en el Corporativo */}
-            <DatosProtegidos
-                tipo="proveedor"
-                id={pBase.SupplierID}
-                onDatos={setSensibles}
-            />
-
-
-            {/* ================= BOTONES ================= */}
-
-            {(onVolver || onEditar) && (
-                <div className="prov-acciones">
-
-                    {onVolver && (
-                        <button
-                            className="prov-btn"
-                            onClick={onVolver}
-                        >
-                            ← Volver a la lista
-                        </button>
-                    )}
-
-                    {onEditar && (
-                        <button
-                            className="prov-btn prov-btn-azul"
-                            onClick={() => onEditar(p)}
-                        >
-                            ✎ Editar
-                        </button>
-                    )}
-
-                </div>
-            )}
-
-
-            {/* ============ DATOS BANCARIOS ============ */}
+            <DatosProtegidos tipo="proveedor" id={proveedorBase.SupplierID} onDatos={setDatosSensibles} />
 
             <div className="prov-caja prov-caja-ambar">
-
                 <div className="prov-caja-titulo ambar">
-
-                    <span className="prov-ico ambar">
-                        <PiBankBold />
-                    </span>
-
+                    <span className="prov-ico ambar"><PiBankBold /></span>
                     Datos bancarios
-
                 </div>
-
                 <div className="prov-pares">
-
-                    <div className="prov-par">
-
-                        <span>
-                            Banco y sucursal
-                        </span>
-
-                        <strong>
-                            {p.Sucursal_Cuenta_Bancaria || '-'}
-                        </strong>
-
-                    </div>
-
-                    <div className="prov-par">
-
-                        <span>
-                            Titular de la cuenta
-                        </span>
-
-                        <strong>
-                            {p.Nombre_Cuenta_Bancaria || '-'}
-                        </strong>
-
-                    </div>
-
-                    <div className="prov-par">
-
-                        <span>
-                            Cuenta corriente
-                        </span>
-
-                        <strong>
-                            {p.Numero_Cuenta_Bancaria || '-'}
-                        </strong>
-
-                    </div>
-
+                    <Par etiqueta="Banco y sucursal" valor={proveedor.Sucursal_Cuenta_Bancaria} />
+                    <Par etiqueta="Titular de la cuenta" valor={proveedor.Nombre_Cuenta_Bancaria} />
+                    <Par etiqueta="Cuenta corriente" valor={proveedor.Numero_Cuenta_Bancaria} />
                 </div>
-
             </div>
-
-
-            {/* ============ CONTACTOS ============ */}
 
             <div className="prov-cajas">
-
-                <div className="prov-caja">
-
-                    <div className="prov-caja-titulo">
-
-                        <span className="prov-ico verde">
-                            <FiUser/>
-                        </span>
-
-                        Contacto principal
-
-                    </div>
-
-                    <p className="prov-caja-nombre">
-                        {p.Contacto_Primario || '-'}
-                    </p>
-
-                </div>
-
-
-                <div className="prov-caja">
-
-                    <div className="prov-caja-titulo">
-
-                        <span className="prov-ico verde">
-                            <FiUser/>
-                        </span>
-
-                        Contacto alternativo
-
-                    </div>
-
-                    <p className="prov-caja-nombre">
-                        {p.Contacto_Alternativo || '-'}
-                    </p>
-
-                </div>
-
+                <CajaContacto titulo="Contacto principal" nombre={proveedor.Contacto_Primario} />
+                <CajaContacto titulo="Contacto alternativo" nombre={proveedor.Contacto_Alternativo} />
             </div>
 
-
-            {/* ============ INFORMACIÓN + DIRECCIONES + MAPA ============ */}
-
             <div className="prov-columnas">
-
-
-                {/* ---------- INFORMACIÓN GENERAL ---------- */}
-
                 <div className="prov-panel">
-
                     <h3 className="prov-panel-titulo">
-
-                        <span className="prov-ico">
-                            <FaClipboardList/>
-                        </span>
-
+                        <span className="prov-ico"><FaClipboardList /></span>
                         Información general
-
                     </h3>
-
-
-                    <Fila etiqueta="Código del proveedor">
-                        {p.Referencia_Proveedor || '-'}
-                    </Fila>
-
-
-                    <Fila etiqueta="Categoría">
-                        {p.Categoria || '-'}
-                    </Fila>
-
-
+                    <Fila etiqueta="Código del proveedor">{proveedor.Referencia_Proveedor || '-'}</Fila>
+                    <Fila etiqueta="Categoría">{proveedor.Categoria || '-'}</Fila>
                     <Fila etiqueta="Métodos de entrega">
                         <div className="prov-metodos">
-                            {metodos.length ? (
-                                metodos.map((metodo, indice) => (
-                                    <span
-                                        key={`${metodo}-${indice}`}
-                                        className={
-                                            indice % 2 === 0
-                                                ? 'prov-chip prov-chip-azul'
-                                                : 'prov-chip prov-chip-verde'
-                                        }
-                                    >
+                            {metodos.length
+                                ? metodos.map((metodo, posicion) => (
+                                    <span key={`${metodo}-${posicion}`}
+                                          className={posicion % 2 === 0 ? 'prov-chip prov-chip-azul' : 'prov-chip prov-chip-verde'}>
                                         {metodo}
                                     </span>
                                 ))
-                            ) : (
-                                <span>-</span>
-                            )}
+                                : <span>-</span>}
                         </div>
                     </Fila>
-
-
-
-                    <Fila etiqueta="Ciudad de entrega">
-                        {p.Ciudad_Entrega || '-'}
-                    </Fila>
-
-
-                    <Fila etiqueta="Código postal de entrega">
-                        {p.Codigo_Postal_Entrega || '-'}
-                    </Fila>
-
-
-                    <Fila etiqueta="Teléfono">
-                        {p.Telefono || '-'}
-                    </Fila>
-
-
-                    <Fila etiqueta="Fax">
-                        {p.Fax || '-'}
-                    </Fila>
-
-
+                    <Fila etiqueta="Ciudad de entrega">{proveedor.Ciudad_Entrega || '-'}</Fila>
+                    <Fila etiqueta="Código postal de entrega">{proveedor.Codigo_Postal_Entrega || '-'}</Fila>
+                    <Fila etiqueta="Teléfono">{proveedor.Telefono || '-'}</Fila>
+                    <Fila etiqueta="Fax">{proveedor.Fax || '-'}</Fila>
                     <Fila etiqueta="Días de gracia para pagar">
-
-                        {p.Dias_De_Gracia != null
-                            ? `${p.Dias_De_Gracia} días`
-                            : '-'
-                        }
-
+                        {proveedor.Dias_De_Gracia != null ? `${proveedor.Dias_De_Gracia} días` : '-'}
                     </Fila>
-
-
                     <Fila etiqueta="Sitio web">
-
-                        {p.Sitio_Web ? (
-
-                            <a
-                                href={p.Sitio_Web}
-                                target="_blank"
-                                rel="noreferrer"
-                            >
-                                {p.Sitio_Web}
-                            </a>
-
-                        ) : (
-                            '-'
-                        )}
-
+                        {proveedor.Sitio_Web
+                            ? <a href={proveedor.Sitio_Web} target="_blank" rel="noreferrer">{proveedor.Sitio_Web}</a>
+                            : '-'}
                     </Fila>
-
                 </div>
-
-
-                {/* ---------- COLUMNA DERECHA ---------- */}
 
                 <div className="prov-derecha">
-
                     <div className="prov-panel">
-
                         <h3 className="prov-panel-titulo">
-
-                            <span className="prov-ico">
-                                <FaMapPin className="icono-rojo" />
-                            </span>
-
+                            <span className="prov-ico"><FaMapPin className="icono-rojo" /></span>
                             Direcciones
-
                         </h3>
-
-
-                        <div className="prov-direccion">
-
-                            <span className="prov-ico">
-                                <FaTruck />
-                            </span>
-
-                            <div>
-
-                                <strong>
-                                    Dirección de entrega
-                                </strong>
-
-                                <p>
-                                    {dirEntrega || '-'}
-                                </p>
-
-                            </div>
-
-                        </div>
-
-
-                        <div className="prov-direccion">
-
-                            <span className="prov-ico">
-                                <FaRegAddressCard />
-                            </span>
-
-                            <div>
-
-                                <strong>
-                                    Dirección postal
-                                </strong>
-
-                                <p>
-                                    {dirPostal || '-'}
-                                </p>
-
-                            </div>
-
-                        </div>
-
+                        <Direccion icono={<FaTruck />} titulo="Dirección de entrega"
+                                   texto={unirPartes([proveedor.Direccion_Entrega1, proveedor.Direccion_Entrega2])} />
+                        <Direccion icono={<FaRegAddressCard />} titulo="Dirección postal"
+                                   texto={unirPartes([proveedor.Direccion_Postal1, proveedor.Direccion_Postal2])} />
                     </div>
 
-
-                    {/* ---------- MAPA ---------- */}
-
-                    {mapaUrl && (
-
+                    {mapa && (
                         <div className="prov-panel">
-
                             <h3 className="prov-panel-titulo">
-
-                                <span className="prov-ico">
-                                    📌
-                                </span>
-
+                                <span className="prov-ico">📌</span>
                                 Ubicación en el mapa
-
                             </h3>
-
-                            <iframe
-                                className="prov-mapa"
-                                title={`mapa-proveedor-${indice}`}
-                                src={mapaUrl}
-                                loading="lazy"
-                            />
-
+                            <iframe className="prov-mapa" title={`mapa-proveedor-${indice}`} src={mapa} loading="lazy" />
                         </div>
-
                     )}
-
                 </div>
-
             </div>
-
         </section>
     );
 }
-
 
 export default ProveedorDetalleModal;
